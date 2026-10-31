@@ -6,12 +6,13 @@ import time
 
 import httpx
 import pytest
-from warden.config import Settings
-from warden.paypal.factory import build_gateway
-from warden.paypal.gateway import ReadOnlyGateway, WriteAccessError
-from warden.paypal.mock_gateway import MockGateway
-from warden.paypal.sandbox_gateway import SandboxGateway
-from warden.paypal.token import TokenManager
+
+from flatline.config import Settings
+from flatline.paypal.factory import build_gateway
+from flatline.paypal.gateway import ReadOnlyGateway, WriteAccessError
+from flatline.paypal.mock_gateway import MockGateway
+from flatline.paypal.sandbox_gateway import SandboxGateway
+from flatline.paypal.token import TokenManager
 
 
 @pytest.mark.asyncio
@@ -84,7 +85,7 @@ async def test_token_manager_caches_and_refreshes(monkeypatch: pytest.MonkeyPatc
 def test_no_live_host_in_paypal_package() -> None:
     from pathlib import Path
 
-    root = Path(__file__).resolve().parents[2] / "warden" / "paypal"
+    root = Path(__file__).resolve().parents[2] / "flatline" / "paypal"
     for path in root.glob("*.py"):
         text = path.read_text()
         # Allow the sandbox hostname; forbid the live hostname.

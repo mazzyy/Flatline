@@ -8,9 +8,9 @@ from dataclasses import dataclass
 
 import httpx
 
-from warden.config import Settings, settings
+from flatline.config import Settings, settings
 
-log = logging.getLogger("warden.paypal.token")
+log = logging.getLogger("flatline.paypal.token")
 
 TOKEN_PATH = "/v1/oauth2/token"
 REFRESH_SKEW_SECONDS = 15 * 60

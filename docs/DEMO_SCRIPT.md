@@ -9,7 +9,7 @@ Record at 125% zoom. Dark or light theme both work. Start with `cp .env.example 
 Open the demo shop (localhost:3000). Buy House Blend with **Pay (mock)**. Thank-you page. Dashboard Overview: health score high, playbook tiles quiet. Transactions grid: the capture, no simulated badge.
 
 **0:35–1:25 — Checkout incident.**  
-Chaos panel → **Ship bad currency config**. Shop checkout now fails (`CURRENCY_MISMATCH`). Inject six failures (or `python scripts/inject.py checkout_failure_spike`). Wait for the detector (30s) or run `python scripts/replay.py`. Overview shows a checkout spike. Incident: Diagnostician names **config version N**. Banner is auto-set. Rollback is **approval**. Approve it. Failures stop. Verifier resolves.
+Chaos panel → **Ship bad currency config**. Shop checkout now fails (`CURRENCY_MISMATCH`). Inject six failures (or `python scripts/inject.py checkout_failure_spike`). Wait for the detector (30s) or run `python scripts/replay.py`. Overview shows a checkout spike. Incident: Diagnostician names **config version N**. Banner is auto-set. Rollback is **approval**. Approve it. Failures stop. Verifier resolves about one minute after approval (`VERIFY_MINUTES=1`); cut to the refund wave while it waits and come back.
 
 **1:25–1:55 — Refund wave + refusal.**  
 Chaos → **Inject refund wave**. Incident names Ethiopia Yirgacheffe. Pause-sales is approval. `refund.bulk` is **forbidden** — the UI shows the refusal. That is the safety model: the agent asked, the proxy said no.

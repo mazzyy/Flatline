@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi import Header, HTTPException, Query
 
-from warden.config import settings
+from flatline.config import settings
 
 
 def require_inject_token(x_inject_token: str | None = Header(default=None)) -> None:

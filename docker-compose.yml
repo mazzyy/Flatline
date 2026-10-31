@@ -1,12 +1,14 @@
+name: flatline
+
 services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: warden
-      POSTGRES_PASSWORD: warden
-      POSTGRES_DB: warden
+      POSTGRES_USER: flatline
+      POSTGRES_PASSWORD: flatline
+      POSTGRES_DB: flatline
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U warden"]
+      test: ["CMD-SHELL", "pg_isready -U flatline"]
       interval: 3s
       timeout: 3s
       retries: 20
@@ -21,7 +23,7 @@ services:
       PAYPAL_ENVIRONMENT: MOCK
       LLM_MODE: mock
       PYTHONPATH: /app
-      DATABASE_URL: postgresql+psycopg://warden:warden@postgres:5432/warden
+      DATABASE_URL: postgresql+psycopg://flatline:flatline@postgres:5432/flatline
       APP_BASE_URL: http://localhost:8000
     ports:
       - "8000:8000"
@@ -43,8 +45,8 @@ services:
       PAYPAL_ENVIRONMENT: MOCK
       LLM_MODE: mock
       PYTHONPATH: /app
-      DATABASE_URL: postgresql+psycopg://warden:warden@postgres:5432/warden
-    command: ["python", "-m", "warden.detector.worker"]
+      DATABASE_URL: postgresql+psycopg://flatline:flatline@postgres:5432/flatline
+    command: ["python", "-m", "flatline.detector.worker"]
     depends_on:
       api:
         condition: service_healthy
@@ -57,8 +59,8 @@ services:
       PAYPAL_ENVIRONMENT: MOCK
       LLM_MODE: mock
       PYTHONPATH: /app
-      DATABASE_URL: postgresql+psycopg://warden:warden@postgres:5432/warden
-    command: ["python", "-m", "warden.loop"]
+      DATABASE_URL: postgresql+psycopg://flatline:flatline@postgres:5432/flatline
+    command: ["python", "-m", "flatline.loop"]
     depends_on:
       api:
         condition: service_healthy
@@ -85,7 +87,7 @@ services:
       LLM_MODE: mock
       PYTHONPATH: /app
       FLATLINE_API_URL: http://api:8000
-      DATABASE_URL: postgresql+psycopg://warden:warden@postgres:5432/warden
+      DATABASE_URL: postgresql+psycopg://flatline:flatline@postgres:5432/flatline
     command: ["python", "scripts/seed.py", "--minutes", "10"]
     depends_on:
       api:

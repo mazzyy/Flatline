@@ -16,4 +16,5 @@
 | Demo-ready stack | DONE | 2026-10-31 | (uncommitted) |
 | Root is payments-only | DONE | 2026-10-31 | previous Flatline/SRE tree removed |
 | PayPal-style dashboard + How it works page | DONE | 2026-10-31 | (uncommitted) |
-| Renamed product to Flatline | DONE | 2026-10-31 | D-012; package `warden/` unchanged |
+| Renamed product to Flatline | DONE | 2026-10-31 | D-012; package renamed `flatline/` too |
+| Verify re-check + no duplicate after resolve | DONE | 2026-10-31 | D-013; verified on clean Docker stack |

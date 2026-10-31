@@ -13,10 +13,10 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any
 
-from warden.config import Settings, settings
-from warden.paypal.token import TokenManager
+from flatline.config import Settings, settings
+from flatline.paypal.token import TokenManager
 
-log = logging.getLogger("warden.paypal.mcp")
+log = logging.getLogger("flatline.paypal.mcp")
 
 # Official tool names from https://www.npmjs.com/package/@paypal/mcp (v1.8.1).
 READ_TOOLS = (

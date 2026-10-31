@@ -16,9 +16,9 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from warden.config import apply_sandbox_guard, settings
-from warden.db.base import utcnow
-from warden.db.models import (
+from flatline.config import apply_sandbox_guard, settings
+from flatline.db.base import utcnow
+from flatline.db.models import (
     DEFAULT_SHOP_CONFIG,
     AuditLog,
     Event,
@@ -27,19 +27,19 @@ from warden.db.models import (
     ShopConfigVersion,
     audit,
 )
-from warden.db.session import create_schema, ensure_default_config, get_sessionmaker, session_dep
-from warden.ingest.auth import require_inject_token, require_passcode
-from warden.ingest.serializers import (
+from flatline.db.session import create_schema, ensure_default_config, get_sessionmaker, session_dep
+from flatline.ingest.auth import require_inject_token, require_passcode
+from flatline.ingest.serializers import (
     audit_out,
     config_out,
     event_out,
     incident_out,
     proposal_out,
 )
-from warden.ingest.sse import HUB
-from warden.paypal.webhooks import normalize_event, verify_signature
+from flatline.ingest.sse import HUB
+from flatline.paypal.webhooks import normalize_event, verify_signature
 
-log = logging.getLogger("warden.ingest")
+log = logging.getLogger("flatline.ingest")
 
 SORTABLE_EVENTS = {
     "occurred_at": Event.occurred_at,
@@ -91,7 +91,7 @@ def create_app() -> FastAPI:
         verified = False
         if not cfg.is_mock_paypal:
             try:
-                from warden.paypal.token import TokenManager
+                from flatline.paypal.token import TokenManager
 
                 token = await TokenManager(cfg).get_token()
                 verified = await verify_signature(headers, raw, cfg=cfg, access_token=token)
@@ -238,7 +238,7 @@ def create_app() -> FastAPI:
 
     @app.get("/api/metrics/health")
     def metrics_health(db: Session = Depends(session_dep)) -> dict[str, Any]:
-        from warden.detector.worker import health_snapshot
+        from flatline.detector.worker import health_snapshot
 
         return health_snapshot(db)
 
@@ -294,7 +294,7 @@ def create_app() -> FastAPI:
 
     @app.get("/api/policy/catalog")
     def policy_catalog() -> dict[str, Any]:
-        from warden.policy.catalog import catalog_public
+        from flatline.policy.catalog import catalog_public
 
         return {"items": catalog_public()}
 
@@ -398,7 +398,7 @@ def _decide_proposal(db: Session, proposal_id: UUID, *, approved: bool) -> dict[
     HUB.publish("proposal.updated", proposal_out(row))
     if approved:
         try:
-            from warden.policy.executor import execute_proposal
+            from flatline.policy.executor import execute_proposal
 
             execute_proposal(db, row)
         except ImportError:
@@ -406,7 +406,7 @@ def _decide_proposal(db: Session, proposal_id: UUID, *, approved: bool) -> dict[
         except Exception as exc:
             log.warning("executor after approve failed: %s", exc)
         try:
-            from warden.loop import verify_incident
+            from flatline.loop import verify_incident
 
             incident = db.get(Incident, row.incident_id)
             if incident is not None:
@@ -452,7 +452,7 @@ def _ingest_payloads(db: Session, items: list[dict[str, Any]]) -> list[str]:
 
 
 def _inject_from_chaos(db: Session, chaos: dict[str, Any]) -> list[str]:
-    from warden.ingest.faults import checkout_failures, refund_wave, renewal_failures
+    from flatline.ingest.faults import checkout_failures, refund_wave, renewal_failures
 
     kind = str(chaos.get("inject") or "")
     if chaos.get("bad_currency"):
@@ -469,7 +469,7 @@ def _inject_from_chaos(db: Session, chaos: dict[str, Any]) -> list[str]:
 
 
 def _run_scan(db: Session) -> list[str]:
-    from warden.detector.worker import scan_once
+    from flatline.detector.worker import scan_once
 
     rows = scan_once(db)
     db.flush()

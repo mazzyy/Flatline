@@ -41,8 +41,8 @@ export default function IncidentPage({ id }: { id: string }) {
   useEffect(() => {
     void refresh();
     const on = () => void refresh();
-    window.addEventListener("warden-sse", on);
-    return () => window.removeEventListener("warden-sse", on);
+    window.addEventListener("flatline-sse", on);
+    return () => window.removeEventListener("flatline-sse", on);
   }, [refresh]);
 
   async function decide(proposalId: string, kind: "approve" | "reject") {

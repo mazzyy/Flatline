@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import pytest
 from pydantic import ValidationError
-from warden.config import SandboxGuardError, Settings
+
+from flatline.config import SandboxGuardError, Settings
 
 
 def test_mock_environment_is_accepted() -> None:

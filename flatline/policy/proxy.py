@@ -5,8 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from warden.config import settings
-from warden.policy.catalog import ACTIONS, get
+from flatline.config import settings
+from flatline.policy.catalog import ACTIONS, get
 
 
 @dataclass(frozen=True)

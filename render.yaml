@@ -1,8 +1,8 @@
 databases:
   - name: flatline-db
     plan: free
-    databaseName: warden
-    user: warden
+    databaseName: flatline
+    user: flatline
 
 services:
   - type: web
@@ -51,7 +51,7 @@ services:
     name: flatline-detector
     runtime: docker
     dockerfilePath: ./Dockerfile
-    dockerCommand: python -m warden.detector.worker
+    dockerCommand: python -m flatline.detector.worker
     envVars:
       - key: PAYPAL_ENVIRONMENT
         value: SANDBOX
@@ -70,7 +70,7 @@ services:
     name: flatline-agents
     runtime: docker
     dockerfilePath: ./Dockerfile
-    dockerCommand: python -m warden.loop
+    dockerCommand: python -m flatline.loop
     envVars:
       - key: PAYPAL_ENVIRONMENT
         value: SANDBOX

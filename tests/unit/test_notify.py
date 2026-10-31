@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from warden.config import reset_settings
-from warden.notify.sinks import send_alert
+from flatline.config import reset_settings
+from flatline.notify.sinks import send_alert
 
 
 def test_blank_and_comment_urls_log_only(monkeypatch) -> None:

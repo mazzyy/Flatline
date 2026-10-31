@@ -14,7 +14,7 @@ from typing import Literal
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-log = logging.getLogger("warden.config")
+log = logging.getLogger("flatline.config")
 
 PayPalEnvironment = Literal["MOCK", "SANDBOX"]
 LlmMode = Literal["mock", "live"]
@@ -51,7 +51,7 @@ class Settings(BaseSettings):
     azure_api_version: str = Field(default="2024-08-01-preview", alias="AZURE_API_VERSION")
 
     database_url: str = Field(
-        default="postgresql+psycopg://warden:warden@localhost:5432/warden",
+        default="postgresql+psycopg://flatline:flatline@localhost:5432/flatline",
         alias="DATABASE_URL",
     )
 

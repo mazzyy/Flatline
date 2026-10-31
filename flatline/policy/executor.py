@@ -9,8 +9,8 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from warden.db.base import utcnow
-from warden.db.models import (
+from flatline.db.base import utcnow
+from flatline.db.models import (
     DEFAULT_SHOP_CONFIG,
     Event,
     Execution,
@@ -19,11 +19,11 @@ from warden.db.models import (
     ShopConfigVersion,
     audit,
 )
-from warden.ingest.sse import HUB
-from warden.notify.sinks import send_alert
-from warden.paypal.factory import build_gateway
+from flatline.ingest.sse import HUB
+from flatline.notify.sinks import send_alert
+from flatline.paypal.factory import build_gateway
 
-log = logging.getLogger("warden.executor")
+log = logging.getLogger("flatline.executor")
 
 CONFIG_ACTIONS = {
     "shop.banner.set",
@@ -131,15 +131,15 @@ async def _paypal_write(action: str, params: dict[str, Any]) -> dict[str, Any]:
         return await gateway.send_invoice_reminder(str(params.get("invoice_id") or "INV-1"))
     if action == "subscription.capture_outstanding":
         return await gateway.capture_subscription_outstanding(
-            str(params.get("subscription_id")), str(params.get("note") or "warden")
+            str(params.get("subscription_id")), str(params.get("note") or "flatline")
         )
     if action == "subscription.suspend":
         return await gateway.suspend_subscription(
-            str(params.get("subscription_id")), str(params.get("reason") or "warden")
+            str(params.get("subscription_id")), str(params.get("reason") or "flatline")
         )
     if action == "subscription.activate":
         return await gateway.activate_subscription(
-            str(params.get("subscription_id")), str(params.get("reason") or "warden")
+            str(params.get("subscription_id")), str(params.get("reason") or "flatline")
         )
     if action == "refund.single":
         return await gateway.create_refund(
@@ -155,11 +155,11 @@ def _shop_action(db: Session, action: str, params: dict[str, Any]) -> dict[str, 
     cfg = dict(current.config or DEFAULT_SHOP_CONFIG)
     if action == "shop.banner.set":
         cfg["banner"] = str(params.get("text") or params.get("banner") or "")
-        row = _write_config(db, cfg, author="warden", note="banner.set")
+        row = _write_config(db, cfg, author="flatline", note="banner.set")
         return {"version": row.version, "banner": cfg["banner"]}
     if action == "shop.banner.clear":
         cfg["banner"] = ""
-        row = _write_config(db, cfg, author="warden", note="banner.clear")
+        row = _write_config(db, cfg, author="flatline", note="banner.clear")
         return {"version": row.version}
     if action == "shop.product.pause_sales":
         paused = list(cfg.get("paused_products") or [])
@@ -167,20 +167,20 @@ def _shop_action(db: Session, action: str, params: dict[str, Any]) -> dict[str, 
         if pid not in paused:
             paused.append(pid)
         cfg["paused_products"] = paused
-        row = _write_config(db, cfg, author="warden", note=f"pause {pid}")
+        row = _write_config(db, cfg, author="flatline", note=f"pause {pid}")
         return {"version": row.version, "paused_products": paused}
     if action == "shop.product.resume_sales":
         pid = str(params.get("product_id"))
         cfg["paused_products"] = [p for p in (cfg.get("paused_products") or []) if p != pid]
-        row = _write_config(db, cfg, author="warden", note=f"resume {pid}")
+        row = _write_config(db, cfg, author="flatline", note=f"resume {pid}")
         return {"version": row.version}
     if action == "shop.plan.pause_signups":
         cfg["plan_signups_paused"] = True
-        row = _write_config(db, cfg, author="warden", note="pause signups")
+        row = _write_config(db, cfg, author="flatline", note="pause signups")
         return {"version": row.version}
     if action == "shop.plan.resume_signups":
         cfg["plan_signups_paused"] = False
-        row = _write_config(db, cfg, author="warden", note="resume signups")
+        row = _write_config(db, cfg, author="flatline", note="resume signups")
         return {"version": row.version}
     if action == "shop.config.rollback":
         target_version = params.get("version")
@@ -199,7 +199,7 @@ def _shop_action(db: Session, action: str, params: dict[str, Any]) -> dict[str, 
         chaos["bad_currency"] = False
         restored["chaos"] = chaos
         restored["currency"] = "USD"
-        row = _write_config(db, restored, author="warden", note=f"rollback to v{prev.version}")
+        row = _write_config(db, restored, author="flatline", note=f"rollback to v{prev.version}")
         maybe_github_pr(row.note or "")
         return {"version": row.version, "restored_from": prev.version}
     if action == "events.replay":
@@ -212,7 +212,7 @@ def _shop_action(db: Session, action: str, params: dict[str, Any]) -> dict[str, 
 
 
 def maybe_github_pr(note: str) -> None:
-    from warden.config import settings as get_settings
+    from flatline.config import settings as get_settings
 
     cfg = get_settings()
     if not cfg.github_token:

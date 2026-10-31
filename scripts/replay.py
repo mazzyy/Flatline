@@ -3,9 +3,9 @@
 
 from __future__ import annotations
 
-from warden.config import apply_sandbox_guard
-from warden.db.session import create_schema, get_sessionmaker
-from warden.detector.worker import scan_once
+from flatline.config import apply_sandbox_guard
+from flatline.db.session import create_schema, get_sessionmaker
+from flatline.detector.worker import scan_once
 
 
 def main() -> None:

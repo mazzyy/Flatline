@@ -36,15 +36,15 @@ test:
 		python -m pytest -q tests/unit tests/integration
 
 lint:
-	ruff check warden tests scripts
-	mypy warden
+	ruff check flatline tests scripts
+	mypy flatline
 	@if [ -f dashboard/package.json ]; then \
 		(cd dashboard && npm run lint); \
 	fi
 
 fmt:
-	ruff check --fix warden tests scripts
-	ruff format warden tests scripts
+	ruff check --fix flatline tests scripts
+	ruff format flatline tests scripts
 
 demo-test:
 	PAYPAL_ENVIRONMENT=MOCK LLM_MODE=mock \

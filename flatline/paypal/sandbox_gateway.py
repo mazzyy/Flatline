@@ -13,9 +13,9 @@ from typing import Any
 
 import httpx
 
-from warden.config import Settings, settings
-from warden.paypal.mcp_pool import McpPool, get_pool
-from warden.paypal.token import TokenManager
+from flatline.config import Settings, settings
+from flatline.paypal.mcp_pool import McpPool, get_pool
+from flatline.paypal.token import TokenManager
 
 
 class SandboxGateway:

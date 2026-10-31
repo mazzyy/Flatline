@@ -7,8 +7,9 @@ from pathlib import Path
 
 import httpx
 import pytest
-from warden.config import Settings
-from warden.paypal.webhooks import (
+
+from flatline.config import Settings
+from flatline.paypal.webhooks import (
     KNOWN_EVENT_TYPES,
     normalize_event,
     verification_payload,

@@ -14,7 +14,8 @@ from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 import httpx
-from warden.config import apply_sandbox_guard, settings
+
+from flatline.config import apply_sandbox_guard, settings
 
 
 def main() -> None:

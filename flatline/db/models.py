@@ -20,7 +20,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import JSON
 
-from warden.db.base import Base, IdMixin, utcnow
+from flatline.db.base import Base, IdMixin, utcnow
 
 
 class Event(IdMixin, Base):
@@ -49,7 +49,7 @@ class ShopConfigVersion(IdMixin, Base):
 
     version: Mapped[int] = mapped_column(Integer, nullable=False)
     config: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
-    author: Mapped[str] = mapped_column(String(16), nullable=False)  # human | warden
+    author: Mapped[str] = mapped_column(String(16), nullable=False)  # human | flatline
     active: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     note: Mapped[str | None] = mapped_column(Text)
 

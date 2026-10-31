@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from warden.policy.catalog import ACTIONS
-from warden.policy.proxy import decide, rate_limit_auto, rate_limit_pending
+from flatline.policy.catalog import ACTIONS
+from flatline.policy.proxy import decide, rate_limit_auto, rate_limit_pending
 
 
 def test_every_catalog_key_has_a_decision() -> None:

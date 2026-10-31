@@ -81,7 +81,7 @@ This repo includes a [Blueprint](render.yaml).
 | --- | --- |
 | No live PayPal | Startup guard + no live host string |
 | Agents are read-only | `ReadOnlyGateway` + import-boundary test |
-| Unknown actions forbidden | `warden/policy/catalog.py` allowlist |
+| Unknown actions forbidden | `flatline/policy/catalog.py` allowlist |
 | Writes only after policy | `executor.py` is the only writer |
 | Everything audited | `audit_log` rows + SSE |
 

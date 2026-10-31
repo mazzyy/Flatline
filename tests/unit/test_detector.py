@@ -6,12 +6,13 @@ from datetime import timedelta
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
-from warden.db.base import utcnow
-from warden.db.models import Event, Incident
-from warden.db.session import create_schema, get_sessionmaker, reset_engine
-from warden.detector.rules import baseline, is_breach
-from warden.detector.worker import scan_once
-from warden.playbooks.loader import load_playbooks
+
+from flatline.db.base import utcnow
+from flatline.db.models import Event, Incident
+from flatline.db.session import create_schema, get_sessionmaker, reset_engine
+from flatline.detector.rules import baseline, is_breach
+from flatline.detector.worker import scan_once
+from flatline.playbooks.loader import load_playbooks
 
 
 def test_baseline_floored() -> None:
@@ -81,5 +82,88 @@ def test_checkout_spike_creates_incident(tmp_path, monkeypatch) -> None:
     db.commit()
     assert db.scalar(select(func.count()).select_from(Incident)) == 1
     assert again[0].id == incidents[0].id
+
+    # Resolved incident + the same stale events: no duplicate, no reopen.
+    incidents[0].status = "resolved"
+    incidents[0].resolved_at = utcnow()
+    db.commit()
+    assert scan_once(db) == []
+    db.commit()
+    assert db.scalar(select(func.count()).select_from(Incident)) == 1
+    assert db.get(Incident, incidents[0].id).status == "resolved"
+
+    # Fresh failures after the fix reopen the same incident and queue agents.
+    for i in range(5):
+        db.add(
+            Event(
+                source="shop_telemetry",
+                event_type="checkout.capture",
+                occurred_at=utcnow() + timedelta(seconds=1 + i),
+                error_code="CURRENCY_MISMATCH",
+                product_id="house-blend",
+                buyer_ref=f"R{i}",
+                amount=18,
+                currency="EUR",
+                payload={},
+            )
+        )
+    db.commit()
+    reopened = scan_once(db)
+    db.commit()
+    assert reopened and reopened[0].id == incidents[0].id
+    assert reopened[0].status == "reopened"
+    assert db.scalar(select(func.count()).select_from(Incident)) == 1
     db.close()
     reset_engine()
+
+
+def test_reverify_resolves_quiet_incident(tmp_path, monkeypatch) -> None:
+    import asyncio
+
+    from flatline.config import settings
+    from flatline.loop import reverify_pending
+
+    monkeypatch.setenv("VERIFY_MINUTES", "1")
+    settings.cache_clear()
+    db = _session(tmp_path, monkeypatch)
+    inc = Incident(
+        playbook="checkout_failure_spike",
+        status="verifying",
+        severity="high",
+        metric="checkout_failures",
+        observed_value=6,
+        baseline_value=1,
+        window_start=utcnow(),
+        window_end=utcnow(),
+        revenue_at_risk_per_hour=108,
+        title="t",
+        evidence={},
+        scope_key="none",
+        scope_value=None,
+    )
+    db.add(inc)
+    # Failures still inside the 1-minute window: stays verifying, no step written.
+    for i in range(6):
+        db.add(
+            Event(
+                source="shop_telemetry",
+                event_type="checkout.capture",
+                occurred_at=utcnow() - timedelta(seconds=10 + i),
+                error_code="CURRENCY_MISMATCH",
+                amount=18,
+                currency="USD",
+                payload={},
+            )
+        )
+    db.commit()
+    assert asyncio.run(reverify_pending(db)) == []
+    assert inc.status == "verifying"
+    # Window goes quiet: resolved.
+    for e in db.scalars(select(Event)).all():
+        e.occurred_at = utcnow() - timedelta(minutes=5)
+    db.commit()
+    assert asyncio.run(reverify_pending(db)) == [inc]
+    assert inc.status == "resolved"
+    db.close()
+    reset_engine()
+    settings.cache_clear()

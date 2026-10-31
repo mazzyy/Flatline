@@ -24,17 +24,17 @@ PayPal Transaction Search can lag by up to three hours. Minute-level detection u
 
 1. Every process refuses to start unless `PAYPAL_ENVIRONMENT` is `MOCK` or `SANDBOX`. There is no live PayPal host string.
 2. Agent processes receive a `ReadOnlyGateway`. Write methods raise.
-3. The remediator only *proposes* catalog actions. `warden/policy/proxy.py` is plain code.
-4. Only `warden/policy/executor.py` calls PayPal write methods or mutates shop config.
+3. The remediator only *proposes* catalog actions. `flatline/policy/proxy.py` is plain code.
+4. Only `flatline/policy/executor.py` calls PayPal write methods or mutates shop config.
 5. Every detection, step, decision, approval and execution writes `audit_log`.
 
 ## Components
 
 | Process | Role |
 | --- | --- |
-| `warden.ingest.app` | Webhooks, telemetry, dashboard API, SSE, static dashboard |
-| `warden.detector.worker` | 30s scan, baselines, incidents, agent jobs |
-| `warden.loop` | Agents + proxy + executor + verifier |
+| `flatline.ingest.app` | Webhooks, telemetry, dashboard API, SSE, static dashboard |
+| `flatline.detector.worker` | 30s scan, baselines, incidents, agent jobs |
+| `flatline.loop` | Agents + proxy + executor + verifier |
 | `demo-shop` | Lumen Coffee Co. (MOCK pay or JS SDK v6) |
 
 Storage is PostgreSQL 16 in Docker/Render. Tests use SQLite.

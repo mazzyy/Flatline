@@ -14,9 +14,9 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from warden.config import settings
-from warden.db.base import Base
-from warden.db.models import DEFAULT_SHOP_CONFIG, ShopConfigVersion
+from flatline.config import settings
+from flatline.db.base import Base
+from flatline.db.models import DEFAULT_SHOP_CONFIG, ShopConfigVersion
 
 _ENGINE: Engine | None = None
 _SESSION: sessionmaker[Session] | None = None

@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from warden.config import Settings, settings
-from warden.paypal.gateway import PayPalGateway, ReadOnlyGateway
-from warden.paypal.mock_gateway import MockGateway
-from warden.paypal.sandbox_gateway import SandboxGateway
+from flatline.config import Settings, settings
+from flatline.paypal.gateway import PayPalGateway, ReadOnlyGateway
+from flatline.paypal.mock_gateway import MockGateway
+from flatline.paypal.sandbox_gateway import SandboxGateway
 
 
 def build_gateway(cfg: Settings | None = None) -> PayPalGateway:

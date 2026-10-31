@@ -9,20 +9,23 @@ license = { text = "MIT" }
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-src = ["warden", "tests", "scripts"]
+src = [".", "tests", "scripts"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 ignore = ["E501", "RUF001", "RUF002", "RUF012", "B008"]
 
+[tool.ruff.lint.isort]
+known-first-party = ["flatline"]
+
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["B018"]
-"warden/db/migrations/**" = ["UP007", "UP035", "I001"]
+"flatline/db/migrations/**" = ["UP007", "UP035", "I001"]
 
 [tool.mypy]
 python_version = "3.12"
 mypy_path = "."
-packages = ["warden"]
+packages = ["flatline"]
 ignore_missing_imports = true
 warn_unused_ignores = false
 check_untyped_defs = true

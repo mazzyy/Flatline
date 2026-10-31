@@ -1,5 +1,5 @@
-const PASS_KEY = "warden-passcode";
-const INJECT_KEY = "warden-inject";
+const PASS_KEY = "flatline-passcode";
+const INJECT_KEY = "flatline-inject";
 
 export function passcode(): string {
   return sessionStorage.getItem(PASS_KEY) || "";

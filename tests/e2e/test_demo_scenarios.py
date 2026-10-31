@@ -7,12 +7,13 @@ from typing import Any
 
 import pytest
 from sqlalchemy.orm import Session
-from warden.db.base import utcnow
-from warden.db.models import DEFAULT_SHOP_CONFIG, Event, Proposal, ShopConfigVersion
-from warden.db.session import create_schema, ensure_default_config, get_sessionmaker, reset_engine
-from warden.detector.worker import scan_once
-from warden.loop import process_incident
-from warden.policy.executor import execute_proposal
+
+from flatline.db.base import utcnow
+from flatline.db.models import DEFAULT_SHOP_CONFIG, Event, Proposal, ShopConfigVersion
+from flatline.db.session import create_schema, ensure_default_config, get_sessionmaker, reset_engine
+from flatline.detector.worker import scan_once
+from flatline.loop import process_incident
+from flatline.policy.executor import execute_proposal
 
 pytestmark = pytest.mark.e2e
 
@@ -106,7 +107,7 @@ async def test_checkout_spike_bad_currency(db: Session) -> None:
     assert actions["shop.config.rollback"].tier == "approval"
     assert actions["shop.config.rollback"].status == "pending"
     execute_proposal(db, actions["shop.config.rollback"])
-    from warden.loop import verify_incident
+    from flatline.loop import verify_incident
 
     await verify_incident(db, incident)
     db.commit()

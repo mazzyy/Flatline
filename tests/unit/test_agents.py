@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import pytest
 from pydantic import ValidationError
-from warden.agents.schemas import DiagnosisOutput, EvidenceClaim
-from warden.llm.mock_llm import diagnose, remediate
+
+from flatline.agents.schemas import DiagnosisOutput, EvidenceClaim
+from flatline.llm.mock_llm import diagnose, remediate
 
 
 def test_evidence_required() -> None:

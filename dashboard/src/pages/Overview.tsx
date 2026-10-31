@@ -47,10 +47,10 @@ export default function Overview() {
   useEffect(() => {
     void refresh();
     const on = () => void refresh();
-    window.addEventListener("warden-sse", on);
+    window.addEventListener("flatline-sse", on);
     const t = setInterval(() => void refresh(), 5000);
     return () => {
-      window.removeEventListener("warden-sse", on);
+      window.removeEventListener("flatline-sse", on);
       clearInterval(t);
     };
   }, [refresh]);

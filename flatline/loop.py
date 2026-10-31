@@ -1,6 +1,6 @@
 """Incident loop: agents propose, proxy decides, executor writes, verifier checks.
 
-Lives outside warden/agents so the import-boundary test stays meaningful.
+Lives outside flatline/agents so the import-boundary test stays meaningful.
 """
 
 from __future__ import annotations
@@ -11,18 +11,18 @@ from datetime import timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from warden.agents.nodes import run_verifier
-from warden.agents.workflow import run_agents
-from warden.config import settings
-from warden.db.base import utcnow
-from warden.db.models import AgentJob, Event, Incident, Proposal, audit
-from warden.detector.rules import event_matches_metric
-from warden.ingest.sse import HUB
-from warden.playbooks.loader import load_playbooks
-from warden.policy.executor import execute_proposal
-from warden.policy.proxy import decide, rate_limit_auto, rate_limit_pending
+from flatline.agents.nodes import run_verifier
+from flatline.agents.workflow import run_agents
+from flatline.config import settings
+from flatline.db.base import utcnow
+from flatline.db.models import AgentJob, Event, Incident, Proposal, audit
+from flatline.detector.rules import event_matches_metric
+from flatline.ingest.sse import HUB
+from flatline.playbooks.loader import load_playbooks
+from flatline.policy.executor import execute_proposal
+from flatline.policy.proxy import decide, rate_limit_auto, rate_limit_pending
 
-log = logging.getLogger("warden.loop")
+log = logging.getLogger("flatline.loop")
 
 
 async def process_incident(db: Session, incident: Incident) -> Incident:
@@ -84,7 +84,13 @@ async def process_incident(db: Session, incident: Incident) -> Incident:
     return incident
 
 
-async def verify_incident(db: Session, incident: Incident) -> None:
+async def verify_incident(db: Session, incident: Incident, *, record_pending: bool = True) -> bool:
+    """Check whether the metric has been quiet for the verify window.
+
+    Returns True once the incident is resolved. With ``record_pending=False``
+    a still-noisy window is not written as a verifier step (used by the
+    periodic re-check so the timeline is not flooded).
+    """
     incident.status = "verifying"
     playbooks = load_playbooks()
     pb = playbooks.get(incident.playbook)
@@ -100,7 +106,21 @@ async def verify_incident(db: Session, incident: Incident) -> None:
     observation = (
         f"metric {metric} in last {minutes}m is {current} (threshold {threshold})"
     )
-    run_verifier(db, incident, resolved, observation)
+    if resolved or record_pending:
+        run_verifier(db, incident, resolved, observation)
+    return resolved
+
+
+async def reverify_pending(db: Session) -> list[Incident]:
+    """Re-check every incident still in ``verifying``; resolve the quiet ones."""
+    resolved: list[Incident] = []
+    for incident in db.scalars(select(Incident).where(Incident.status == "verifying")).all():
+        if await verify_incident(db, incident, record_pending=False):
+            resolved.append(incident)
+    return resolved
+
+
+REVERIFY_SECONDS = 15.0
 
 
 async def process_job(db: Session, job: AgentJob) -> None:
@@ -125,21 +145,27 @@ async def process_job(db: Session, job: AgentJob) -> None:
 def run_forever(interval: float = 2.0) -> None:
     from time import sleep
 
-    from warden.config import apply_sandbox_guard
-    from warden.db.session import create_schema, get_sessionmaker
+    from flatline.config import apply_sandbox_guard
+    from flatline.db.session import create_schema, get_sessionmaker
 
     apply_sandbox_guard()
     create_schema()
     SessionLocal = get_sessionmaker()
     log.info("agents worker polling every %ss", interval)
+    last_reverify = 0.0
     while True:
         db = SessionLocal()
         try:
+            import asyncio
+            from time import monotonic
+
             job = db.scalar(select(AgentJob).where(AgentJob.status == "queued").order_by(AgentJob.created_at.asc()))
             if job:
-                import asyncio
-
                 asyncio.run(process_job(db, job))
+            if monotonic() - last_reverify >= REVERIFY_SECONDS:
+                last_reverify = monotonic()
+                for inc in asyncio.run(reverify_pending(db)):
+                    log.info("incident %s resolved by verifier", inc.id)
             db.commit()
         except Exception:
             db.rollback()

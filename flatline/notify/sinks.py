@@ -8,9 +8,9 @@ import urllib.error
 import urllib.request
 from typing import Any
 
-from warden.config import settings
+from flatline.config import settings
 
-log = logging.getLogger("warden.notify")
+log = logging.getLogger("flatline.notify")
 
 
 def send_alert(message: str, details: dict[str, Any] | None = None) -> dict[str, Any]:

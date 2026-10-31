@@ -10,12 +10,12 @@ from typing import Any
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
-from warden.agents.schemas import DiagnosisOutput, RemediatorOutput, TriageOutput, VerifierOutput
-from warden.config import settings
-from warden.db.base import utcnow
-from warden.db.models import AgentStep, Incident, audit
-from warden.ingest.sse import HUB
-from warden.llm import mock_llm
+from flatline.agents.schemas import DiagnosisOutput, RemediatorOutput, TriageOutput, VerifierOutput
+from flatline.config import settings
+from flatline.db.base import utcnow
+from flatline.db.models import AgentStep, Incident, audit
+from flatline.ingest.sse import HUB
+from flatline.llm import mock_llm
 
 PROMPTS = Path(__file__).resolve().parent / "prompts"
 
@@ -56,7 +56,7 @@ def _live_or_mock(node: str, model_kind: str, fallback: Any) -> Any:
     cfg = settings()
     if cfg.is_mock_llm:
         return fallback
-    from warden.llm.models import live_complete, resolve_model
+    from flatline.llm.models import live_complete, resolve_model
 
     raw = live_complete(resolve_model(model_kind, cfg), _prompt(node) + "\n\n" + json.dumps(fallback))
     return raw

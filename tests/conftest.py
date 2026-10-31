@@ -5,7 +5,8 @@ from __future__ import annotations
 import os
 
 import pytest
-from warden.config import reset_settings
+
+from flatline.config import reset_settings
 
 SAFE_ENV = {
     "PAYPAL_ENVIRONMENT": "MOCK",

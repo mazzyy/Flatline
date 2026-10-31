@@ -1,6 +1,6 @@
 # Playbooks
 
-Thresholds live in `warden/playbooks/*.yaml`.
+Thresholds live in `flatline/playbooks/*.yaml`.
 
 ## Checkout failure spike
 

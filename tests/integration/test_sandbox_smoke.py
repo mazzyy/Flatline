@@ -13,8 +13,8 @@ def test_sandbox_token_and_host() -> None:
     if not os.environ.get("PAYPAL_CLIENT_ID") or not os.environ.get("PAYPAL_CLIENT_SECRET"):
         pytest.skip("no sandbox keys")
     os.environ["PAYPAL_ENVIRONMENT"] = "SANDBOX"
-    from warden.config import Settings
-    from warden.paypal.token import TokenManager
+    from flatline.config import Settings
+    from flatline.paypal.token import TokenManager
 
     cfg = Settings()
     assert "sandbox" in cfg.paypal_api_base

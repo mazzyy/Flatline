@@ -8,7 +8,7 @@ from typing import Any
 
 import httpx
 
-from warden.config import Settings, settings
+from flatline.config import Settings, settings
 
 VERIFY_PATH = "/v1/notifications/verify-webhook-signature"
 

@@ -57,7 +57,7 @@ export default function App() {
       es.addEventListener(name, () => {
         setLive(true);
         setLastEvent(name);
-        window.dispatchEvent(new CustomEvent("warden-sse", { detail: name }));
+        window.dispatchEvent(new CustomEvent("flatline-sse", { detail: name }));
       });
     }
     return () => es.close();

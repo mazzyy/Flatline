@@ -4,15 +4,15 @@ from __future__ import annotations
 
 import logging
 from collections import Counter
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from warden.db.base import utcnow
-from warden.db.models import AgentJob, Event, Incident, audit
-from warden.detector.rules import (
+from flatline.db.base import utcnow
+from flatline.db.models import AgentJob, Event, Incident, audit
+from flatline.detector.rules import (
     baseline,
     counts_by_window,
     event_matches_metric,
@@ -20,12 +20,19 @@ from warden.detector.rules import (
     scope_of,
     windows,
 )
-from warden.ingest.sse import HUB
-from warden.playbooks.loader import Playbook, load_playbooks
+from flatline.ingest.sse import HUB
+from flatline.playbooks.loader import Playbook, load_playbooks
 
-log = logging.getLogger("warden.detector")
+log = logging.getLogger("flatline.detector")
 
 DEDUPE_MINUTES = 30
+
+
+def _aware(value: Any) -> datetime | None:
+    """SQLite returns naive datetimes for timezone columns; compare in UTC."""
+    if not isinstance(value, datetime):
+        return None
+    return value.replace(tzinfo=UTC) if value.tzinfo is None else value
 
 
 def health_snapshot(db: Session) -> dict[str, Any]:
@@ -120,8 +127,10 @@ def scan_once(db: Session, playbooks: dict[str, Playbook] | None = None) -> list
                 base=base,
                 window_start=window_start,
                 window_end=window_end,
+                events=events,
             )
-            created.append(incident)
+            if incident is not None:
+                created.append(incident)
     return created
 
 
@@ -134,26 +143,43 @@ def _upsert_incident(
     base: float,
     window_start: Any,
     window_end: Any,
-) -> Incident:
+    events: list[Event] | None = None,
+) -> Incident | None:
     cutoff = utcnow() - timedelta(minutes=DEDUPE_MINUTES)
     existing = db.scalar(
-        select(Incident).where(
+        select(Incident)
+        .where(
             Incident.playbook == playbook.name,
             Incident.scope_key == playbook.scope_key,
             Incident.scope_value == scope_value,
             Incident.created_at >= cutoff,
-            Incident.status.notin_(("resolved",)),
         )
+        .order_by(Incident.created_at.desc())
     )
     rar = _revenue_at_risk(playbook, current)
     if existing:
+        if existing.status == "resolved":
+            # The breach window still contains the events that caused the
+            # resolved incident. Only reopen when the metric fires again
+            # *after* the fix was verified; otherwise the breach is stale.
+            since = _aware(existing.resolved_at)
+            fresh = [
+                e
+                for e in (events or [])
+                if event_matches_metric(e, playbook.metric)
+                and (scope_value is None or scope_of(e, playbook.scope_key) == scope_value)
+                and (since is None or (_aware(e.occurred_at) or since) > since)
+            ]
+            if len(fresh) < playbook.min_count:
+                return None
+            existing.status = "reopened"
+            existing.resolved_at = None
+            db.add(AgentJob(incident_id=existing.id, status="queued"))
         existing.observed_value = current
         existing.baseline_value = base
         existing.window_start = window_start
         existing.window_end = window_end
         existing.revenue_at_risk_per_hour = rar
-        if existing.status == "resolved":
-            existing.status = "reopened"
         audit(
             db,
             actor="detector",
@@ -199,8 +225,8 @@ def _upsert_incident(
 def run_forever(interval: float = 30.0) -> None:
     from time import sleep
 
-    from warden.config import apply_sandbox_guard
-    from warden.db.session import create_schema, get_sessionmaker
+    from flatline.config import apply_sandbox_guard
+    from flatline.db.session import create_schema, get_sessionmaker
 
     apply_sandbox_guard()
     create_schema()

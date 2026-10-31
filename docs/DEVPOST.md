@@ -2,7 +2,7 @@
 
 ## Inspiration
 
-The original Warden project put SRE agents on a Kubernetes estate and refused to give them write credentials. Payments have the same shape of problem: a checkout 500, a refund wave, a broken plan, and nobody is on call for revenue.
+The original Flatline project put SRE agents on a Kubernetes estate and refused to give them write credentials. Payments have the same shape of problem: a checkout 500, a refund wave, a broken plan, and nobody is on call for revenue.
 
 ## What it does
 

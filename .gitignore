@@ -22,7 +22,7 @@ dashboard/node_modules/
 dashboard/dist/
 
 # Runtime
-.warden-state/
+.flatline-state/
 *.db
 *.sqlite
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from warden.config import Settings, settings
+from flatline.config import Settings, settings
 
 
 def resolve_model(kind: str, cfg: Settings | None = None) -> str:

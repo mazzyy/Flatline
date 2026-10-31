@@ -1,6 +1,6 @@
 """Sequential agent workflow: Triage → Diagnostician → Remediator.
 
-Orchestration is plain Python (same reason as original Warden: inspectable
+Orchestration is plain Python (same reason as original Flatline: inspectable
 handoffs). Live nodes can use ADK + LiteLLM; mock mode never imports them.
 This module must not import the executor or any write-side PayPal client.
 """
@@ -12,11 +12,11 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from warden.agents import tools
-from warden.agents.nodes import run_diagnostician, run_remediator, run_triage
-from warden.agents.schemas import DiagnosisOutput, RemediatorOutput, TriageOutput
-from warden.db.models import Event, Incident
-from warden.paypal.factory import build_read_gateway
+from flatline.agents import tools
+from flatline.agents.nodes import run_diagnostician, run_remediator, run_triage
+from flatline.agents.schemas import DiagnosisOutput, RemediatorOutput, TriageOutput
+from flatline.db.models import Event, Incident
+from flatline.paypal.factory import build_read_gateway
 
 
 class WorkflowResult:

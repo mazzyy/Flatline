@@ -2,20 +2,37 @@
 
 Unspecified choices and any difference from SPEC.md. Newest first.
 
+## D-013 — Verification is re-checked; resolved incidents are not re-created
+
+Found during the pre-video run on a clean Docker stack. `verify_incident`
+ran exactly once, right after approval, when the injected failures were
+still inside the verify window, so incidents stayed `verifying` forever.
+The agents worker now re-checks every `verifying` incident every 15 s
+(`reverify_pending`) and only writes a verifier step when the window is
+quiet, to keep the timeline short. Second half: the detector's dedupe
+excluded resolved incidents, so the same stale events would have spawned a
+duplicate incident on the next 30 s scan. Dedupe now matches the latest
+incident for the scope regardless of status and reopens a resolved one
+(queuing agents again) only if `min_count` matching events arrived after
+`resolved_at`. Covered by `test_detector.py`.
+
 ## D-012 — Product name is Flatline
 
 The owner asked for the project to be called **Flatline** (matching the
-GitHub remote). All user-facing names changed: README, dashboard brand and
-title, FastAPI title, prompts, Devpost/demo docs, `pyproject` and npm package
-names, Render service names, and the shop's env var (`WARDEN_API_URL` →
-`FLATLINE_API_URL`). The Python package stays `warden/` and the Postgres
-user/db stay `warden`: they are internal, and renaming them would churn every
-import and invalidate existing database volumes for no user-visible gain.
+GitHub remote), then asked for the old name to be removed everywhere. The
+Python package was renamed `warden/` → `flatline/` (all imports, loggers,
+Dockerfile, Compose/Render commands, CI, Makefile, alembic), the shop env var
+became `FLATLINE_API_URL`, the Postgres user/password/db became `flatline`
+(existing volumes must be recreated: `docker compose down -v && make up`),
+and dashboard storage keys/events were renamed. `SPEC.md`,
+`AGENT_PROMPT.md` and `launch_cursor_agent.py` are the original brief and
+were left as written; "original Flatline" in D-002 refers to the earlier
+Kubernetes project this design was reused from.
 
 ## D-011 — This repo is the payments product only
 
 The working tree used to be the original Kubernetes SRE project with
-payments nested in `warden-pay/`. That previous
+payments nested in a subfolder. That previous
 product is gone from this folder. The PayPal hackathon app is now the
 repository root so `cp .env.example .env && make up` matches SPEC.md.
 
@@ -33,7 +50,7 @@ ignores anything that is not `http(s)://`.
 
 ## D-000 — Payments app is the repository root
 
-SPEC.md originally said to nest the build in `warden-pay/` if this folder
+SPEC.md originally said to nest the build in a subfolder if this folder
 already held the Kubernetes SRE project. The owner later asked to drop that
 previous product and keep only the PayPal hackathon work. Layout is now the
 SPEC.md Section 6 tree at the repo root.
@@ -44,7 +61,7 @@ Only `SPEC.md`, `spec.jpeg`, and `launch_cursor_agent.py` were present at
 the start. `AGENT_PROMPT.md` was written from the owner's launch
 instructions.
 
-## D-002 — Reuse from original Warden
+## D-002 — Reuse from original Flatline
 
 Read-only reuse of ideas and patterns, not files copied wholesale:
 
@@ -52,7 +69,7 @@ Read-only reuse of ideas and patterns, not files copied wholesale:
   layer (plain code) is the gate.
 - Four-node pipeline: Triage → Diagnostician → Remediator → Verifier, with
   orchestration as sequential Python rather than an ADK multi-agent tree
-  (same reason as original Warden: inspectable handoffs).
+  (same reason as original Flatline: inspectable handoffs).
 - `pydantic-settings` config object, ruff + pytest layout, MIT license
   wording.
 - Dashboard visual language (Archivo / IBM Plex, gold accent, light/dark,
@@ -73,7 +90,7 @@ orders. Recorded so we do not claim otherwise.
 
 ## D-007 — Sequential Python workflow, ADK on the live path only
 
-Same choice as original Warden: four nodes run in plain async Python so
+Same choice as original Flatline: four nodes run in plain async Python so
 handoffs are inspectable. `LLM_MODE=mock` never imports `google-adk` or
 `litellm`. `LLM_MODE=live` calls LiteLLM (`google.adk.models.lite_llm.LiteLlm`
 is available; we call `litellm.completion` directly to keep node I/O as

@@ -9,8 +9,8 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from warden.db.models import Event, ShopConfigVersion
-from warden.paypal.gateway import ReadOnlyGateway
+from flatline.db.models import Event, ShopConfigVersion
+from flatline.paypal.gateway import ReadOnlyGateway
 
 
 def events_by_group(db: Session, incident_id: UUID | None = None, playbook: str | None = None) -> dict[str, Any]:

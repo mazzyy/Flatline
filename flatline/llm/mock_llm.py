@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from warden.agents.schemas import (
+from flatline.agents.schemas import (
     DiagnosisOutput,
     EvidenceClaim,
     ProposalDraft,

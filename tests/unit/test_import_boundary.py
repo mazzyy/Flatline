@@ -5,11 +5,11 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-AGENTS = Path(__file__).resolve().parents[2] / "warden" / "agents"
+AGENTS = Path(__file__).resolve().parents[2] / "flatline" / "agents"
 
 FORBIDDEN_IMPORTS = {
-    "warden.paypal.sandbox_gateway",
-    "warden.policy.executor",
+    "flatline.paypal.sandbox_gateway",
+    "flatline.policy.executor",
 }
 FORBIDDEN_NAMES = {
     "SandboxGateway",
@@ -64,7 +64,7 @@ def test_agents_package_does_not_import_write_surface() -> None:
 
 
 def test_mcp_pool_keeps_read_and_write_tool_sets_disjoint() -> None:
-    from warden.paypal.mcp_pool import READ_TOOLS, WRITE_TOOLS
+    from flatline.paypal.mcp_pool import READ_TOOLS, WRITE_TOOLS
 
     assert not set(READ_TOOLS) & set(WRITE_TOOLS)
     # Official @paypal/mcp names, not the dotted SPEC draft names.
