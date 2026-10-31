@@ -1,0 +1,28 @@
+:root {
+  --ground: #f6f1e8;
+  --ink: #1c1612;
+  --muted: #6b5d50;
+  --accent: #8a6118;
+  --surface: #fffdf8;
+  --line: #e4d8c4;
+  --risk: #a6382d;
+  font-family: "Iowan Old Style", "Palatino Linotype", Palatino, serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--ground); color: var(--ink); }
+header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; border-bottom: 1px solid var(--line); background: var(--surface); }
+.brand { font-weight: 700; letter-spacing: .02em; color: inherit; text-decoration: none; font-size: 1.25rem; }
+nav a { margin-left: 1rem; color: var(--muted); }
+main { max-width: 960px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 1.1rem 1.2rem; }
+.card h2 { margin: 0 0 .4rem; font-size: 1.2rem; }
+.price { color: var(--accent); font-weight: 700; }
+button, .btn { appearance: none; border: 0; background: var(--ink); color: var(--ground); padding: .7rem 1rem; border-radius: 8px; cursor: pointer; font: inherit; }
+button.secondary { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+.banner { background: #f8dfda; color: var(--risk); padding: .7rem 1.25rem; text-align: center; }
+.banner[hidden] { display: none; }
+.muted { color: var(--muted); }
+paypal-button { display: block; width: 100%; max-width: 360px; --paypal-button-border-radius: 8px; }
+#mock-pay { width: 100%; max-width: 360px; }
+.err { color: var(--risk); margin-top: .75rem; }

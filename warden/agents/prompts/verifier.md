@@ -1,0 +1,1 @@
+You are the Verifier. The metric check is already decided deterministically. Write a short observation and next_step that match the boolean resolved flag. Return JSON matching VerifierOutput. Do not change resolved.

@@ -1,0 +1,96 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: warden
+      POSTGRES_PASSWORD: warden
+      POSTGRES_DB: warden
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U warden"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  api:
+    build:
+      context: .
+    env_file: .env
+    environment:
+      PAYPAL_ENVIRONMENT: MOCK
+      LLM_MODE: mock
+      PYTHONPATH: /app
+      DATABASE_URL: postgresql+psycopg://warden:warden@postgres:5432/warden
+      APP_BASE_URL: http://localhost:8000
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:8000/healthz || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 20s
+
+  detector:
+    build:
+      context: .
+    env_file: .env
+    environment:
+      PAYPAL_ENVIRONMENT: MOCK
+      LLM_MODE: mock
+      PYTHONPATH: /app
+      DATABASE_URL: postgresql+psycopg://warden:warden@postgres:5432/warden
+    command: ["python", "-m", "warden.detector.worker"]
+    depends_on:
+      api:
+        condition: service_healthy
+
+  agents:
+    build:
+      context: .
+    env_file: .env
+    environment:
+      PAYPAL_ENVIRONMENT: MOCK
+      LLM_MODE: mock
+      PYTHONPATH: /app
+      DATABASE_URL: postgresql+psycopg://warden:warden@postgres:5432/warden
+    command: ["python", "-m", "warden.loop"]
+    depends_on:
+      api:
+        condition: service_healthy
+
+  demo-shop:
+    build: ./demo-shop
+    env_file: .env
+    environment:
+      PAYPAL_ENVIRONMENT: MOCK
+      WARDEN_API_URL: http://api:8000
+      SHOP_PORT: "3000"
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+
+  seed:
+    build:
+      context: .
+    env_file: .env
+    environment:
+      PAYPAL_ENVIRONMENT: MOCK
+      LLM_MODE: mock
+      PYTHONPATH: /app
+      WARDEN_API_URL: http://api:8000
+      DATABASE_URL: postgresql+psycopg://warden:warden@postgres:5432/warden
+    command: ["python", "scripts/seed.py", "--minutes", "10"]
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: on-failure
+
+volumes:
+  pgdata:

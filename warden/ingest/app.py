@@ -1,0 +1,475 @@
+"""FastAPI ingest, dashboard API, and SSE."""
+
+from __future__ import annotations
+
+import logging
+from datetime import UTC, datetime
+from decimal import Decimal
+from pathlib import Path
+from typing import Any
+from uuid import UUID
+
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
+
+from warden.config import apply_sandbox_guard, settings
+from warden.db.base import utcnow
+from warden.db.models import (
+    DEFAULT_SHOP_CONFIG,
+    AuditLog,
+    Event,
+    Incident,
+    Proposal,
+    ShopConfigVersion,
+    audit,
+)
+from warden.db.session import create_schema, ensure_default_config, get_sessionmaker, session_dep
+from warden.ingest.auth import require_inject_token, require_passcode
+from warden.ingest.serializers import (
+    audit_out,
+    config_out,
+    event_out,
+    incident_out,
+    proposal_out,
+)
+from warden.ingest.sse import HUB
+from warden.paypal.webhooks import normalize_event, verify_signature
+
+log = logging.getLogger("warden.ingest")
+
+SORTABLE_EVENTS = {
+    "occurred_at": Event.occurred_at,
+    "event_type": Event.event_type,
+    "amount": Event.amount,
+    "source": Event.source,
+    "created_at": Event.created_at,
+}
+
+
+def create_app() -> FastAPI:
+    apply_sandbox_guard()
+    app = FastAPI(title="Warden for Payments", version="0.1.0")
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    @app.on_event("startup")
+    def _startup() -> None:
+        create_schema()
+        db = get_sessionmaker()()
+        try:
+            ensure_default_config(db)
+        finally:
+            db.close()
+
+    @app.get("/healthz")
+    def healthz() -> dict[str, Any]:
+        cfg = settings()
+        return {
+            "ok": True,
+            "paypal_environment": cfg.paypal_environment,
+            "llm_mode": cfg.llm_mode,
+        }
+
+    @app.post("/webhooks/paypal")
+    async def paypal_webhook(
+        request: Request,
+        db: Session = Depends(session_dep),
+    ) -> dict[str, Any]:
+        if _chaos_flag(db, "webhook_broken"):
+            raise HTTPException(status_code=500, detail="chaos: webhook endpoint broken")
+        raw = await request.json()
+        headers = {k: v for k, v in request.headers.items()}
+        cfg = settings()
+        verified = False
+        if not cfg.is_mock_paypal:
+            try:
+                from warden.paypal.token import TokenManager
+
+                token = await TokenManager(cfg).get_token()
+                verified = await verify_signature(headers, raw, cfg=cfg, access_token=token)
+            except Exception as exc:
+                log.warning("webhook verify failed: %s", exc)
+                raise HTTPException(status_code=400, detail="webhook verification failed") from exc
+        row = _store_normalized(db, normalize_event(raw, verified=verified), emit=True)
+        return {"id": str(row.id), "duplicate": getattr(row, "_duplicate", False)}
+
+    @app.post("/api/telemetry")
+    def telemetry(body: dict[str, Any], db: Session = Depends(session_dep)) -> dict[str, Any]:
+        occurred = body.get("at") or body.get("occurred_at")
+        try:
+            occurred_at = (
+                datetime.fromisoformat(str(occurred).replace("Z", "+00:00"))
+                if occurred
+                else utcnow()
+            )
+        except ValueError:
+            occurred_at = utcnow()
+        if occurred_at.tzinfo is None:
+            occurred_at = occurred_at.replace(tzinfo=UTC)
+        ok = bool(body.get("ok", True))
+        event_type = str(body.get("type") or "checkout.capture")
+        error_code = body.get("error_code")
+        if not ok and not error_code:
+            error_code = "CAPTURE_FAILED"
+        row = Event(
+            source="shop_telemetry",
+            event_type=event_type,
+            occurred_at=occurred_at,
+            resource_id=body.get("order_id"),
+            amount=_decimal(body.get("amount")),
+            currency=body.get("currency"),
+            product_id=body.get("product_id"),
+            plan_id=body.get("plan_id"),
+            error_code=error_code,
+            payload=body,
+            synthetic=False,
+            verified=True,
+        )
+        db.add(row)
+        db.flush()
+        audit(db, actor="ingest", action="telemetry", details={"type": event_type, "ok": ok})
+        HUB.publish("event.ingested", event_out(row))
+        return {"id": str(row.id)}
+
+    @app.post("/api/synthetic/events", dependencies=[Depends(require_inject_token)])
+    def synthetic_events(body: dict[str, Any], db: Session = Depends(session_dep)) -> dict[str, Any]:
+        raw_items = body.get("events")
+        items: list[Any] = raw_items if isinstance(raw_items, list) else [body]
+        stored: list[str] = []
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            norm = normalize_event(item, synthetic=True, verified=False)
+            if item.get("source"):
+                norm["source"] = str(item["source"])
+            if item.get("event_type"):
+                norm["event_type"] = str(item["event_type"])
+            if item.get("product_id"):
+                norm["product_id"] = item["product_id"]
+            if item.get("plan_id"):
+                norm["plan_id"] = item["plan_id"]
+            if item.get("error_code"):
+                norm["error_code"] = item["error_code"]
+            if item.get("amount") is not None:
+                norm["amount"] = _decimal(item["amount"])
+            row = _store_normalized(db, norm, emit=True)
+            stored.append(str(row.id))
+        incidents = _run_scan(db)
+        return {"ids": stored, "incidents": incidents}
+
+    @app.get("/api/shop/config")
+    def shop_config(db: Session = Depends(session_dep)) -> dict[str, Any]:
+        row = _active_config(db)
+        return {"version": row.version, **dict(row.config or DEFAULT_SHOP_CONFIG)}
+
+    @app.get("/api/incidents")
+    def list_incidents(
+        db: Session = Depends(session_dep),
+        status: str | None = None,
+        playbook: str | None = None,
+    ) -> dict[str, Any]:
+        stmt = select(Incident).order_by(Incident.created_at.desc())
+        if status:
+            stmt = stmt.where(Incident.status == status)
+        if playbook:
+            stmt = stmt.where(Incident.playbook == playbook)
+        rows = list(db.scalars(stmt).all())
+        return {"items": [incident_out(r) for r in rows]}
+
+    @app.get("/api/incidents/{incident_id}")
+    def get_incident(incident_id: UUID, db: Session = Depends(session_dep)) -> dict[str, Any]:
+        row = db.get(Incident, incident_id)
+        if not row:
+            raise HTTPException(status_code=404, detail="incident not found")
+        db.refresh(row, attribute_names=["steps", "proposals"])
+        for proposal in row.proposals:
+            db.refresh(proposal, attribute_names=["executions"])
+        return incident_out(row, extra=True)
+
+    @app.post("/api/proposals/{proposal_id}/approve", dependencies=[Depends(require_passcode)])
+    def approve_proposal(proposal_id: UUID, db: Session = Depends(session_dep)) -> dict[str, Any]:
+        return _decide_proposal(db, proposal_id, approved=True)
+
+    @app.post("/api/proposals/{proposal_id}/reject", dependencies=[Depends(require_passcode)])
+    def reject_proposal(proposal_id: UUID, db: Session = Depends(session_dep)) -> dict[str, Any]:
+        return _decide_proposal(db, proposal_id, approved=False)
+
+    @app.get("/api/events")
+    def list_events(
+        db: Session = Depends(session_dep),
+        start_row: int = Query(default=0, ge=0),
+        end_row: int = Query(default=100, ge=0),
+        sort_field: str = "occurred_at",
+        sort_dir: str = "desc",
+        filter_event_type: str | None = None,
+        filter_source: str | None = None,
+        quick_filter: str | None = None,
+        synthetic: bool | None = None,
+    ) -> dict[str, Any]:
+        stmt = select(Event)
+        if filter_event_type:
+            stmt = stmt.where(Event.event_type == filter_event_type)
+        if filter_source:
+            stmt = stmt.where(Event.source == filter_source)
+        if synthetic is not None:
+            stmt = stmt.where(Event.synthetic.is_(synthetic))
+        if quick_filter:
+            like = f"%{quick_filter}%"
+            stmt = stmt.where(
+                Event.event_type.ilike(like)
+                | Event.resource_id.ilike(like)
+                | Event.product_id.ilike(like)
+                | Event.buyer_ref.ilike(like)
+                | Event.error_code.ilike(like)
+            )
+        col = SORTABLE_EVENTS.get(sort_field, Event.occurred_at)
+        stmt = stmt.order_by(col.desc() if sort_dir.lower() == "desc" else col.asc())
+        total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
+        rows = list(db.scalars(stmt.offset(start_row).limit(max(0, end_row - start_row))).all())
+        return {"rows": [event_out(r) for r in rows], "lastRow": total}
+
+    @app.get("/api/metrics/health")
+    def metrics_health(db: Session = Depends(session_dep)) -> dict[str, Any]:
+        from warden.detector.worker import health_snapshot
+
+        return health_snapshot(db)
+
+    @app.get("/api/audit")
+    def list_audit(
+        db: Session = Depends(session_dep),
+        incident_id: UUID | None = None,
+        actor: str | None = None,
+        start_row: int = 0,
+        end_row: int = 200,
+    ) -> dict[str, Any]:
+        stmt = select(AuditLog).order_by(AuditLog.created_at.desc())
+        if incident_id:
+            stmt = stmt.where(AuditLog.incident_id == incident_id)
+        if actor:
+            stmt = stmt.where(AuditLog.actor == actor)
+        total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
+        rows = list(db.scalars(stmt.offset(start_row).limit(max(0, end_row - start_row))).all())
+        return {"rows": [audit_out(r) for r in rows], "lastRow": total}
+
+    @app.post("/api/chaos", dependencies=[Depends(require_passcode), Depends(require_inject_token)])
+    def set_chaos(body: dict[str, Any], db: Session = Depends(session_dep)) -> dict[str, Any]:
+        current = _active_config(db)
+        cfg = dict(current.config or DEFAULT_SHOP_CONFIG)
+        chaos = dict(cfg.get("chaos") or {})
+        injected: list[str] = []
+        if body.get("reset"):
+            chaos = {}
+            cfg["banner"] = ""
+            cfg["paused_products"] = []
+            cfg["plan_signups_paused"] = False
+            cfg["currency"] = "USD"
+        else:
+            incoming = dict(body.get("chaos") or body)
+            incoming.pop("note", None)
+            incoming.pop("reset", None)
+            chaos.update(incoming)
+            if incoming.get("bad_currency"):
+                cfg["currency"] = "EUR"
+            injected = _inject_from_chaos(db, incoming)
+        cfg["chaos"] = chaos
+        row = _new_config(db, cfg, author="human", note=str(body.get("note") or "chaos update"))
+        incidents = _run_scan(db)
+        HUB.publish("incident.updated", {"reason": "chaos", "version": row.version})
+        out = config_out(row)
+        out["injected"] = injected
+        out["incidents"] = incidents
+        return out
+
+    @app.get("/api/stream")
+    async def stream() -> StreamingResponse:
+        return StreamingResponse(HUB.stream(), media_type="text/event-stream")
+
+    @app.get("/api/policy/catalog")
+    def policy_catalog() -> dict[str, Any]:
+        from warden.policy.catalog import catalog_public
+
+        return {"items": catalog_public()}
+
+    dashboard_dist = Path(__file__).resolve().parents[2] / "dashboard" / "dist"
+    if dashboard_dist.is_dir():
+        app.mount("/assets", StaticFiles(directory=dashboard_dist / "assets"), name="assets")
+
+        @app.get("/")
+        def _index() -> FileResponse:
+            return FileResponse(dashboard_dist / "index.html")
+
+    return app
+
+
+def _decimal(value: Any) -> Decimal | None:
+    if value is None or value == "":
+        return None
+    try:
+        return Decimal(str(value))
+    except Exception:
+        return None
+
+
+def _active_config(db: Session) -> ShopConfigVersion:
+    row = db.scalar(select(ShopConfigVersion).where(ShopConfigVersion.active.is_(True)))
+    if row:
+        return row
+    return ensure_default_config(db)
+
+
+def _new_config(db: Session, config: dict[str, Any], *, author: str, note: str) -> ShopConfigVersion:
+    current = db.scalar(
+        select(func.max(ShopConfigVersion.version))
+    ) or 0
+    for row in db.scalars(select(ShopConfigVersion).where(ShopConfigVersion.active.is_(True))):
+        row.active = False
+    nxt = ShopConfigVersion(version=int(current) + 1, config=config, author=author, active=True, note=note)
+    db.add(nxt)
+    db.flush()
+    return nxt
+
+
+def _store_normalized(db: Session, norm: dict[str, Any], *, emit: bool) -> Event:
+    paypal_id = norm.get("paypal_event_id")
+    if paypal_id:
+        existing = db.scalar(select(Event).where(Event.paypal_event_id == paypal_id))
+        if existing:
+            existing._duplicate = True  # type: ignore[attr-defined]
+            return existing
+    row = Event(
+        source=str(norm.get("source") or "paypal_webhook"),
+        event_type=str(norm.get("event_type") or "UNKNOWN"),
+        occurred_at=norm.get("occurred_at") or utcnow(),
+        resource_id=norm.get("resource_id"),
+        amount=norm.get("amount"),
+        currency=norm.get("currency"),
+        product_id=norm.get("product_id"),
+        plan_id=norm.get("plan_id"),
+        subscription_id=norm.get("subscription_id"),
+        buyer_ref=norm.get("buyer_ref"),
+        error_code=norm.get("error_code"),
+        payload=norm.get("payload") or {},
+        synthetic=bool(norm.get("synthetic")),
+        verified=bool(norm.get("verified")),
+        paypal_event_id=paypal_id,
+    )
+    db.add(row)
+    db.flush()
+    audit(
+        db,
+        actor="ingest",
+        action="event.ingested",
+        details={"event_type": row.event_type, "synthetic": row.synthetic},
+    )
+    if emit:
+        HUB.publish("event.ingested", event_out(row))
+    row._duplicate = False  # type: ignore[attr-defined]
+    return row
+
+
+def _decide_proposal(db: Session, proposal_id: UUID, *, approved: bool) -> dict[str, Any]:
+    row = db.get(Proposal, proposal_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="proposal not found")
+    if row.status not in {"pending"}:
+        raise HTTPException(status_code=409, detail=f"proposal is {row.status}")
+    row.status = "approved" if approved else "rejected"
+    row.decided_by = "human"
+    row.decided_at = utcnow()
+    audit(
+        db,
+        actor="human",
+        action="proposal.approved" if approved else "proposal.rejected",
+        incident_id=row.incident_id,
+        proposal_id=row.id,
+    )
+    HUB.publish("proposal.updated", proposal_out(row))
+    if approved:
+        try:
+            from warden.policy.executor import execute_proposal
+
+            execute_proposal(db, row)
+        except ImportError:
+            pass
+        except Exception as exc:
+            log.warning("executor after approve failed: %s", exc)
+        try:
+            from warden.loop import verify_incident
+
+            incident = db.get(Incident, row.incident_id)
+            if incident is not None:
+                pending = list(
+                    db.scalars(
+                        select(Proposal).where(
+                            Proposal.incident_id == incident.id, Proposal.status == "pending"
+                        )
+                    ).all()
+                )
+                if not pending:
+                    import asyncio
+
+                    asyncio.run(verify_incident(db, incident))
+        except Exception as exc:
+            log.warning("verify after approve failed: %s", exc)
+    return proposal_out(row)
+
+
+def _chaos_flag(db: Session, key: str) -> bool:
+    cfg = _active_config(db).config or {}
+    chaos = cfg.get("chaos") or {}
+    return bool(chaos.get(key))
+
+
+def _ingest_payloads(db: Session, items: list[dict[str, Any]]) -> list[str]:
+    stored: list[str] = []
+    for item in items:
+        norm = normalize_event(item, synthetic=True, verified=False)
+        if item.get("event_type"):
+            norm["event_type"] = str(item["event_type"])
+        if item.get("product_id"):
+            norm["product_id"] = item["product_id"]
+        if item.get("plan_id"):
+            norm["plan_id"] = item["plan_id"]
+        if item.get("error_code"):
+            norm["error_code"] = item["error_code"]
+        if item.get("amount") is not None:
+            norm["amount"] = _decimal(item["amount"])
+        row = _store_normalized(db, norm, emit=True)
+        stored.append(str(row.id))
+    return stored
+
+
+def _inject_from_chaos(db: Session, chaos: dict[str, Any]) -> list[str]:
+    from warden.ingest.faults import checkout_failures, refund_wave, renewal_failures
+
+    kind = str(chaos.get("inject") or "")
+    if chaos.get("bad_currency"):
+        return _ingest_payloads(db, checkout_failures("CURRENCY_MISMATCH"))
+    if chaos.get("mock_response") == "INSTRUMENT_DECLINED" or kind == "checkout_declines":
+        return _ingest_payloads(db, checkout_failures("INSTRUMENT_DECLINED"))
+    if chaos.get("mock_response") == "INTERNAL_SERVER_ERROR" or kind == "checkout_errors":
+        return _ingest_payloads(db, checkout_failures("INTERNAL_SERVER_ERROR"))
+    if kind == "refund_wave":
+        return _ingest_payloads(db, refund_wave())
+    if kind in {"renewal_failures", "renewals"}:
+        return _ingest_payloads(db, renewal_failures())
+    return []
+
+
+def _run_scan(db: Session) -> list[str]:
+    from warden.detector.worker import scan_once
+
+    rows = scan_once(db)
+    db.flush()
+    return [str(r.id) for r in rows]
+
+
+app = create_app()

@@ -1,0 +1,111 @@
+databases:
+  - name: warden-pay-db
+    plan: free
+    databaseName: warden
+    user: warden
+
+services:
+  - type: web
+    name: warden-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /healthz
+    envVars:
+      - key: PAYPAL_ENVIRONMENT
+        value: SANDBOX
+      - key: LLM_MODE
+        value: live
+      - key: DATABASE_URL
+        fromDatabase:
+          name: warden-pay-db
+          property: connectionString
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
+      - key: PAYPAL_WEBHOOK_ID
+        sync: false
+      - key: PAYPAL_SANDBOX_PLAN_ID
+        sync: false
+      - key: PAYPAL_SANDBOX_PRODUCT_ID
+        sync: false
+      - key: AZURE_API_KEY
+        sync: false
+      - key: AZURE_API_BASE
+        sync: false
+      - key: AZURE_API_VERSION
+        value: 2024-08-01-preview
+      - key: MODEL_FAST
+        sync: false
+      - key: MODEL_REASONING
+        sync: false
+      - key: DASHBOARD_PASSCODE
+        sync: false
+      - key: INJECT_TOKEN
+        sync: false
+      - key: APP_BASE_URL
+        sync: false
+
+  - type: worker
+    name: warden-detector
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerCommand: python -m warden.detector.worker
+    envVars:
+      - key: PAYPAL_ENVIRONMENT
+        value: SANDBOX
+      - key: LLM_MODE
+        value: live
+      - key: DATABASE_URL
+        fromDatabase:
+          name: warden-pay-db
+          property: connectionString
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
+
+  - type: worker
+    name: warden-agents
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerCommand: python -m warden.loop
+    envVars:
+      - key: PAYPAL_ENVIRONMENT
+        value: SANDBOX
+      - key: LLM_MODE
+        value: live
+      - key: DATABASE_URL
+        fromDatabase:
+          name: warden-pay-db
+          property: connectionString
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
+      - key: AZURE_API_KEY
+        sync: false
+      - key: AZURE_API_BASE
+        sync: false
+      - key: MODEL_FAST
+        sync: false
+      - key: MODEL_REASONING
+        sync: false
+
+  - type: web
+    name: demo-shop
+    runtime: docker
+    dockerfilePath: ./demo-shop/Dockerfile
+    dockerContext: ./demo-shop
+    envVars:
+      - key: PAYPAL_ENVIRONMENT
+        value: SANDBOX
+      - key: WARDEN_API_URL
+        sync: false
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
+      - key: PAYPAL_SANDBOX_PLAN_ID
+        sync: false

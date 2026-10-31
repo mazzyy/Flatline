@@ -1,0 +1,8 @@
+[
+  {
+    "transaction_id": "TX-1",
+    "transaction_status": "S",
+    "product_id": "house-blend",
+    "transaction_amount": { "currency_code": "USD", "value": "18.00" }
+  }
+]

@@ -1,0 +1,15 @@
+name: webhook_gap
+enabled: false
+metric: missing_webhooks
+reconcile_lag_hours: 3
+min_count: 3
+multiplier: 1
+baseline_floor: 0
+window_minutes: 180
+scope_key: none
+evidence:
+  - missing_event_count
+  - endpoint_error_log
+allowed_actions:
+  - notify.alert
+  - events.replay

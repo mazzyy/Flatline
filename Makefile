@@ -1,53 +1,60 @@
-.PHONY: help install test lint fmt demo demo-live demo-oom probe check registry-sync
+.PHONY: help install up down test lint fmt demo-test sandbox-smoke secret-scan check
 
 help:
-	@echo "  make install    create .venv and install dependencies"
-	@echo "  make test       run the suite — no cloud, no key, no spend"
-	@echo "  make probe      print the policy matrix (agent x tool)"
-	@echo "  make demo       one incident end to end, offline and free"
-	@echo "  make demo-live  the same, against real Gemini (costs tokens)"
-	@echo "  make check      lint + test + probe assertion. run before every commit"
+	@echo "  make install         create .venv and install Python deps"
+	@echo "  make up              start the full stack in MOCK mode (docker compose)"
+	@echo "  make down            stop the stack"
+	@echo "  make test            unit + integration tests (no network, no keys)"
+	@echo "  make demo-test       e2e demo scenarios (in-process, mock)"
+	@echo "  make lint            ruff + mypy + dashboard tsc/eslint when present"
+	@echo "  make sandbox-smoke   optional live sandbox checks (skipped without keys)"
 
 install:
 	python3 -m venv .venv
 	./.venv/bin/pip install -U pip
 	./.venv/bin/pip install -r requirements-dev.txt
-	@echo "\nNow: cp .env.example .env  &&  make demo"
+	@echo "\nNow: cp .env.example .env  &&  make up"
+
+up:
+	@test -f .env || cp .env.example .env
+	docker compose up --build -d
+	@echo "waiting for API on :8000 …"
+	@i=0; until curl -sf http://127.0.0.1:8000/healthz >/dev/null; do \
+		i=$$((i+1)); \
+		if [ $$i -ge 40 ]; then echo "API did not become healthy"; exit 1; fi; \
+		sleep 2; \
+	done
+	@echo "API        http://localhost:8000"
+	@echo "Dashboard  http://localhost:8000/"
+	@echo "Demo shop  http://localhost:3000"
+
+down:
+	docker compose down
 
 test:
-	./.venv/bin/python -m pytest -q
+	PAYPAL_ENVIRONMENT=MOCK LLM_MODE=mock \
+		python -m pytest -q tests/unit tests/integration
 
 lint:
-	./.venv/bin/ruff check warden tests
+	ruff check warden tests scripts
+	mypy warden
+	@if [ -f dashboard/package.json ]; then \
+		(cd dashboard && npm run lint); \
+	fi
 
 fmt:
-	./.venv/bin/ruff check --fix warden tests
-	./.venv/bin/ruff format warden tests
+	ruff check --fix warden tests scripts
+	ruff format warden tests scripts
 
-probe:
-	./.venv/bin/python -m warden.probe --explain
+demo-test:
+	PAYPAL_ENVIRONMENT=MOCK LLM_MODE=mock \
+		python -m pytest -q tests/e2e/test_demo_scenarios.py
 
-demo:
-	./.venv/bin/python -m warden.agents.demo
+sandbox-smoke:
+	PAYPAL_ENVIRONMENT=SANDBOX \
+		python -m pytest -q tests/integration/test_sandbox_smoke.py
 
-demo-oom:
-	./.venv/bin/python -m warden.agents.demo --mode oom
+secret-scan:
+	python scripts/secret_scan.py
 
-demo-live:
-	./.venv/bin/python -m warden.agents.demo --live
-
-# The gate. `no agent can write to the cluster` is a build failure if it
-# stops being true, not a claim in a README.
-check: lint test
-	./.venv/bin/python -m warden.probe --assert-no-cluster-writes
-
-registry-sync:
-	./.venv/bin/python -c "import asyncio; from warden.control_plane.registry import load_all, sync_to_store; from warden.config import settings; asyncio.run(sync_to_store(load_all(settings().manifest_dir), settings().gcp_project))"
-
-models:
-	./.venv/bin/python -m warden.doctor --models
-
-dashboard:
-	@test -d warden/dashboard/web/dist || (cd warden/dashboard/web && npm install && npm run build)
-	./.venv/bin/python -m uvicorn warden.dashboard.api:app --port 8080 --reload
-
+check: lint test secret-scan

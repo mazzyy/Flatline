@@ -1,0 +1,8 @@
+{
+  "REF-ETHIOPIA-1": {
+    "id": "REF-ETHIOPIA-1",
+    "status": "COMPLETED",
+    "amount": { "currency_code": "USD", "value": "22.00" },
+    "custom_id": "ethiopia-yirgacheffe"
+  }
+}

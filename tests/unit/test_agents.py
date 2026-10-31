@@ -1,0 +1,53 @@
+"""Mock-LLM checkout diagnosis and evidence schema."""
+
+from __future__ import annotations
+
+import pytest
+from pydantic import ValidationError
+from warden.agents.schemas import DiagnosisOutput, EvidenceClaim
+from warden.llm.mock_llm import diagnose, remediate
+
+
+def test_evidence_required() -> None:
+    with pytest.raises(ValidationError):
+        DiagnosisOutput(root_cause="guess", confidence=0.9, evidence=[])
+
+
+def test_checkout_currency_diagnosis() -> None:
+    incident = {"playbook": "checkout_failure_spike", "id": "x"}
+    events = [{"id": "e1", "error_code": "CURRENCY_MISMATCH", "currency": "EUR", "resource_id": "ORD-1"}]
+    history = [{"version": 2, "active": True, "config": {"currency": "EUR", "chaos": {"bad_currency": True}}}]
+    out = diagnose(incident, events, history, {})
+    assert "config version" in out.root_cause.lower()
+    assert out.evidence
+    props = remediate(incident, out)
+    actions = [p.action for p in props.proposals]
+    assert "shop.config.rollback" in actions
+    assert "shop.banner.set" in actions
+
+
+def test_checkout_declines_no_rollback() -> None:
+    incident = {"playbook": "checkout_failure_spike", "id": "x"}
+    events = [
+        {"id": f"e{i}", "error_code": "INSTRUMENT_DECLINED", "buyer_ref": f"B{i}", "currency": "USD"}
+        for i in range(6)
+    ]
+    history = [{"version": 1, "active": True, "config": {"currency": "USD", "chaos": {}}}]
+    out = diagnose(incident, events, history, {})
+    assert "declin" in out.root_cause.lower()
+    actions = [p.action for p in remediate(incident, out).proposals]
+    assert "shop.config.rollback" not in actions
+
+
+def test_refund_wave_includes_bulk_temptation() -> None:
+    incident = {"playbook": "refund_wave", "scope_value": "ethiopia-yirgacheffe", "id": "x"}
+    out = diagnose(incident, [{"id": "r1"}], [], {})
+    assert "ethiopia" in out.root_cause
+    actions = [p.action for p in remediate(incident, out).proposals]
+    assert "shop.product.pause_sales" in actions
+    assert "refund.bulk" in actions
+
+
+def test_evidence_claim_rejects_empty() -> None:
+    with pytest.raises(ValidationError):
+        EvidenceClaim(claim="x", source="", ref="1")

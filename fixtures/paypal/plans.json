@@ -1,0 +1,13 @@
+{
+  "P-COFFEECLUB": {
+    "id": "P-COFFEECLUB",
+    "name": "Coffee Club",
+    "status": "ACTIVE",
+    "billing_cycles": [
+      {
+        "frequency": { "interval_unit": "MONTH", "interval_count": 1 },
+        "pricing_scheme": { "fixed_price": { "currency_code": "USD", "value": "14.00" } }
+      }
+    ]
+  }
+}

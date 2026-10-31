@@ -1,18 +1,44 @@
 [project]
-name = "flatline"
+name = "warden-pay"
 version = "0.1.0"
-description = "A governed fleet of autonomous SRE agents"
-requires-python = ">=3.11"
+description = "On-call SRE agent for a merchant's PayPal revenue"
+requires-python = ">=3.12"
+readme = "README.md"
+license = { text = "MIT" }
 
 [tool.ruff]
 line-length = 100
-target-version = "py311"
+target-version = "py312"
+src = ["warden", "tests", "scripts"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
-ignore = ["E501", "RUF001", "RUF002"]
+ignore = ["E501", "RUF001", "RUF002", "RUF012", "B008"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["B018"]
+"warden/db/migrations/**" = ["UP007", "UP035", "I001"]
+
+[tool.mypy]
+python_version = "3.12"
+mypy_path = "."
+packages = ["warden"]
+ignore_missing_imports = true
+warn_unused_ignores = false
+check_untyped_defs = true
+no_implicit_optional = true
+pretty = true
+show_error_codes = true
+exclude = ["dashboard", "demo-shop"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
-filterwarnings = ["ignore::DeprecationWarning"]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]
+markers = [
+    "e2e: end-to-end demo scenarios (make demo-test)",
+    "sandbox: live PayPal sandbox smoke (skipped without keys)",
+]

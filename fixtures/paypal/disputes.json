@@ -1,0 +1,8 @@
+{
+  "PP-D-1": {
+    "dispute_id": "PP-D-1",
+    "reason": "MERCHANDISE_OR_SERVICE_NOT_AS_DESCRIBED",
+    "status": "OPEN",
+    "dispute_amount": { "currency_code": "USD", "value": "22.00" }
+  }
+}

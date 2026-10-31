@@ -1,0 +1,15 @@
+{
+  "I-COFFEECLUB-1": {
+    "id": "I-COFFEECLUB-1",
+    "status": "ACTIVE",
+    "plan_id": "P-COFFEECLUB",
+    "subscriber": { "payer_id": "BUYER-CLUB-1" },
+    "billing_info": {
+      "outstanding_balance": { "currency_code": "USD", "value": "14.00" },
+      "last_failed_payment": {
+        "amount": { "currency_code": "USD", "value": "14.00" },
+        "time": "2026-10-31T16:00:00Z"
+      }
+    }
+  }
+}

@@ -8,28 +8,41 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      PAYPAL_ENVIRONMENT: MOCK
+      LLM_MODE: mock
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12"
           cache: pip
 
-      - run: pip install -r requirements-dev.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Python deps
+        run: pip install -r requirements-dev.txt
 
       - name: Lint
-        run: ruff check warden tests
+        run: |
+          ruff check warden tests scripts
+          mypy warden
 
-      # No cloud credentials, no API key, no cost. The governance layer is
-      # testable offline by design — that is the point of the fake estate.
+      - name: Secret scan
+        run: python scripts/secret_scan.py
+
       - name: Test
-        run: pytest -q
+        run: pytest -q tests/unit tests/integration
 
-      # The security gate. If a manifest edit ever grants an agent a
-      # cluster-mutating tool, this fails the build rather than shipping it.
-      - name: Assert no agent can write to the cluster
-        run: python -m warden.probe --assert-no-cluster-writes
+      - name: Demo scenarios
+        run: pytest -q tests/e2e/test_demo_scenarios.py
 
-      - name: Full incident, end to end
-        run: python -m warden.agents.demo
+      - name: Dashboard lint
+        if: hashFiles('dashboard/package.json') != ''
+        run: |
+          cd dashboard
+          npm ci
+          npm run lint

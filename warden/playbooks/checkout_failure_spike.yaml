@@ -1,0 +1,18 @@
+name: checkout_failure_spike
+metric: capture_failures
+window_minutes: 5
+multiplier: 3
+min_count: 5
+baseline_floor: 1
+scope_key: none
+evidence:
+  - error_code_breakdown
+  - distinct_buyers
+  - active_config_diff
+  - sample_orders
+allowed_actions:
+  - notify.alert
+  - report.create
+  - shop.banner.set
+  - shop.config.rollback
+average_order_value: 18.00

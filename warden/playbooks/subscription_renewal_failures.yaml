@@ -1,0 +1,18 @@
+name: subscription_renewal_failures
+metric: renewal_failures
+window_minutes: 60
+multiplier: 3
+min_count: 3
+baseline_floor: 0.5
+scope_key: plan_id
+evidence:
+  - subscription_details
+  - failures_per_subscriber
+  - plan_details
+allowed_actions:
+  - notify.alert
+  - report.create
+  - invoice.send_reminder
+  - subscription.capture_outstanding
+  - shop.plan.pause_signups
+plan_price: 14.00

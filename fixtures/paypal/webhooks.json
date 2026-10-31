@@ -1,0 +1,78 @@
+{
+  "PAYMENT.CAPTURE.COMPLETED": {
+    "id": "WH-CAPTURE-OK-1",
+    "event_type": "PAYMENT.CAPTURE.COMPLETED",
+    "create_time": "2026-10-31T16:00:00Z",
+    "resource": {
+      "id": "CAP-OK-1",
+      "status": "COMPLETED",
+      "amount": { "currency_code": "USD", "value": "18.00" },
+      "custom_id": "house-blend",
+      "supplementary_data": { "related_ids": { "order_id": "ORDER-HOUSE-1" } },
+      "payer": { "payer_id": "BUYER-1" }
+    }
+  },
+  "PAYMENT.CAPTURE.DENIED": {
+    "id": "WH-CAPTURE-DENY-1",
+    "event_type": "PAYMENT.CAPTURE.DENIED",
+    "create_time": "2026-10-31T16:01:00Z",
+    "resource": {
+      "id": "CAP-DENY-1",
+      "status": "DECLINED",
+      "amount": { "currency_code": "USD", "value": "18.00" },
+      "custom_id": "house-blend",
+      "status_details": { "reason": "INSTRUMENT_DECLINED" },
+      "payer": { "payer_id": "BUYER-2" }
+    }
+  },
+  "PAYMENT.CAPTURE.REFUNDED": {
+    "id": "WH-REFUND-1",
+    "event_type": "PAYMENT.CAPTURE.REFUNDED",
+    "create_time": "2026-10-31T16:02:00Z",
+    "resource": {
+      "id": "REF-ETHIOPIA-1",
+      "status": "COMPLETED",
+      "amount": { "currency_code": "USD", "value": "22.00" },
+      "custom_id": "ethiopia-yirgacheffe",
+      "payer": { "payer_id": "BUYER-3" }
+    }
+  },
+  "BILLING.SUBSCRIPTION.PAYMENT.FAILED": {
+    "id": "WH-RENEW-FAIL-1",
+    "event_type": "BILLING.SUBSCRIPTION.PAYMENT.FAILED",
+    "create_time": "2026-10-31T16:03:00Z",
+    "resource": {
+      "id": "I-COFFEECLUB-1",
+      "plan_id": "P-COFFEECLUB",
+      "status": "ACTIVE",
+      "subscriber": { "payer_id": "BUYER-CLUB-1" },
+      "billing_info": {
+        "last_failed_payment": {
+          "amount": { "currency_code": "USD", "value": "14.00" }
+        }
+      }
+    }
+  },
+  "CHECKOUT.ORDER.APPROVED": {
+    "id": "WH-ORDER-1",
+    "event_type": "CHECKOUT.ORDER.APPROVED",
+    "create_time": "2026-10-31T16:04:00Z",
+    "resource": {
+      "id": "ORDER-HOUSE-1",
+      "status": "APPROVED",
+      "purchase_units": [
+        { "custom_id": "house-blend", "amount": { "currency_code": "USD", "value": "18.00" } }
+      ]
+    }
+  },
+  "CUSTOMER.DISPUTE.CREATED": {
+    "id": "WH-DISPUTE-1",
+    "event_type": "CUSTOMER.DISPUTE.CREATED",
+    "create_time": "2026-10-31T16:05:00Z",
+    "resource": {
+      "dispute_id": "PP-D-1",
+      "id": "PP-D-1",
+      "dispute_amount": { "currency_code": "USD", "value": "22.00" }
+    }
+  }
+}
