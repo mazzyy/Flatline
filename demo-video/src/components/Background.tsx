@@ -26,7 +26,8 @@ export const Background: React.FC<{ glow?: "accent" | "critical" | "ok" | "none"
           backgroundImage: `linear-gradient(${colors.line} 1px, transparent 1px), linear-gradient(90deg, ${colors.line} 1px, transparent 1px)`,
           backgroundSize: "96px 96px",
           backgroundPosition: "-1px -1px",
-          opacity: 0.06 / 0.16, // line colour is already dim; this lands at ~6% visible
+          // `line` is already dim against `bg`; 0.45 of it reads as ~6% contrast on screen.
+          opacity: 0.45,
           maskImage: "radial-gradient(ellipse at center, black 55%, transparent 100%)",
           WebkitMaskImage: "radial-gradient(ellipse at center, black 55%, transparent 100%)",
         }}
