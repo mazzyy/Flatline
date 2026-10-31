@@ -1,5 +1,5 @@
 [project]
-name = "warden"
+name = "flatline"
 version = "0.1.0"
 description = "A governed fleet of autonomous SRE agents"
 requires-python = ">=3.11"

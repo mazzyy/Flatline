@@ -109,7 +109,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Warden", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="Flatline", version="0.1.0", lifespan=lifespan)
 
 # Mounted before the SPA catch-all, which claims every remaining path.
 app.include_router(ingest.router)

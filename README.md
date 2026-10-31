@@ -1,4 +1,4 @@
-# Warden
+# Flatline
 
 A fleet of four autonomous SRE agents that watch a live Kubernetes estate, diagnose failures from real evidence, and land the fix as a reviewed pull request.
 
@@ -262,7 +262,7 @@ Python 3.11 or newer. Node 18+ only if you want the dashboard.
 ### Everything below this line needs no cloud, no key, and no spend
 
 ```bash
-git clone https://github.com/mazzyy/warden.git && cd warden
+git clone https://github.com/mazzyy/flatline.git && cd flatline
 make install
 cp .env.example .env
 make doctor

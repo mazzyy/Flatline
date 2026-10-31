@@ -119,7 +119,7 @@ export default function App() {
       <Header live={live} view={view} setView={setView} onKill={toggleKill} err={err} />
 
       {/* For someone arriving cold. This screen is an operations console: it
-          assumes you already know what Warden is, and a judge opening the
+          assumes you already know what Flatline is, and a judge opening the
           hosted URL does not. One line of thesis and two links cost nothing
           and are the difference between "an empty dashboard" and "oh, that is
           the whole argument". */}
@@ -128,7 +128,7 @@ export default function App() {
         primitive is opening a pull request — a human reviews it, and a CI identity
         no agent holds applies the merge.
         <span className="thesis-links">
-          <a href="https://github.com/mazzyy/warden" target="_blank" rel="noreferrer">Source</a>
+          <a href="https://github.com/mazzyy/flatline" target="_blank" rel="noreferrer">Source</a>
           <a href="https://github.com/mazzyy/estate-gitops" target="_blank" rel="noreferrer">The estate</a>
         </span>
       </div>
@@ -165,7 +165,7 @@ function Header({ live, view, setView, onKill, err }) {
       <div className="hdr-l">
         <div className="mark" aria-hidden="true" />
         <div>
-          <div className="hdr-name">Warden</div>
+          <div className="hdr-name">Flatline</div>
           <div className="hdr-sub">governed SRE fleet</div>
         </div>
       </div>
