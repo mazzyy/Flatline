@@ -6,7 +6,7 @@ The original Warden project put SRE agents on a Kubernetes estate and refused to
 
 ## What it does
 
-Warden for Payments watches a merchant PayPal integration (Checkout + Subscriptions). It detects three incident types within minutes (checkout failure spike, subscription renewal failures, refund wave), diagnoses a root cause from evidence, proposes catalog actions, and executes only what a deterministic policy proxy allows. Humans approve the rest in a dashboard. Everything is audited. Synthetic demo events are labeled.
+Flatline watches a merchant PayPal integration (Checkout + Subscriptions). It detects three incident types within minutes (checkout failure spike, subscription renewal failures, refund wave), diagnoses a root cause from evidence, proposes catalog actions, and executes only what a deterministic policy proxy allows. Humans approve the rest in a dashboard. Everything is audited. Synthetic demo events are labeled.
 
 ## How we built it
 

@@ -24,7 +24,7 @@ def main() -> None:
     p.add_argument("--rate", type=float, default=4, help="successful captures per minute")
     args = p.parse_args()
     cfg = settings()
-    base = os.environ.get("WARDEN_API_URL", cfg.app_base_url)
+    base = os.environ.get("FLATLINE_API_URL", cfg.app_base_url)
     token = cfg.inject_token
     now = datetime.now(UTC)
     events = []

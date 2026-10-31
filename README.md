@@ -1,4 +1,4 @@
-# Warden for Payments
+# Flatline
 
 An on-call SRE agent for a merchant's revenue. It watches a PayPal integration,
 detects checkout failures, refund waves and broken subscription renewals within
@@ -72,7 +72,7 @@ Tests never require these keys.
 This repo includes a [Blueprint](render.yaml).
 
 1. New → Blueprint → this repo.
-2. Fill the `sync: false` env vars: PayPal sandbox credentials, webhook id, plan id, Azure keys, `DASHBOARD_PASSCODE`, `INJECT_TOKEN`, `APP_BASE_URL`, `WARDEN_API_URL` for the shop.
+2. Fill the `sync: false` env vars: PayPal sandbox credentials, webhook id, plan id, Azure keys, `DASHBOARD_PASSCODE`, `INJECT_TOKEN`, `APP_BASE_URL`, `FLATLINE_API_URL` for the shop.
 3. `PAYPAL_ENVIRONMENT` is set to `SANDBOX` in the Blueprint. Do not set it to live.
 
 ## Safety model

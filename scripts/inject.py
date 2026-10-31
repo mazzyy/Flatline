@@ -69,7 +69,7 @@ def main() -> None:
     p.add_argument("playbook")
     args = p.parse_args()
     cfg = settings()
-    base = os.environ.get("WARDEN_API_URL", cfg.app_base_url)
+    base = os.environ.get("FLATLINE_API_URL", cfg.app_base_url)
     headers = {
         "X-Inject-Token": cfg.inject_token,
         "X-Passcode": cfg.dashboard_passcode,

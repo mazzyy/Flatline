@@ -68,7 +68,7 @@ services:
     env_file: .env
     environment:
       PAYPAL_ENVIRONMENT: MOCK
-      WARDEN_API_URL: http://api:8000
+      FLATLINE_API_URL: http://api:8000
       SHOP_PORT: "3000"
     ports:
       - "3000:3000"
@@ -84,7 +84,7 @@ services:
       PAYPAL_ENVIRONMENT: MOCK
       LLM_MODE: mock
       PYTHONPATH: /app
-      WARDEN_API_URL: http://api:8000
+      FLATLINE_API_URL: http://api:8000
       DATABASE_URL: postgresql+psycopg://warden:warden@postgres:5432/warden
     command: ["python", "scripts/seed.py", "--minutes", "10"]
     depends_on:

@@ -2,7 +2,7 @@
   "name": "lumen-coffee-shop",
   "version": "0.1.0",
   "private": true,
-  "description": "Lumen Coffee Co. — fictional demo shop for Warden for Payments",
+  "description": "Lumen Coffee Co. — fictional demo shop for Flatline",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

@@ -1,6 +1,6 @@
 # Architecture
 
-Warden for Payments is an on-call SRE for a merchant's PayPal revenue.
+Flatline is an on-call SRE for a merchant's PayPal revenue.
 
 ```
  Demo shop ──(orders, subscriptions)──▶ PayPal sandbox ──(webhooks)──┐

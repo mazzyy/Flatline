@@ -84,15 +84,15 @@ export default function Transactions() {
   return (
     <div>
       <h1>Transactions</h1>
-      <p className="muted">Server-side sort and filter over ingested events. Simulated rows are labeled.</p>
-      <p>
-        <input id="qf" placeholder="Quick filter" onKeyDown={(e) => {
+      <p className="lede">Every webhook and checkout event, sorted and filtered on the server. Simulated rows are labeled.</p>
+      <div className="toolbar">
+        <input id="qf" placeholder="Search type, order, product, buyer or error — press Enter" onKeyDown={(e) => {
           if (e.key === "Enter") {
             const api = (window as unknown as { __eventsGrid?: { purgeInfiniteCache: () => void } }).__eventsGrid;
             api?.purgeInfiniteCache();
           }
         }} />
-      </p>
+      </div>
       <div className="grid-wrap ag-theme-quartz">
         <AgGridReact<EventRow>
           columnDefs={columnDefs}

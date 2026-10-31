@@ -112,7 +112,7 @@ def _perform(db: Session, proposal: Proposal) -> dict[str, Any]:
     action = proposal.action
     params = proposal.params or {}
     if action == "notify.alert":
-        return send_alert(str(params.get("message") or "Warden alert"), params)
+        return send_alert(str(params.get("message") or "Flatline alert"), params)
     if action == "report.create":
         incident = db.get(Incident, proposal.incident_id)
         if incident is not None:

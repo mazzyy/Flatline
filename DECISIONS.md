@@ -2,10 +2,20 @@
 
 Unspecified choices and any difference from SPEC.md. Newest first.
 
-## D-011 — This repo is Warden for Payments only
+## D-012 — Product name is Flatline
 
-The working tree used to be the original Kubernetes SRE project (later
-renamed Flatline) with payments nested in `warden-pay/`. That previous
+The owner asked for the project to be called **Flatline** (matching the
+GitHub remote). All user-facing names changed: README, dashboard brand and
+title, FastAPI title, prompts, Devpost/demo docs, `pyproject` and npm package
+names, Render service names, and the shop's env var (`WARDEN_API_URL` →
+`FLATLINE_API_URL`). The Python package stays `warden/` and the Postgres
+user/db stay `warden`: they are internal, and renaming them would churn every
+import and invalidate existing database volumes for no user-visible gain.
+
+## D-011 — This repo is the payments product only
+
+The working tree used to be the original Kubernetes SRE project with
+payments nested in `warden-pay/`. That previous
 product is gone from this folder. The PayPal hackathon app is now the
 repository root so `cp .env.example .env && make up` matches SPEC.md.
 

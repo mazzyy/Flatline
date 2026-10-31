@@ -38,6 +38,7 @@ export default function AuditPage() {
   return (
     <div>
       <h1>Audit log</h1>
+      <p className="lede">Every detection, agent step, policy decision, approval and execution, newest first.</p>
       <div className="grid-wrap ag-theme-quartz">
         <AgGridReact<Row> columnDefs={columnDefs} rowModelType="infinite" datasource={datasource} cacheBlockSize={50} />
       </div>

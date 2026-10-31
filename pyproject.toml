@@ -1,5 +1,5 @@
 [project]
-name = "warden-pay"
+name = "flatline"
 version = "0.1.0"
 description = "On-call SRE agent for a merchant's PayPal revenue"
 requires-python = ">=3.12"

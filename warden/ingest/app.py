@@ -52,7 +52,7 @@ SORTABLE_EVENTS = {
 
 def create_app() -> FastAPI:
     apply_sandbox_guard()
-    app = FastAPI(title="Warden for Payments", version="0.1.0")
+    app = FastAPI(title="Flatline", version="0.1.0")
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
@@ -304,7 +304,11 @@ def create_app() -> FastAPI:
 
         @app.get("/")
         def _index() -> FileResponse:
-            return FileResponse(dashboard_dist / "index.html")
+            # Hashed assets are immutable; the entry document must never be stale.
+            return FileResponse(
+                dashboard_dist / "index.html",
+                headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
+            )
 
     return app
 

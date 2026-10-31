@@ -15,3 +15,5 @@
 | M10 Docs | DONE | 2026-10-31 | 700260f |
 | Demo-ready stack | DONE | 2026-10-31 | (uncommitted) |
 | Root is payments-only | DONE | 2026-10-31 | previous Flatline/SRE tree removed |
+| PayPal-style dashboard + How it works page | DONE | 2026-10-31 | (uncommitted) |
+| Renamed product to Flatline | DONE | 2026-10-31 | D-012; package `warden/` unchanged |

@@ -62,9 +62,9 @@ class Settings(BaseSettings):
     inject_token: str = Field(default="change-me", alias="INJECT_TOKEN")
 
     github_token: str = Field(default="", alias="GITHUB_TOKEN")
-    github_repo: str = Field(default="mazzyy/warden-pay", alias="GITHUB_REPO")
+    github_repo: str = Field(default="mazzyy/Flatline", alias="GITHUB_REPO")
     notify_webhook_url: str = Field(default="", alias="NOTIFY_WEBHOOK_URL")
-    warden_api_url: str = Field(default="http://localhost:8000", alias="WARDEN_API_URL")
+    flatline_api_url: str = Field(default="http://localhost:8000", alias="FLATLINE_API_URL")
     shop_port: int = Field(default=3000, alias="SHOP_PORT")
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
 

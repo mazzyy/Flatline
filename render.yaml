@@ -1,12 +1,12 @@
 databases:
-  - name: warden-pay-db
+  - name: flatline-db
     plan: free
     databaseName: warden
     user: warden
 
 services:
   - type: web
-    name: warden-api
+    name: flatline-api
     runtime: docker
     dockerfilePath: ./Dockerfile
     dockerContext: .
@@ -18,7 +18,7 @@ services:
         value: live
       - key: DATABASE_URL
         fromDatabase:
-          name: warden-pay-db
+          name: flatline-db
           property: connectionString
       - key: PAYPAL_CLIENT_ID
         sync: false
@@ -48,7 +48,7 @@ services:
         sync: false
 
   - type: worker
-    name: warden-detector
+    name: flatline-detector
     runtime: docker
     dockerfilePath: ./Dockerfile
     dockerCommand: python -m warden.detector.worker
@@ -59,7 +59,7 @@ services:
         value: live
       - key: DATABASE_URL
         fromDatabase:
-          name: warden-pay-db
+          name: flatline-db
           property: connectionString
       - key: PAYPAL_CLIENT_ID
         sync: false
@@ -67,7 +67,7 @@ services:
         sync: false
 
   - type: worker
-    name: warden-agents
+    name: flatline-agents
     runtime: docker
     dockerfilePath: ./Dockerfile
     dockerCommand: python -m warden.loop
@@ -78,7 +78,7 @@ services:
         value: live
       - key: DATABASE_URL
         fromDatabase:
-          name: warden-pay-db
+          name: flatline-db
           property: connectionString
       - key: PAYPAL_CLIENT_ID
         sync: false
@@ -101,7 +101,7 @@ services:
     envVars:
       - key: PAYPAL_ENVIRONMENT
         value: SANDBOX
-      - key: WARDEN_API_URL
+      - key: FLATLINE_API_URL
         sync: false
       - key: PAYPAL_CLIENT_ID
         sync: false

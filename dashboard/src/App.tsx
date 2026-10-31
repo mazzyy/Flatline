@@ -2,26 +2,36 @@ import { useEffect, useMemo, useState } from "react";
 import { passcode, setInjectToken, setPasscode } from "./api";
 import AuditPage from "./pages/Audit";
 import ChaosPage from "./pages/Chaos";
+import HowItWorks from "./pages/HowItWorks";
 import IncidentPage from "./pages/Incident";
 import Overview from "./pages/Overview";
 import PolicyPage from "./pages/Policy";
 import Transactions from "./pages/Transactions";
 
-type Page = "overview" | "incident" | "transactions" | "policy" | "audit" | "chaos";
+type Page = "overview" | "how" | "incident" | "transactions" | "policy" | "audit" | "chaos";
 
 function parseHash(): { page: Page; id?: string } {
   const raw = location.hash.replace(/^#\/?/, "") || "overview";
   const [page, id] = raw.split("/");
   if (page === "incident") return { page: "incident", id };
-  if (["transactions", "policy", "audit", "chaos"].includes(page)) return { page: page as Page };
+  if (["how", "transactions", "policy", "audit", "chaos"].includes(page)) return { page: page as Page };
   return { page: "overview" };
 }
+
+const NAV: { page: Page; label: string }[] = [
+  { page: "overview", label: "Overview" },
+  { page: "how", label: "How it works" },
+  { page: "transactions", label: "Transactions" },
+  { page: "policy", label: "Policy" },
+  { page: "audit", label: "Audit" },
+  { page: "chaos", label: "Chaos" },
+];
 
 export default function App() {
   const [authed, setAuthed] = useState(Boolean(passcode()));
   const [route, setRoute] = useState(parseHash);
-  const [theme, setTheme] = useState<"light" | "dark" | "auto">("auto");
-  const [flash, setFlash] = useState("");
+  const [live, setLive] = useState(false);
+  const [lastEvent, setLastEvent] = useState("");
 
   useEffect(() => {
     const onHash = () => setRoute(parseHash());
@@ -30,14 +40,11 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (theme === "auto") document.documentElement.removeAttribute("data-theme");
-    else document.documentElement.setAttribute("data-theme", theme);
-  }, [theme]);
-
-  useEffect(() => {
     if (!authed) return;
     const es = new EventSource("/api/stream");
-    es.onmessage = () => setFlash("live");
+    es.onopen = () => setLive(true);
+    es.onerror = () => setLive(false);
+    es.onmessage = () => setLive(true);
     const evs = [
       "incident.created",
       "incident.updated",
@@ -48,7 +55,8 @@ export default function App() {
     ];
     for (const name of evs) {
       es.addEventListener(name, () => {
-        setFlash(name);
+        setLive(true);
+        setLastEvent(name);
         window.dispatchEvent(new CustomEvent("warden-sse", { detail: name }));
       });
     }
@@ -56,6 +64,7 @@ export default function App() {
   }, [authed]);
 
   const page = useMemo(() => {
+    if (route.page === "how") return <HowItWorks />;
     if (route.page === "transactions") return <Transactions />;
     if (route.page === "policy") return <PolicyPage />;
     if (route.page === "audit") return <AuditPage />;
@@ -66,46 +75,73 @@ export default function App() {
 
   if (!authed) {
     return (
-      <div className="card login">
-        <h1>Warden for Payments</h1>
-        <p className="muted">Shared demo passcode. Default is <code>demo-judge</code>.</p>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            const fd = new FormData(e.currentTarget);
-            setPasscode(String(fd.get("pass") || ""));
-            setInjectToken(String(fd.get("inject") || "change-me"));
-            setAuthed(true);
-          }}
-        >
-          <p><input name="pass" placeholder="passcode" defaultValue="demo-judge" /></p>
-          <p><input name="inject" placeholder="inject token" defaultValue="change-me" /></p>
-          <button type="submit">Enter</button>
-        </form>
+      <div className="login-wrap">
+        <div className="card login">
+          <div className="brand">
+            <span className="brand-mark" />
+            Flatline <small>for Payments</small>
+          </div>
+          <h1>Log in to the demo</h1>
+          <p className="muted">An on-call agent for a merchant&apos;s PayPal revenue.</p>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const fd = new FormData(e.currentTarget);
+              setPasscode(String(fd.get("pass") || ""));
+              setInjectToken(String(fd.get("inject") || "change-me"));
+              setAuthed(true);
+            }}
+          >
+            <div className="field">
+              <label htmlFor="pass">Shared passcode</label>
+              <input id="pass" name="pass" placeholder="passcode" defaultValue="demo-judge" />
+            </div>
+            <div className="field">
+              <label htmlFor="inject">Chaos / inject token</label>
+              <input id="inject" name="inject" placeholder="inject token" defaultValue="change-me" />
+            </div>
+            <button type="submit">Log In</button>
+          </form>
+          <p className="foot muted">
+            Sandbox and mock data only. There is no live PayPal path.
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="app-shell">
-      <aside>
-        <div className="brand">Warden</div>
-        <div className="muted">for Payments</div>
-        <nav>
-          <a className={route.page === "overview" ? "active" : ""} href="#/overview">Overview</a>
-          <a className={route.page === "transactions" ? "active" : ""} href="#/transactions">Transactions</a>
-          <a className={route.page === "policy" ? "active" : ""} href="#/policy">Policy</a>
-          <a className={route.page === "audit" ? "active" : ""} href="#/audit">Audit</a>
-          <a className={route.page === "chaos" ? "active" : ""} href="#/chaos">Chaos</a>
-        </nav>
-        <p className="muted">{flash ? `SSE: ${flash}` : "SSE idle"}</p>
-        <div className="theme">
-          <button className="secondary" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
-            Theme: {theme}
-          </button>
+    <>
+      <header className="pp-header">
+        <div className="pp-header-inner">
+          <a className="brand" href="#/overview">
+            <span className="brand-mark" />
+            Flatline <small>for Payments</small>
+          </a>
+          <nav className="pp-nav">
+            {NAV.map((n) => (
+              <a key={n.page} className={route.page === n.page ? "active" : ""} href={`#/${n.page}`}>
+                {n.label}
+              </a>
+            ))}
+          </nav>
+          <div className="pp-header-right">
+            <span className={`live ${live ? "on" : ""}`} title={lastEvent || "waiting for events"}>
+              {live ? (lastEvent ? `Live · ${lastEvent}` : "Live") : "Connecting"}
+            </span>
+            <button
+              className="secondary small"
+              onClick={() => {
+                sessionStorage.clear();
+                setAuthed(false);
+              }}
+            >
+              Log Out
+            </button>
+          </div>
         </div>
-      </aside>
-      <main>{page}</main>
-    </div>
+      </header>
+      <main className="pp-main">{page}</main>
+    </>
   );
 }

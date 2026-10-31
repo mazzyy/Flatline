@@ -11,7 +11,7 @@ const path = require("path");
 const products = require("./products");
 
 const PORT = Number(process.env.SHOP_PORT || 3000);
-const WARDEN = process.env.WARDEN_API_URL || "http://localhost:8000";
+const FLATLINE = process.env.FLATLINE_API_URL || "http://localhost:8000";
 const PAYPAL_ENV = (process.env.PAYPAL_ENVIRONMENT || "MOCK").toUpperCase();
 const CLIENT_ID = process.env.PAYPAL_CLIENT_ID || "";
 const CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET || "";
@@ -32,7 +32,7 @@ let cachedAt = 0;
 async function shopConfig() {
   if (Date.now() - cachedAt < 2_000) return cachedConfig;
   try {
-    const res = await fetch(`${WARDEN}/api/shop/config`);
+    const res = await fetch(`${FLATLINE}/api/shop/config`);
     if (res.ok) {
       cachedConfig = await res.json();
       cachedAt = Date.now();
@@ -45,7 +45,7 @@ async function shopConfig() {
 
 async function telemetry(body) {
   try {
-    await fetch(`${WARDEN}/api/telemetry`, {
+    await fetch(`${FLATLINE}/api/telemetry`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...body, at: new Date().toISOString() }),
