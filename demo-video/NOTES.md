@@ -4,7 +4,14 @@
 
 | File | What |
 |---|---|
-| `out/demo-video.mp4` | Master, 1920×1080, 170.0 s, 42 MB, H.264 CRF 18 |
+| `out/demo-video.mp4` | Silent master, 1920×1080, 170.0 s, 42 MB, H.264 CRF 18 |
+| `out/demo-video-vo.mp4` | Clone with timed voiceover (Daniel, matches captions) |
+| `public/audio/voiceover.mp3` | The 170 s voice track used on the clone |
+| `out/demo-video-vo-human.mp4` | Clone with natural, upbeat neural voiceover (Kokoro `am_fenrir`), same words and timing as the captions |
+| `public/audio/voiceover-human.mp3` / `.m4a` | That voice track; rebuild with `scripts/build-voiceover-human.py` |
+| `out/demo-video-v2.mp4` | **v2 submission cut.** Rewritten excited script (fills ~80% of the runtime), captions re-timed to it, livelier Kokoro voice, original music bed + SFX |
+| `public/audio/soundtrack-v2.m4a` | v2 full mix (voice + music + SFX), -15.5 LUFS; script in `public/audio/SCRIPT-v2.txt` |
+| `scripts/audio-v2/` | `build-voiceover-v2.py` → `compose-music-sfx.py` → `mix-soundtrack.py`; `narration.json` holds the line timings that `src/captions.ts` uses |
 | `out/demo-video-720.mp4` | Preview, 1280×720, 13 MB (ffmpeg scale of the master) |
 | `out/poster.png` | YouTube thumbnail, S3 introducing frame |
 | `out/stills/` | Review stills per scene |
