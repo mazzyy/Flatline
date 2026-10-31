@@ -1,0 +1,22 @@
+Voiceover script for public/audio/voiceover.mp3
+Record in your own voice, ~170 seconds, then drop the file here and re-render.
+
+Every online shop monitors its servers. Almost none monitor their money.
+
+When a checkout breaks on a Friday evening, or refunds suddenly spike, most merchants find out days later, from a payout report or an angry customer.
+
+This is Flatline: an on-call SRE agent for your PayPal revenue.
+
+It listens to PayPal webhooks and checkout telemetry. When a metric breaks its baseline, four agents take over. Triage scopes the incident. The Diagnostician reads PayPal data through a read-only MCP server and finds the root cause. The Remediator proposes fixes. And every proposal goes through a policy proxy written in plain code, not a prompt. Only the executor behind it can write.
+
+Let's break something. I ship a bad currency config. Checkouts start failing, and within seconds an incident opens. The Diagnostician points to the exact config version that caused it, with evidence. A warning banner goes up automatically. The rollback needs my approval. I approve, failures stop, and the Verifier confirms recovery.
+
+Now a refund wave. The agent finds one product behind most of the refunds and proposes pausing it. It also tries a bulk refund. The policy says no. Agents can ask; code decides.
+
+For failed subscription renewals, a reminder goes out on its own. Capturing the outstanding balance waits for a human.
+
+It runs only in the PayPal sandbox, agents never hold write credentials, and every step is in the audit log.
+
+Built on PayPal's REST APIs, MCP server and JavaScript SDK, with Azure-hosted models.
+
+Flatline. On call for your revenue.

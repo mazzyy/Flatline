@@ -6,14 +6,14 @@ import { colors } from "../theme";
  * Dark base, 1px grid at 6% opacity, and a slow drifting radial accent glow.
  * Pure CSS so it costs nothing to render.
  */
-export const Background: React.FC<{ glow?: "accent" | "critical" | "ok" | "none"; glowStrength?: number }> = ({
+export const Background: React.FC<{ glow?: "accent" | "critical" | "ok" | "warn" | "none"; glowStrength?: number }> = ({
   glow = "accent",
   glowStrength = 0.22,
 }) => {
   const frame = useCurrentFrame();
   const { width, height, fps } = useVideoConfig();
   const glowColor =
-    glow === "critical" ? colors.critical : glow === "ok" ? colors.ok : colors.accent;
+    glow === "critical" ? colors.critical : glow === "ok" ? colors.ok : glow === "warn" ? colors.warn : colors.accent;
   // One slow drift across the whole scene; period ~ 40 s so it never repeats on screen.
   const t = frame / (fps * 40);
   const gx = interpolate(Math.sin(t * Math.PI * 2), [-1, 1], [width * 0.3, width * 0.7]);
