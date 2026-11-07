@@ -20,8 +20,8 @@ services:
       context: .
     env_file: .env
     environment:
-      PAYPAL_ENVIRONMENT: MOCK
-      LLM_MODE: mock
+      PAYPAL_ENVIRONMENT: ${PAYPAL_ENVIRONMENT:-MOCK}
+      LLM_MODE: ${LLM_MODE:-mock}
       PYTHONPATH: /app
       DATABASE_URL: postgresql+psycopg://flatline:flatline@postgres:5432/flatline
       APP_BASE_URL: http://localhost:8000
@@ -42,8 +42,8 @@ services:
       context: .
     env_file: .env
     environment:
-      PAYPAL_ENVIRONMENT: MOCK
-      LLM_MODE: mock
+      PAYPAL_ENVIRONMENT: ${PAYPAL_ENVIRONMENT:-MOCK}
+      LLM_MODE: ${LLM_MODE:-mock}
       PYTHONPATH: /app
       DATABASE_URL: postgresql+psycopg://flatline:flatline@postgres:5432/flatline
     command: ["python", "-m", "flatline.detector.worker"]
@@ -56,8 +56,8 @@ services:
       context: .
     env_file: .env
     environment:
-      PAYPAL_ENVIRONMENT: MOCK
-      LLM_MODE: mock
+      PAYPAL_ENVIRONMENT: ${PAYPAL_ENVIRONMENT:-MOCK}
+      LLM_MODE: ${LLM_MODE:-mock}
       PYTHONPATH: /app
       DATABASE_URL: postgresql+psycopg://flatline:flatline@postgres:5432/flatline
     command: ["python", "-m", "flatline.loop"]
@@ -69,7 +69,7 @@ services:
     build: ./demo-shop
     env_file: .env
     environment:
-      PAYPAL_ENVIRONMENT: MOCK
+      PAYPAL_ENVIRONMENT: ${PAYPAL_ENVIRONMENT:-MOCK}
       FLATLINE_API_URL: http://api:8000
       SHOP_PORT: "3000"
     ports:
@@ -83,8 +83,8 @@ services:
       context: .
     env_file: .env
     environment:
-      PAYPAL_ENVIRONMENT: MOCK
-      LLM_MODE: mock
+      PAYPAL_ENVIRONMENT: ${PAYPAL_ENVIRONMENT:-MOCK}
+      LLM_MODE: ${LLM_MODE:-mock}
       PYTHONPATH: /app
       FLATLINE_API_URL: http://api:8000
       DATABASE_URL: postgresql+psycopg://flatline:flatline@postgres:5432/flatline

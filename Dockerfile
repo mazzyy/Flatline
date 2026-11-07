@@ -10,8 +10,10 @@ WORKDIR /app
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl ca-certificates nodejs npm \
     && rm -rf /var/lib/apt/lists/*
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# requirements-live.txt pulls in requirements.txt plus the live model stack
+# (Google ADK, LiteLLM, MCP); mock mode never imports them.
+COPY requirements.txt requirements-live.txt ./
+RUN pip install --no-cache-dir -r requirements-live.txt
 COPY flatline ./flatline
 COPY fixtures ./fixtures
 COPY alembic.ini .

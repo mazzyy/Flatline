@@ -2,7 +2,7 @@
 
 help:
 	@echo "  make install         create .venv and install Python deps"
-	@echo "  make up              start the full stack in MOCK mode (docker compose)"
+	@echo "  make up              start the full stack (mode from .env, MOCK by default)"
 	@echo "  make down            stop the stack"
 	@echo "  make test            unit + integration tests (no network, no keys)"
 	@echo "  make demo-test       e2e demo scenarios (in-process, mock)"
