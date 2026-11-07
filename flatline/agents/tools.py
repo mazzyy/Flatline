@@ -13,7 +13,9 @@ from flatline.db.models import Event, ShopConfigVersion
 from flatline.paypal.gateway import ReadOnlyGateway
 
 
-def events_by_group(db: Session, incident_id: UUID | None = None, playbook: str | None = None) -> dict[str, Any]:
+def events_by_group(
+    db: Session, incident_id: UUID | None = None, playbook: str | None = None
+) -> dict[str, Any]:
     rows = list(db.scalars(select(Event).order_by(Event.occurred_at.desc()).limit(200)).all())
     by_error = Counter(r.error_code or "none" for r in rows)
     by_product = Counter(r.product_id or "none" for r in rows)
@@ -30,7 +32,9 @@ def events_by_group(db: Session, incident_id: UUID | None = None, playbook: str 
 
 
 def config_history(db: Session) -> list[dict[str, Any]]:
-    rows = list(db.scalars(select(ShopConfigVersion).order_by(ShopConfigVersion.version.asc())).all())
+    rows = list(
+        db.scalars(select(ShopConfigVersion).order_by(ShopConfigVersion.version.asc())).all()
+    )
     return [
         {
             "version": r.version,
@@ -44,7 +48,9 @@ def config_history(db: Session) -> list[dict[str, Any]]:
     ]
 
 
-async def paypal_snapshot(gateway: ReadOnlyGateway, *, plan_id: str | None, product_hint: str | None) -> dict[str, Any]:
+async def paypal_snapshot(
+    gateway: ReadOnlyGateway, *, plan_id: str | None, product_hint: str | None
+) -> dict[str, Any]:
     snap: dict[str, Any] = {}
     try:
         snap["transactions"] = await gateway.list_transactions(product_id=product_hint)

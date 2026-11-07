@@ -41,17 +41,23 @@ def _active_config(db: Session) -> ShopConfigVersion:
     row = db.scalar(select(ShopConfigVersion).where(ShopConfigVersion.active.is_(True)))
     if row:
         return row
-    row = ShopConfigVersion(version=1, config=dict(DEFAULT_SHOP_CONFIG), author="human", active=True)
+    row = ShopConfigVersion(
+        version=1, config=dict(DEFAULT_SHOP_CONFIG), author="human", active=True
+    )
     db.add(row)
     db.flush()
     return row
 
 
-def _write_config(db: Session, config: dict[str, Any], *, author: str, note: str) -> ShopConfigVersion:
+def _write_config(
+    db: Session, config: dict[str, Any], *, author: str, note: str
+) -> ShopConfigVersion:
     current = db.scalar(select(func.max(ShopConfigVersion.version))) or 0
     for row in db.scalars(select(ShopConfigVersion).where(ShopConfigVersion.active.is_(True))):
         row.active = False
-    nxt = ShopConfigVersion(version=int(current) + 1, config=config, author=author, active=True, note=note)
+    nxt = ShopConfigVersion(
+        version=int(current) + 1, config=config, author=author, active=True, note=note
+    )
     db.add(nxt)
     db.flush()
     return nxt
@@ -185,7 +191,9 @@ def _shop_action(db: Session, action: str, params: dict[str, Any]) -> dict[str, 
     if action == "shop.config.rollback":
         target_version = params.get("version")
         if target_version:
-            prev = db.scalar(select(ShopConfigVersion).where(ShopConfigVersion.version == int(target_version)))
+            prev = db.scalar(
+                select(ShopConfigVersion).where(ShopConfigVersion.version == int(target_version))
+            )
         else:
             prev = db.scalar(
                 select(ShopConfigVersion)

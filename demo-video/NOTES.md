@@ -4,21 +4,16 @@
 
 | File | What |
 |---|---|
-| `out/demo-video.mp4` | Silent master, 1920×1080, 170.0 s, 42 MB, H.264 CRF 18 |
-| `out/demo-video-vo.mp4` | Clone with timed voiceover (Daniel, matches captions) |
-| `public/audio/voiceover.mp3` | The 170 s voice track used on the clone |
-| `out/demo-video-vo-human.mp4` | Clone with natural, upbeat neural voiceover (Kokoro `am_fenrir`), same words and timing as the captions |
-| `public/audio/voiceover-human.mp3` / `.m4a` | That voice track; rebuild with `scripts/build-voiceover-human.py` |
-| `out/demo-video-v2.mp4` | **v2 submission cut.** Rewritten excited script (fills ~80% of the runtime), captions re-timed to it, livelier Kokoro voice, original music bed + SFX |
-| `public/audio/soundtrack-v2.m4a` | v2 full mix (voice + music + SFX), -15.5 LUFS; script in `public/audio/SCRIPT-v2.txt` |
+| `out/demo-video-v3.mp4` | **Submission cut.** 1920×1080, 170 s, H.264. Narration, music and SFX; captions matched to the voice |
+| `out/demo-video-v2.mp4` | Previous cut (before the S4 layout fix and the S5 zoom). Safe to delete once v3 is approved |
+| `public/audio/soundtrack-v2.m4a` | Final mix (voice + music + SFX), -15.5 LUFS. Rendered under the picture when `hasSoundtrack` is on (the default) |
+| `public/audio/SCRIPT-v2.txt` | Narration with start times |
 | `scripts/audio-v2/` | `build-voiceover-v2.py` → `compose-music-sfx.py` → `mix-soundtrack.py`; `narration.json` holds the line timings that `src/captions.ts` uses |
-| `out/demo-video-720.mp4` | Preview, 1280×720, 13 MB (ffmpeg scale of the master) |
-| `out/poster.png` | YouTube thumbnail, S3 introducing frame |
-| `out/stills/` | Review stills per scene |
+| `out/poster.png` | YouTube thumbnail, S3 introducing frame, no captions |
 
 ## Final duration
 
-170 s (5100 frames) at 1920×1080, 30 fps. No voiceover on disk, so scenes are not stretched.
+170 s (5100 frames) at 1920×1080, 30 fps. The soundtrack is built to this timeline, so scenes are not stretched.
 
 ## Placeholders
 
@@ -57,8 +52,7 @@ All eight clips were recorded against the live Docker stack (`localhost:8000` + 
 | `06-refund-wave.mp4` | First ~3 s is the Chaos click; composition trims those (`trimBefore={90}`) to land on the incident (`refund.bulk` refused) |
 | `07-renewals.mp4` | Same trim; reminder auto + capture outstanding pending |
 | `08-audit-log.mp4` | Audit table with policy / executor / agent rows |
-| `audio/voiceover.mp3` | **Missing.** Record from `public/audio/SCRIPT.txt` and drop it here |
-| `audio/music.mp3` | **Missing on purpose.** No royalty-free track was bundled |
+| `audio/soundtrack-v2.m4a` | Final mix. Music and SFX are synthesized in `scripts/audio-v2/compose-music-sfx.py` (no licensed audio); the voice is Kokoro `am_fenrir` |
 
 Re-record clips: with the stack up (`make up`),
 
@@ -77,6 +71,7 @@ cd demo-video && node scripts/record-clips.mjs
 - `OffthreadVideo` is not looped (Remotion requires a finite `durationInFrames` on the wrapping Sequence). Short clips hold / end; overlays carry the beat.
 - Shop clip shows the honest-banner state rather than a raw capture 500 — that is what the live shop looks like after the auto action.
 - `DemoVideoVertical` (1080×1920) was not built. The submission asset is the 16:9 file.
+- S4 nodes use `AgentNode compact` (22 px role line) so every label fits its card. S5 beat B has a camera move (`CAM_B`): push in on the checkout-failure tile, glide to the shop banner, pull back, timed to the narration.
 - Illustrative revenue-lost number in S2 is `$12,480`, labelled “illustrative”.
 
 ## Re-render
@@ -84,17 +79,17 @@ cd demo-video && node scripts/record-clips.mjs
 From `demo-video/`:
 
 ```
-# stills
-npx remotion still DemoVideo out/stills/s3-mid.png --frame=1020
+# final video with sound
+npx remotion render DemoVideo out/demo-video-v3.mp4 --codec=h264 --crf=18
 
-# master
-npx remotion render DemoVideo out/demo-video.mp4 --codec=h264 --crf=18
+# picture only
+npx remotion render DemoVideo out/silent.mp4 --codec=h264 --crf=18 --props='{"hasSoundtrack":false}'
 
 # 720p preview
-npx remotion render DemoVideo out/demo-video-720.mp4 --codec=h264 --crf=20 --scale=0.6666667
+npx remotion render DemoVideo out/preview-720.mp4 --codec=h264 --crf=20 --scale=0.6666667
 
 # poster (S3 introducing)
 npx remotion still DemoVideo out/poster.png --frame=1020
 ```
 
-After adding `public/audio/voiceover.mp3`, restore `calculateMetadata` in `src/Root.tsx` (see git history / the first version) so a voiceover longer than 170 s stretches every scene. Then re-render.
+To change the narration: edit `LINES` in `scripts/audio-v2/build-voiceover-v2.py`, run the three audio scripts in order, copy the new start and end times from `narration.json` into `NARRATION` in `src/captions.ts`, then re-render.

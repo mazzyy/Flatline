@@ -1,5 +1,5 @@
 import React from "react";
-import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
+import { AbsoluteFill, Easing, useCurrentFrame, useVideoConfig } from "remotion";
 import { evolvePath } from "@remotion/paths";
 import { Background } from "../components/Background";
 import { BrowserFrame } from "../components/BrowserFrame";
@@ -22,6 +22,8 @@ export const CLIP_H = 900;
 export const S5_TARGETS = {
   chaosButton: { x: 1180, y: 360, w: 140, h: 52 },
   overviewTile: { x: 280, y: 500, w: 440, h: 160 },
+  /** Centre and size of the checkout-failure tile itself (ring while zoomed). */
+  overviewTileBox: { x: 400, y: 486, w: 390, h: 136 },
   banner: { x: 800, y: 28, w: 900, h: 40 },
   approve: { x: 160, y: 490 },
   triageRow: { x: 220, y: 730 },
@@ -31,6 +33,38 @@ export const S5_TARGETS = {
 const toScene = (frame: { x: number; y: number; w: number }, pt: { x: number; y: number }) => {
   const s = frame.w / CLIP_W;
   return { x: frame.x + pt.x * s, y: frame.y + 44 + pt.y * s };
+};
+
+/**
+ * Beat B camera: push in on the overview's checkout-failure tile while the
+ * narration says the incident is open, glide to the shop's warning banner for
+ * "And look!", then pull back out before beat C. Keyframes in scene seconds.
+ */
+type CamKey = { at: number; s: number; x: number; y: number };
+const CAM_B: CamKey[] = [
+  { at: 8.4, s: 1, x: 960, y: 540 },
+  { at: 9.25, s: 2.3, x: 1300, y: 580 }, // checkout failure tile + incident row
+  { at: 10.7, s: 2.3, x: 1300, y: 580 },
+  { at: 11.6, s: 2.8, x: 520, y: 330 }, // shop warning banner
+  { at: 13.0, s: 2.8, x: 520, y: 330 },
+  { at: 13.8, s: 1, x: 960, y: 540 },
+];
+const camEase = Easing.bezier(0.65, 0, 0.35, 1);
+
+const cameraAt = (sec: number): { s: number; x: number; y: number } => {
+  if (sec <= CAM_B[0].at) return CAM_B[0];
+  for (let i = 0; i < CAM_B.length - 1; i++) {
+    const a = CAM_B[i];
+    const b = CAM_B[i + 1];
+    if (sec <= b.at) {
+      const e = camEase((sec - a.at) / (b.at - a.at));
+      // zoom in log space; dip out a little when travelling between two close-ups
+      const travelling = a.s > 1.01 && b.s > 1.01 && (a.x !== b.x || a.y !== b.y);
+      const logS = Math.log(a.s) + (Math.log(b.s) - Math.log(a.s)) * e - (travelling ? 0.45 * Math.sin(Math.PI * e) : 0);
+      return { s: Math.exp(logS), x: a.x + (b.x - a.x) * e, y: a.y + (b.y - a.y) * e };
+    }
+  }
+  return CAM_B[CAM_B.length - 1];
 };
 
 export const S5Checkout: React.FC = () => {
@@ -69,6 +103,14 @@ export const S5Checkout: React.FC = () => {
   const chartEvolved = evolvePath(chartP, chartD);
   const approveX = 760; // where the rollback was approved
 
+  const cam = cameraAt(frame / t(1));
+  const camStyle: React.CSSProperties = {
+    transformOrigin: "0 0",
+    transform: `translate(${960 - cam.s * cam.x}px, ${540 - cam.s * cam.y}px) scale(${cam.s})`,
+  };
+  // Callout pills sit below the frames; hide them while the camera is close in.
+  const camLabel = Math.max(0, Math.min(1, 1 - (cam.s - 1.05) / 0.35));
+
   return (
     <AbsoluteFill>
       <Background glow={frame < t(E.from) ? "critical" : "ok"} glowStrength={0.14} />
@@ -86,7 +128,7 @@ export const S5Checkout: React.FC = () => {
 
       {/* Beat B: split shop / overview */}
       {inBeat(B) ? (
-        <div style={{ position: "absolute", inset: 0, opacity: beatFade(B) }}>
+        <div style={{ position: "absolute", inset: 0, opacity: beatFade(B), ...camStyle }}>
           <LowerThird title="Lumen Coffee Co." sub="checkout fails · CURRENCY_MISMATCH" delay={t(B.from) + 4} top={150} color={colors.critical} />
           <LowerThird title="Overview" sub="incident opens within seconds" delay={t(B.from) + 10} top={150} left={frameR.x} />
           <BrowserFrame x={frameL.x} y={frameL.y} width={frameL.w} height={44 + (frameL.w * CLIP_H) / CLIP_W} url="localhost:3000" delay={t(B.from)} pushInFrames={t(7)}>
@@ -95,8 +137,8 @@ export const S5Checkout: React.FC = () => {
           <BrowserFrame x={frameR.x} y={frameR.y} width={frameR.w} height={44 + (frameR.w * CLIP_H) / CLIP_W} url="localhost:8000/#/overview" delay={t(B.from) + 6} pushInFrames={t(7)}>
             <Clip name="03-incident-opens.mp4" available={Boolean(clips["03-incident-opens.mp4"])} />
           </BrowserFrame>
-          <Callout label="Banner is already up" target={toScene(frameL, S5_TARGETS.banner)} at={{ x: frameL.x + 40, y: frameL.y + 44 + (frameL.w * CLIP_H) / CLIP_W + 50 }} delay={t(8.4)} color={colors.warn} />
-          <Callout label="Checkout tile · breach" target={tileT} at={{ x: frameR.x + 40, y: frameR.y + 44 + (frameR.w * CLIP_H) / CLIP_W + 50 }} delay={t(10.4)} color={colors.critical} ring={{ w: S5_TARGETS.overviewTile.w * (frameR.w / CLIP_W) + 12, h: S5_TARGETS.overviewTile.h * (frameR.w / CLIP_W) + 12 }} />
+          <Callout label="Banner is already up" target={toScene(frameL, S5_TARGETS.banner)} at={{ x: frameL.x + 40, y: frameL.y + 44 + (frameL.w * CLIP_H) / CLIP_W + 50 }} delay={t(10.9)} color={colors.warn} labelOpacity={camLabel} />
+          <Callout label="Checkout tile · breach" target={tileT} at={{ x: frameR.x + 40, y: frameR.y + 44 + (frameR.w * CLIP_H) / CLIP_W + 50 }} delay={t(9.0)} color={colors.critical} labelOpacity={camLabel} ringAt={toScene(frameR, S5_TARGETS.overviewTileBox)} ring={{ w: S5_TARGETS.overviewTileBox.w * (frameR.w / CLIP_W) + 16, h: S5_TARGETS.overviewTileBox.h * (frameR.w / CLIP_W) + 16 }} />
         </div>
       ) : null}
 
@@ -131,13 +173,13 @@ export const S5Checkout: React.FC = () => {
 
           {/* Proposals */}
           {frame >= t(20.4) ? (
-            <div style={{ position: "absolute", left: colX, top: 520, display: "flex", flexDirection: "column", gap: 18 }}>
+            <div style={{ position: "absolute", left: colX, top: 610, display: "flex", flexDirection: "column", gap: 18 }}>
               <div style={{ fontFamily: fonts.mono, fontSize: type.min, color: colors.textMuted, opacity: uiSpring(frame, fps, t(20.4)) }}>proposals</div>
               <TierBadge tier="auto" label="Set banner" state="executed" delay={t(20.6)} size={type.label} />
               <TierBadge tier="approval" label="Roll back config" state={frame >= t(27.2) ? "executed" : "pending"} delay={t(23.6)} size={type.label} />
             </div>
           ) : null}
-          {frame >= t(26.0) ? <Callout label="Approve" target={toScene(frameC, S5_TARGETS.approve)} at={{ x: colX, y: 760 }} delay={t(26.0)} color={colors.ok} /> : null}
+          {frame >= t(26.0) ? <Callout label="Approve" target={toScene(frameC, S5_TARGETS.approve)} at={{ x: colX, y: 870 }} delay={t(26.0)} color={colors.ok} /> : null}
         </div>
       ) : null}
 

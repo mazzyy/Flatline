@@ -140,7 +140,9 @@ def create_app() -> FastAPI:
         return {"id": str(row.id)}
 
     @app.post("/api/synthetic/events", dependencies=[Depends(require_inject_token)])
-    def synthetic_events(body: dict[str, Any], db: Session = Depends(session_dep)) -> dict[str, Any]:
+    def synthetic_events(
+        body: dict[str, Any], db: Session = Depends(session_dep)
+    ) -> dict[str, Any]:
         raw_items = body.get("events")
         items: list[Any] = raw_items if isinstance(raw_items, list) else [body]
         stored: list[str] = []
@@ -329,13 +331,15 @@ def _active_config(db: Session) -> ShopConfigVersion:
     return ensure_default_config(db)
 
 
-def _new_config(db: Session, config: dict[str, Any], *, author: str, note: str) -> ShopConfigVersion:
-    current = db.scalar(
-        select(func.max(ShopConfigVersion.version))
-    ) or 0
+def _new_config(
+    db: Session, config: dict[str, Any], *, author: str, note: str
+) -> ShopConfigVersion:
+    current = db.scalar(select(func.max(ShopConfigVersion.version))) or 0
     for row in db.scalars(select(ShopConfigVersion).where(ShopConfigVersion.active.is_(True))):
         row.active = False
-    nxt = ShopConfigVersion(version=int(current) + 1, config=config, author=author, active=True, note=note)
+    nxt = ShopConfigVersion(
+        version=int(current) + 1, config=config, author=author, active=True, note=note
+    )
     db.add(nxt)
     db.flush()
     return nxt

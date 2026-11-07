@@ -11,8 +11,7 @@ const clips = Object.fromEntries(CLIP_FILES.map((c) => [c, true]));
 
 const defaultProps: DemoVideoProps = {
   scale: 1,
-  hasVoiceover: false,
-  hasMusic: false,
+  hasSoundtrack: true,
   clips,
 };
 

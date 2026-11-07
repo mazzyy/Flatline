@@ -2,7 +2,7 @@
 """Generate steady baseline traffic. MOCK: synthetic events. SANDBOX: telemetry + synthetic.
 
 Server-side capture without a buyer approval is not possible on PayPal Checkout,
-so SANDBOX seed does not create real captured orders. See DECISIONS.md D-008.
+so SANDBOX seed does not create real captured orders. See docs/decisions.md D-008.
 """
 
 from __future__ import annotations

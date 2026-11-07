@@ -65,11 +65,16 @@ def iter_files() -> list[Path]:
             continue
         if path.name == ".env.example":
             continue
-        if path.suffix and path.suffix not in TEXT_SUFFIXES and path.name not in {
-            "Dockerfile",
-            "Makefile",
-            "LICENSE",
-        }:
+        if (
+            path.suffix
+            and path.suffix not in TEXT_SUFFIXES
+            and path.name
+            not in {
+                "Dockerfile",
+                "Makefile",
+                "LICENSE",
+            }
+        ):
             continue
         out.append(path)
     return out

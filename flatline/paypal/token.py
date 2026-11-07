@@ -30,7 +30,9 @@ class Token:
 class TokenManager:
     """Cache a sandbox access token; refresh 15 minutes before expiry."""
 
-    def __init__(self, cfg: Settings | None = None, client: httpx.AsyncClient | None = None) -> None:
+    def __init__(
+        self, cfg: Settings | None = None, client: httpx.AsyncClient | None = None
+    ) -> None:
         self._cfg = cfg or settings()
         self._client = client
         self._token: Token | None = None
@@ -39,7 +41,9 @@ class TokenManager:
     def token_url(self) -> str:
         base = self._cfg.paypal_api_base
         if not base:
-            raise RuntimeError("TokenManager only talks to the sandbox host; PAYPAL_ENVIRONMENT=MOCK")
+            raise RuntimeError(
+                "TokenManager only talks to the sandbox host; PAYPAL_ENVIRONMENT=MOCK"
+            )
         return f"{base}{TOKEN_PATH}"
 
     async def get_token(self) -> str:

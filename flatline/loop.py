@@ -36,7 +36,10 @@ async def process_incident(db: Session, incident: Incident) -> Incident:
         if decision.tier == "forbidden":
             status = "refused"
             incident.status = "escalated"
-            note = (incident.notes or "") + f"\nRefused {draft.action}: {decision.reason}. Agent recommendation: {draft.rationale}"
+            note = (
+                (incident.notes or "")
+                + f"\nRefused {draft.action}: {decision.reason}. Agent recommendation: {draft.rationale}"
+            )
             incident.notes = note.strip()
         elif decision.tier == "approval":
             if not rate_limit_pending(pending_by_action.get(draft.action, 0)):
@@ -70,13 +73,18 @@ async def process_incident(db: Session, incident: Incident) -> Incident:
             proposal_id=proposal.id,
             details={"reason": decision.reason},
         )
-        HUB.publish("proposal.created", {"id": str(proposal.id), "action": draft.action, "tier": decision.tier})
+        HUB.publish(
+            "proposal.created",
+            {"id": str(proposal.id), "action": draft.action, "tier": decision.tier},
+        )
         if status == "approved":
             execute_proposal(db, proposal)
     db.flush()
     pending = list(
         db.scalars(
-            select(Proposal).where(Proposal.incident_id == incident.id, Proposal.status == "pending")
+            select(Proposal).where(
+                Proposal.incident_id == incident.id, Proposal.status == "pending"
+            )
         ).all()
     )
     if not pending:
@@ -103,9 +111,7 @@ async def verify_incident(db: Session, incident: Incident, *, record_pending: bo
     # After a fix, the verify window should be quiet. minutes=0 (tests) means
     # "no events after now" which is always resolved.
     resolved = current < (pb.min_count if pb else 1) if minutes > 0 else True
-    observation = (
-        f"metric {metric} in last {minutes}m is {current} (threshold {threshold})"
-    )
+    observation = f"metric {metric} in last {minutes}m is {current} (threshold {threshold})"
     if resolved or record_pending:
         run_verifier(db, incident, resolved, observation)
     return resolved
@@ -159,7 +165,11 @@ def run_forever(interval: float = 2.0) -> None:
             import asyncio
             from time import monotonic
 
-            job = db.scalar(select(AgentJob).where(AgentJob.status == "queued").order_by(AgentJob.created_at.asc()))
+            job = db.scalar(
+                select(AgentJob)
+                .where(AgentJob.status == "queued")
+                .order_by(AgentJob.created_at.asc())
+            )
             if job:
                 asyncio.run(process_job(db, job))
             if monotonic() - last_reverify >= REVERIFY_SECONDS:

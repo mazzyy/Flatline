@@ -5,7 +5,7 @@ import { product } from "./theme";
 /**
  * Narration, timed relative to the start of each scene (seconds). Each segment
  * fits two caption lines at 34 px. These double as the voiceover script.
- * Timings come from the generated voice (scripts/build-voiceover-v2.py → narration.json).
+ * Timings come from the generated voice (scripts/audio-v2/build-voiceover-v2.py → narration.json).
  */
 export type Narration = { scene: SceneIndex; from: number; to: number; text: string };
 
@@ -78,5 +78,3 @@ export const getCaptionSegments = (fps: number, scale: number): CaptionSegment[]
   }));
 };
 
-/** Plain-text script for recording the voiceover. */
-export const SCRIPT = NARRATION.map((n) => n.text).join("\n");

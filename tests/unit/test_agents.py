@@ -16,8 +16,16 @@ def test_evidence_required() -> None:
 
 def test_checkout_currency_diagnosis() -> None:
     incident = {"playbook": "checkout_failure_spike", "id": "x"}
-    events = [{"id": "e1", "error_code": "CURRENCY_MISMATCH", "currency": "EUR", "resource_id": "ORD-1"}]
-    history = [{"version": 2, "active": True, "config": {"currency": "EUR", "chaos": {"bad_currency": True}}}]
+    events = [
+        {"id": "e1", "error_code": "CURRENCY_MISMATCH", "currency": "EUR", "resource_id": "ORD-1"}
+    ]
+    history = [
+        {
+            "version": 2,
+            "active": True,
+            "config": {"currency": "EUR", "chaos": {"bad_currency": True}},
+        }
+    ]
     out = diagnose(incident, events, history, {})
     assert "config version" in out.root_cause.lower()
     assert out.evidence
@@ -30,7 +38,12 @@ def test_checkout_currency_diagnosis() -> None:
 def test_checkout_declines_no_rollback() -> None:
     incident = {"playbook": "checkout_failure_spike", "id": "x"}
     events = [
-        {"id": f"e{i}", "error_code": "INSTRUMENT_DECLINED", "buyer_ref": f"B{i}", "currency": "USD"}
+        {
+            "id": f"e{i}",
+            "error_code": "INSTRUMENT_DECLINED",
+            "buyer_ref": f"B{i}",
+            "currency": "USD",
+        }
         for i in range(6)
     ]
     history = [{"version": 1, "active": True, "config": {"currency": "USD", "chaos": {}}}]

@@ -48,8 +48,11 @@ def test_agents_package_does_not_import_write_surface() -> None:
             elif isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name):
                 if node.attr in {"write_instance", "call_write"}:
                     hits.append(f"{path.name}: .{node.attr}")
-            elif isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
-                if node.func.attr in {
+            elif (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Attribute)
+                and node.func.attr
+                in {
                     "create_refund",
                     "suspend_subscription",
                     "activate_subscription",
@@ -58,8 +61,9 @@ def test_agents_package_does_not_import_write_surface() -> None:
                     "create_invoice",
                     "call_write",
                     "write_instance",
-                }:
-                    hits.append(f"{path.name}: call {node.func.attr}()")
+                }
+            ):
+                hits.append(f"{path.name}: call {node.func.attr}()")
     assert hits == []
 
 

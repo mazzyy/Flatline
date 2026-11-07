@@ -16,7 +16,11 @@ export const Callout: React.FC<{
   color?: string;
   ring?: { w: number; h: number; r?: number };
   hideAfter?: number;
-}> = ({ label, target, at, delay = 0, color = colors.accent, ring, hideAfter }) => {
+  /** Centre of the highlight ring, if it should not sit on the leader's end point. */
+  ringAt?: { x: number; y: number };
+  /** Fades the pill and leader only (dot and ring stay), e.g. while a camera is zoomed in. */
+  labelOpacity?: number;
+}> = ({ label, target, at, delay = 0, color = colors.accent, ring, hideAfter, ringAt, labelOpacity = 1 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const enter = uiSpring(frame, fps, delay);
@@ -40,12 +44,13 @@ export const Callout: React.FC<{
           strokeLinecap="round"
           strokeDasharray={evolved.strokeDasharray}
           strokeDashoffset={evolved.strokeDashoffset}
+          opacity={labelOpacity}
         />
         <circle cx={target.x} cy={target.y} r={7 * draw} fill={color} />
         {ring ? (
           <rect
-            x={target.x - ring.w / 2}
-            y={target.y - ring.h / 2}
+            x={(ringAt ?? target).x - ring.w / 2}
+            y={(ringAt ?? target).y - ring.h / 2}
             width={ring.w}
             height={ring.h}
             rx={ring.r ?? 10}
@@ -72,7 +77,7 @@ export const Callout: React.FC<{
           fontWeight: 500,
           fontSize: type.labelSmall,
           whiteSpace: "nowrap",
-          opacity: enter,
+          opacity: enter * labelOpacity,
           scale: String(0.9 + enter * 0.1),
           transformOrigin: "left center",
           boxShadow: `0 8px 24px ${color}55`,

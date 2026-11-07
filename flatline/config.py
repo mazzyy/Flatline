@@ -87,9 +87,7 @@ class Settings(BaseSettings):
                 "Live PayPal is impossible to enable: there is no code path to it."
             )
         if self.llm_mode not in ("mock", "live"):
-            raise ValueError(
-                f"LLM_MODE={self.llm_mode!r} is not allowed. Use 'mock' or 'live'."
-            )
+            raise ValueError(f"LLM_MODE={self.llm_mode!r} is not allowed. Use 'mock' or 'live'.")
         return self
 
     @property

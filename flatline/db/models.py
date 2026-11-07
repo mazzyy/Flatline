@@ -1,4 +1,4 @@
-"""SQLAlchemy models matching SPEC.md Section 8."""
+"""SQLAlchemy models matching docs/spec.md Section 8."""
 
 from __future__ import annotations
 

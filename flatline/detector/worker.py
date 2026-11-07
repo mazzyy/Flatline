@@ -54,7 +54,9 @@ def health_snapshot(db: Session) -> dict[str, Any]:
         )
         or 0
     )
-    open_incidents = db.scalar(select(func.count()).where(Incident.status.notin_(("resolved",)))) or 0
+    open_incidents = (
+        db.scalar(select(func.count()).where(Incident.status.notin_(("resolved",)))) or 0
+    )
     fail_rate = (failures / captures) if captures else 0.0
     score = max(0, min(100, int(100 - fail_rate * 80 - open_incidents * 10)))
     metrics = {}
@@ -84,7 +86,9 @@ def health_snapshot(db: Session) -> dict[str, Any]:
 def _scopes(events: list[Event], playbook: Playbook) -> list[str | None]:
     if playbook.scope_key in {"none", ""}:
         return [None]
-    values = {scope_of(e, playbook.scope_key) for e in events if event_matches_metric(e, playbook.metric)}
+    values = {
+        scope_of(e, playbook.scope_key) for e in events if event_matches_metric(e, playbook.metric)
+    }
     values.discard(None)
     if playbook.name == "refund_wave":
         matching = [e for e in events if event_matches_metric(e, playbook.metric)]

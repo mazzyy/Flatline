@@ -8,7 +8,6 @@ from typing import Any
 
 from flatline.playbooks.loader import Playbook
 
-CAPTURE_FAIL_TYPES = frozenset({"PAYMENT.CAPTURE.DENIED", "checkout.capture"})
 REFUND_TYPES = frozenset({"PAYMENT.CAPTURE.REFUNDED"})
 RENEWAL_FAIL_TYPES = frozenset({"BILLING.SUBSCRIPTION.PAYMENT.FAILED"})
 
@@ -25,8 +24,14 @@ def is_breach(current: float, baseline_value: float, multiplier: float, min_coun
 
 
 def event_matches_metric(event: Any, metric: str) -> bool:
-    event_type = getattr(event, "event_type", None) or (event.get("event_type") if isinstance(event, dict) else "")
-    error = getattr(event, "error_code", None) if not isinstance(event, dict) else event.get("error_code")
+    event_type = getattr(event, "event_type", None) or (
+        event.get("event_type") if isinstance(event, dict) else ""
+    )
+    error = (
+        getattr(event, "error_code", None)
+        if not isinstance(event, dict)
+        else event.get("error_code")
+    )
     if metric == "capture_failures":
         if event_type == "PAYMENT.CAPTURE.DENIED":
             return True

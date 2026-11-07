@@ -45,7 +45,9 @@ def diagnose(
 ) -> DiagnosisOutput:
     playbook = incident.get("playbook")
     codes = _codes(events)
-    active = next((c for c in config_history if c.get("active")), config_history[-1] if config_history else {})
+    active = next(
+        (c for c in config_history if c.get("active")), config_history[-1] if config_history else {}
+    )
     config = (active.get("config") or {}) if active else {}
     chaos = config.get("chaos") or {}
 
@@ -106,8 +108,12 @@ def diagnose(
             root_cause=f"Refunds are concentrated on product {product}.",
             confidence=0.9,
             evidence=[
-                EvidenceClaim(claim=f"scope product {product}", source="incident", ref=str(incident.get("id"))),
-                EvidenceClaim(claim=f"{len(events)} refund events in window", source="event", ref="refunds"),
+                EvidenceClaim(
+                    claim=f"scope product {product}", source="incident", ref=str(incident.get("id"))
+                ),
+                EvidenceClaim(
+                    claim=f"{len(events)} refund events in window", source="event", ref="refunds"
+                ),
             ],
             hypotheses_rejected=["random buyer remorse spread across the catalog"],
         )
@@ -119,7 +125,11 @@ def diagnose(
             confidence=0.86,
             evidence=[
                 EvidenceClaim(claim=f"plan {plan} failed renewals", source="event", ref=plan),
-                EvidenceClaim(claim="failed PAYMENT events clustered on one plan", source="event", ref="renewals"),
+                EvidenceClaim(
+                    claim="failed PAYMENT events clustered on one plan",
+                    source="event",
+                    ref="renewals",
+                ),
             ],
             hypotheses_rejected=["a checkout capture outage"],
         )
@@ -127,7 +137,9 @@ def diagnose(
     return DiagnosisOutput(
         root_cause="Insufficient evidence for a specific merchant-side cause.",
         confidence=0.4,
-        evidence=[EvidenceClaim(claim="generic fallback", source="incident", ref=str(incident.get("id")))],
+        evidence=[
+            EvidenceClaim(claim="generic fallback", source="incident", ref=str(incident.get("id")))
+        ],
         hypotheses_rejected=[],
     )
 
@@ -135,7 +147,10 @@ def diagnose(
 def remediate(incident: dict[str, Any], diagnosis: DiagnosisOutput) -> RemediatorOutput:
     playbook = incident.get("playbook")
     if playbook == "checkout_failure_spike":
-        if "currency" in diagnosis.root_cause.lower() or "config version" in diagnosis.root_cause.lower():
+        if (
+            "currency" in diagnosis.root_cause.lower()
+            or "config version" in diagnosis.root_cause.lower()
+        ):
             return RemediatorOutput(
                 proposals=[
                     ProposalDraft(
@@ -168,7 +183,9 @@ def remediate(incident: dict[str, Any], diagnosis: DiagnosisOutput) -> Remediato
                 ),
                 ProposalDraft(
                     action="shop.banner.set",
-                    params={"text": "Some cards are being declined by the issuer. Try another card."},
+                    params={
+                        "text": "Some cards are being declined by the issuer. Try another card."
+                    },
                     rationale="Set expectations; do not roll back a healthy config.",
                     expected_effect="shoppers see guidance",
                 ),

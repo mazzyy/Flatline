@@ -40,7 +40,9 @@ def _header(headers: dict[str, str], name: str) -> str:
     return lower.get(name, "")
 
 
-def verification_payload(headers: dict[str, str], event: dict[str, Any], webhook_id: str) -> dict[str, Any]:
+def verification_payload(
+    headers: dict[str, str], event: dict[str, Any], webhook_id: str
+) -> dict[str, Any]:
     body: dict[str, Any] = {"webhook_id": webhook_id, "webhook_event": event}
     for header_name, field in HEADER_MAP.items():
         value = _header(headers, header_name)
@@ -123,7 +125,9 @@ def _amount_from(resource: dict[str, Any]) -> tuple[Decimal | None, str | None]:
     return None, None
 
 
-def normalize_event(raw: dict[str, Any], *, synthetic: bool = False, verified: bool = False) -> dict[str, Any]:
+def normalize_event(
+    raw: dict[str, Any], *, synthetic: bool = False, verified: bool = False
+) -> dict[str, Any]:
     """Flatten a PayPal webhook (or similar) into the events-table shape."""
     raw_resource = raw.get("resource")
     resource: dict[str, Any] = raw_resource if isinstance(raw_resource, dict) else {}

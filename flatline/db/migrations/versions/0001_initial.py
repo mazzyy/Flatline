@@ -1,4 +1,4 @@
-"""Initial schema (SPEC.md Section 8).
+"""Initial schema (docs/spec.md Section 8).
 
 Revision ID: 0001
 Revises:

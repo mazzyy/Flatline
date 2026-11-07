@@ -1,5 +1,5 @@
 import React from "react";
-import { AbsoluteFill, Audio, interpolate, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
+import { AbsoluteFill, Audio, staticFile, useVideoConfig } from "remotion";
 import { TransitionSeries, linearTiming } from "@remotion/transitions";
 import { fade } from "@remotion/transitions/fade";
 import { getTimeline, SCENES, TRANSITION_FRAMES } from "./timeline";
@@ -21,24 +21,14 @@ import { S10Close } from "./scenes/S10Close";
 export type DemoVideoProps = {
   /** 1 = 170 s. >1 when the voiceover is longer; every scene stretches proportionally. */
   scale: number;
-  hasVoiceover: boolean;
-  hasMusic: boolean;
+  /** Lay the final mix (voice + music + SFX, public/audio/soundtrack-v2.m4a) under the picture. */
+  hasSoundtrack: boolean;
   clips: ClipAvailability;
 };
 
 const SCENE_COMPONENTS: React.FC[] = [S1Hook, S2Problem, S3Intro, S4Architecture, S5Checkout, S6Refunds, S7Renewals, S8Trust, S9BuiltWith, S10Close];
 
-/** -22 dB under the voice. */
-const MUSIC_GAIN = Math.pow(10, -22 / 20);
-
-const Music: React.FC<{ total: number }> = ({ total }) => {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const env = interpolate(frame, [0, fps, total - fps, total], [0, 1, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  return <Audio src={staticFile("audio/music.mp3")} volume={MUSIC_GAIN * env} loop />;
-};
-
-export const DemoVideo: React.FC<DemoVideoProps> = ({ scale, hasVoiceover, hasMusic, clips }) => {
+export const DemoVideo: React.FC<DemoVideoProps> = ({ scale, hasSoundtrack, clips }) => {
   const { fps } = useVideoConfig();
   const tl = getTimeline(fps, scale);
   const captions = getCaptionSegments(fps, scale);
@@ -62,8 +52,7 @@ export const DemoVideo: React.FC<DemoVideoProps> = ({ scale, hasVoiceover, hasMu
           })}
         </TransitionSeries>
         <CaptionTrack segments={captions} />
-        {hasVoiceover ? <Audio src={staticFile("audio/voiceover.mp3")} /> : null}
-        {hasMusic ? <Music total={tl.total} /> : null}
+        {hasSoundtrack ? <Audio src={staticFile("audio/soundtrack-v2.m4a")} /> : null}
       </AbsoluteFill>
     </SceneProvider>
   );

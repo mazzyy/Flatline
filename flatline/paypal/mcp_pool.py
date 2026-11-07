@@ -1,7 +1,7 @@
 """Spawn and respawn the two PayPal MCP servers (read scope and write scope).
 
 Tool identifiers are the official @paypal/mcp names (snake_case), not the
-dotted names in SPEC.md Section 9.4. See DECISIONS.md D-004.
+dotted names in docs/spec.md Section 9.4. See docs/decisions.md D-004.
 
 Only this module and the executor may touch the write instance.
 """

@@ -17,11 +17,17 @@ class ActionSpec:
 
 
 ACTIONS: dict[str, ActionSpec] = {
-    "notify.alert": ActionSpec("notify.alert", "auto", "Log an alert and optionally POST NOTIFY_WEBHOOK_URL"),
-    "report.create": ActionSpec("report.create", "auto", "Attach a markdown report to the incident"),
+    "notify.alert": ActionSpec(
+        "notify.alert", "auto", "Log an alert and optionally POST NOTIFY_WEBHOOK_URL"
+    ),
+    "report.create": ActionSpec(
+        "report.create", "auto", "Attach a markdown report to the incident"
+    ),
     "shop.banner.set": ActionSpec("shop.banner.set", "auto", "Set the shop-wide banner"),
     "shop.banner.clear": ActionSpec("shop.banner.clear", "auto", "Clear the shop-wide banner"),
-    "invoice.send_reminder": ActionSpec("invoice.send_reminder", "auto", "Send a reminder to one subscriber"),
+    "invoice.send_reminder": ActionSpec(
+        "invoice.send_reminder", "auto", "Send a reminder to one subscriber"
+    ),
     "shop.config.rollback": ActionSpec(
         "shop.config.rollback", "approval", "Activate a previous shop config version"
     ),
@@ -56,9 +62,13 @@ ACTIONS: dict[str, ActionSpec] = {
         "subscription.cancel_at_period_end", "forbidden", "Cancel is human-only"
     ),
     "dispute.accept": ActionSpec("dispute.accept", "forbidden", "Accepting a claim is human-only"),
-    "dispute.accept_claim": ActionSpec("dispute.accept_claim", "forbidden", "Accepting a claim is human-only"),
+    "dispute.accept_claim": ActionSpec(
+        "dispute.accept_claim", "forbidden", "Accepting a claim is human-only"
+    ),
     "payout.create": ActionSpec("payout.create", "forbidden", "Payouts are out of scope"),
-    "credentials.rotate": ActionSpec("credentials.rotate", "forbidden", "Credential changes are human-only"),
+    "credentials.rotate": ActionSpec(
+        "credentials.rotate", "forbidden", "Credential changes are human-only"
+    ),
     "webhook.delete": ActionSpec("webhook.delete", "forbidden", "Webhook deletion is human-only"),
 }
 

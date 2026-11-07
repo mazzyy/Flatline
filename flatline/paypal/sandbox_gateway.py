@@ -135,7 +135,9 @@ class SandboxGateway:
                 "create_refund", {"capture_id": capture_id, **payload}
             )
         except Exception:
-            return await self._rest("POST", f"/v2/payments/captures/{capture_id}/refund", json=payload)
+            return await self._rest(
+                "POST", f"/v2/payments/captures/{capture_id}/refund", json=payload
+            )
 
     async def suspend_subscription(self, subscription_id: str, reason: str) -> dict[str, Any]:
         return await self._rest(
@@ -157,7 +159,10 @@ class SandboxGateway:
         return await self._rest(
             "POST",
             f"/v1/billing/subscriptions/{subscription_id}/capture",
-            json={"note": note or "Flatline outstanding balance capture", "capture_type": "OUTSTANDING_BALANCE"},
+            json={
+                "note": note or "Flatline outstanding balance capture",
+                "capture_type": "OUTSTANDING_BALANCE",
+            },
         )
 
     async def send_invoice_reminder(self, invoice_id: str) -> dict[str, Any]:

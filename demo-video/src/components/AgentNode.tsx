@@ -83,7 +83,9 @@ export const AgentNode: React.FC<{
   delay?: number;
   activeDelay?: number;
   dashed?: boolean;
-}> = ({ x, y, width = 300, name, role, icon, active = false, activeColor = colors.accent, delay = 0, activeDelay = 0, dashed }) => {
+  /** Tighter padding/icon and a 22 px role line, for dense diagrams (S4). */
+  compact?: boolean;
+}> = ({ x, y, width = 300, name, role, icon, active = false, activeColor = colors.accent, delay = 0, activeDelay = 0, dashed, compact = false }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const enter = uiSpring(frame, fps, delay);
@@ -96,7 +98,7 @@ export const AgentNode: React.FC<{
         left: x,
         top: y,
         width,
-        padding: "22px 24px",
+        padding: compact ? "22px 20px" : "22px 24px",
         borderRadius: radius.card,
         background: colors.surface,
         border,
@@ -104,14 +106,14 @@ export const AgentNode: React.FC<{
         opacity: enter,
         translate: `0px ${(1 - enter) * 24}px`,
         display: "flex",
-        gap: 18,
+        gap: compact ? 14 : 18,
         alignItems: "center",
       }}
     >
       <div
         style={{
-          width: 56,
-          height: 56,
+          width: compact ? 50 : 56,
+          height: compact ? 50 : 56,
           borderRadius: 14,
           display: "grid",
           placeItems: "center",
@@ -138,7 +140,7 @@ export const AgentNode: React.FC<{
         <div
           style={{
             fontFamily: fonts.body,
-            fontSize: type.min,
+            fontSize: compact ? 22 : type.min,
             color: colors.textMuted,
             marginTop: 4,
             whiteSpace: "nowrap",

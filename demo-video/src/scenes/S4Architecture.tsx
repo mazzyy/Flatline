@@ -21,22 +21,22 @@ export const S4Architecture: React.FC = () => {
   const t = useT();
 
   // Row 1
-  const srcW = 320;
+  const srcW = 430;
   const shop = { x: layout.marginX, y: 150, w: srcW };
   const paypal = { x: layout.marginX, y: 272, w: srcW };
-  const detector = { x: 620, y: 211, w: 320 };
-  const incident = { x: 1080, y: 200, w: 480 };
+  const detector = { x: 670, y: 211, w: 390 };
+  const incident = { x: 1130, y: 200, w: 480 };
   const rowH = 102;
 
   // Row 2
-  const agentW = 340;
+  const agentW = 390;
   const agentY = 470;
-  const agentsX = [120, 530, 940, 1350];
+  const agentsX = [120, 550, 980, 1410];
 
   // Row 3
-  const mcp = { x: 530, y: 760, w: 340 };
-  const gate = { x: 1400, y: 830 };
-  const executor = { x: 1454, y: 779, w: 306 };
+  const mcp = { x: agentsX[1] + (agentW - 340) / 2, y: 760, w: 340 };
+  const gate = { x: 1440, y: 830 };
+  const executor = { x: 1494, y: 779, w: 306 };
 
   // Timing (seconds in scene)
   const T = {
@@ -80,11 +80,11 @@ export const S4Architecture: React.FC = () => {
       <Background glow="accent" glowStrength={0.16} />
       <div style={{ position: "absolute", inset: 0, opacity: dim }}>
         {/* Row 1 */}
-        <AgentNode x={shop.x} y={shop.y} width={shop.w} name="Demo shop" role="Lumen Coffee Co. · telemetry" icon="shop" delay={T.shop} />
-        <AgentNode x={paypal.x} y={paypal.y} width={paypal.w} name="PayPal sandbox" role="webhooks" icon="paypal" delay={T.paypal} />
+        <AgentNode compact x={shop.x} y={shop.y} width={shop.w} name="Demo shop" role="Lumen Coffee Co. · telemetry" icon="shop" delay={T.shop} />
+        <AgentNode compact x={paypal.x} y={paypal.y} width={paypal.w} name="PayPal sandbox" role="webhooks" icon="paypal" delay={T.paypal} />
         <FlowArrow d={`M ${shop.x + shop.w} ${shopC.cy} C ${shop.x + shop.w + 90} ${shopC.cy} ${detector.x - 90} ${detC.cy - 12} ${detector.x - 4} ${detC.cy - 12}`} delay={T.arrows} dots={{ count: 3, period: 40, start: T.dotsFrom, end: T.dotsTo }} />
         <FlowArrow d={`M ${paypal.x + paypal.w} ${paypalC.cy} C ${paypal.x + paypal.w + 90} ${paypalC.cy} ${detector.x - 90} ${detC.cy + 12} ${detector.x - 4} ${detC.cy + 12}`} delay={T.arrows + 6} dots={{ count: 3, period: 46, start: T.dotsFrom + 10, end: T.dotsTo }} />
-        <AgentNode x={detector.x} y={detector.y} width={detector.w} name="Detector" role="baseline vs. 5-min window" icon="detector" delay={T.detector} active={frame >= T.detectorPulse} activeColor={colors.critical} activeDelay={T.detectorPulse} />
+        <AgentNode compact x={detector.x} y={detector.y} width={detector.w} name="Detector" role="baseline vs. 5-min window" icon="detector" delay={T.detector} active={frame >= T.detectorPulse} activeColor={colors.critical} activeDelay={T.detectorPulse} />
         <div
           style={{
             position: "absolute",
@@ -117,7 +117,7 @@ export const S4Architecture: React.FC = () => {
           { name: "Verifier", role: "confirms recovery", icon: "verify" as const, at: T.verifier },
         ].map((a, i) => (
           <React.Fragment key={a.name}>
-            <AgentNode x={agentsX[i]} y={agentY} width={agentW} name={a.name} role={a.role} icon={a.icon} delay={T.agents + i * 5} active={frame >= a.at} activeDelay={a.at} />
+            <AgentNode compact x={agentsX[i]} y={agentY} width={agentW} name={a.name} role={a.role} icon={a.icon} delay={T.agents + i * 5} active={frame >= a.at} activeDelay={a.at} />
             {i < 3 ? (
               <FlowArrow d={`M ${agentsX[i] + agentW} ${agentY + rowH / 2} L ${agentsX[i + 1] - 4} ${agentY + rowH / 2}`} delay={T.agents + 20 + i * 5} duration={14} />
             ) : null}
@@ -125,7 +125,7 @@ export const S4Architecture: React.FC = () => {
         ))}
 
         {/* Row 3: read scope */}
-        <AgentNode x={mcp.x} y={mcp.y} width={mcp.w} name="PayPal MCP" role="read scope only" icon="mcp" delay={T.mcp} dashed />
+        <AgentNode compact x={mcp.x} y={mcp.y} width={mcp.w} name="PayPal MCP" role="read scope only" icon="mcp" delay={T.mcp} dashed />
         <FlowArrow d={`M ${mcp.x + mcp.w / 2} ${mcp.y} L ${mcp.x + mcp.w / 2} ${agentY + rowH + 4}`} delay={T.mcpArrow} dashed color={colors.accent} label="read only" labelOffset={{ x: 112, y: 0 }} />
 
         {/* Row 3: gate + executor */}
@@ -134,9 +134,9 @@ export const S4Architecture: React.FC = () => {
           y={gate.y}
           height={200}
           startX={700}
-          endX={1460}
+          endX={1500}
           delay={T.gate}
-          cardWidth={360}
+          cardWidth={440}
           absorb
           proposals={[
             { label: "Roll back config", tier: "approval", delay: T.approval },
@@ -144,7 +144,7 @@ export const S4Architecture: React.FC = () => {
           ]}
         />
         <FlowArrow d={`M ${agentsX[2] + agentW / 2} ${agentY + rowH} L ${agentsX[2] + agentW / 2} ${gate.y - 100 - 100}`} delay={T.gate - 10} duration={14} />
-        <AgentNode x={executor.x} y={executor.y} width={executor.w} name="Executor" role="write scope" icon="executor" delay={T.executor} active={frame >= T.executorActive} activeColor={colors.ok} activeDelay={T.executorActive} />
+        <AgentNode compact x={executor.x} y={executor.y} width={executor.w} name="Executor" role="write scope" icon="executor" delay={T.executor} active={frame >= T.executorActive} activeColor={colors.ok} activeDelay={T.executorActive} />
       </div>
 
       {/* Final framing line */}

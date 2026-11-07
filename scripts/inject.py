@@ -55,7 +55,9 @@ def events_for(playbook: str) -> list[dict]:
                     "id": f"I-{i}",
                     "plan_id": "P-COFFEECLUB",
                     "billing_info": {
-                        "last_failed_payment": {"amount": {"currency_code": "USD", "value": "14.00"}}
+                        "last_failed_payment": {
+                            "amount": {"currency_code": "USD", "value": "14.00"}
+                        }
                     },
                 },
             }

@@ -46,7 +46,13 @@ def _persist(
         created_at=utcnow(),
     )
     db.add(step)
-    audit(db, actor=f"agent:{node}", action=f"{node}.completed", incident_id=incident.id, details={"model": model})
+    audit(
+        db,
+        actor=f"agent:{node}",
+        action=f"{node}.completed",
+        incident_id=incident.id,
+        details={"model": model},
+    )
     db.flush()
     HUB.publish("step.added", {"incident_id": str(incident.id), "node": node, "id": str(step.id)})
     return step
@@ -58,7 +64,9 @@ def _live_or_mock(node: str, model_kind: str, fallback: Any) -> Any:
         return fallback
     from flatline.llm.models import live_complete, resolve_model
 
-    raw = live_complete(resolve_model(model_kind, cfg), _prompt(node) + "\n\n" + json.dumps(fallback))
+    raw = live_complete(
+        resolve_model(model_kind, cfg), _prompt(node) + "\n\n" + json.dumps(fallback)
+    )
     return raw
 
 
@@ -83,7 +91,15 @@ def run_triage(db: Session, incident: Incident, events: list[dict[str, Any]]) ->
             pass
     incident.severity = out.severity
     incident.status = "diagnosing"
-    _persist(db, incident, "triage", body, out.model_dump(), model="mock" if settings().is_mock_llm else settings().model_fast, latency_ms=int((time.perf_counter() - started) * 1000))
+    _persist(
+        db,
+        incident,
+        "triage",
+        body,
+        out.model_dump(),
+        model="mock" if settings().is_mock_llm else settings().model_fast,
+        latency_ms=int((time.perf_counter() - started) * 1000),
+    )
     return out
 
 
@@ -128,7 +144,11 @@ def run_diagnostician(
 
 def run_remediator(db: Session, incident: Incident, diagnosis: DiagnosisOutput) -> RemediatorOutput:
     started = time.perf_counter()
-    body = {"id": str(incident.id), "playbook": incident.playbook, "scope_value": incident.scope_value}
+    body = {
+        "id": str(incident.id),
+        "playbook": incident.playbook,
+        "scope_value": incident.scope_value,
+    }
     out = mock_llm.remediate(body, diagnosis)
     if not settings().is_mock_llm:
         try:
@@ -150,7 +170,9 @@ def run_remediator(db: Session, incident: Incident, diagnosis: DiagnosisOutput) 
     return out
 
 
-def run_verifier(db: Session, incident: Incident, resolved: bool, observation: str) -> VerifierOutput:
+def run_verifier(
+    db: Session, incident: Incident, resolved: bool, observation: str
+) -> VerifierOutput:
     started = time.perf_counter()
     out = mock_llm.verify(resolved, observation)
     if resolved:
