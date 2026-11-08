@@ -237,8 +237,13 @@ try {
     await sleep(500);
     const readyAt = Date.now();
     await sleep(900);
-    await page.getByRole("button", { name: "Approve" }).first().click();
-    await sleep(2600);
+    const card = page.locator(".card", { has: page.locator("code", { hasText: "shop.config.rollback" }) }).first();
+    await card.getByRole("button", { name: "Approve" }).click();
+    // Hold until the rollback shows as executed, then a beat longer.
+    await card.locator(".badge.executed").first().waitFor({ timeout: 15000 }).catch(() => {
+      console.log("rollback did not show as executed within 15 s");
+    });
+    await sleep(1600);
     return { readyAt };
   });
 

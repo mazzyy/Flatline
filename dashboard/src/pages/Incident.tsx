@@ -47,6 +47,9 @@ export default function IncidentPage({ id }: { id: string }) {
   }, [refresh]);
 
   async function decide(proposalId: string, kind: "approve" | "reject") {
+    // Show the decision at once; the server confirms it (and the execution) next.
+    const status = kind === "approve" ? "approved" : "rejected";
+    setRow((r) => (r ? { ...r, proposals: (r.proposals || []).map((p) => (p.id === proposalId ? { ...p, status } : p)) } : r));
     await post(`/api/proposals/${proposalId}/${kind}`, {});
     await refresh();
   }

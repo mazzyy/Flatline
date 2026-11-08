@@ -181,9 +181,13 @@ def main() -> int:
                 has(proposals, "invoice.send_reminder", "approved", "executed"),
                 "the payment reminder runs on its own",
             )
+            # Whether to chase the balance now is the model's call; if it does,
+            # moving the money must wait for a human.
+            captures = [p for p in proposals if p["action"] == "subscription.capture_outstanding"]
             report.check(
-                has(proposals, "subscription.capture_outstanding", "pending"),
-                "capturing the balance waits for approval",
+                all(p["status"] in ("pending", "refused") for p in captures),
+                "capturing a balance never runs without approval"
+                + ("" if captures else " (none proposed this run)"),
             )
 
     api.post("/api/chaos", json={"reset": True, "note": "live check done"}).raise_for_status()

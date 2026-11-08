@@ -419,12 +419,17 @@ def _decide_proposal(db: Session, proposal_id: UUID, *, approved: bool) -> dict[
         incident_id=row.incident_id,
         proposal_id=row.id,
     )
+    # Commit before telling the dashboard, so the refresh it triggers sees the
+    # decision, then again after the executor, before the (slower) verifier.
+    db.commit()
     HUB.publish("proposal.updated", proposal_out(row))
     if approved:
         try:
             from flatline.policy.executor import execute_proposal
 
             execute_proposal(db, row)
+            db.commit()
+            HUB.publish("proposal.updated", proposal_out(row))
         except ImportError:
             pass
         except Exception as exc:
