@@ -55,7 +55,7 @@ export const DemoVideo: React.FC<DemoVideoProps> = ({ scale, hasSoundtrack, clip
           })}
         </TransitionSeries>
         <CaptionTrack segments={captions} />
-        {hasSoundtrack ? <Audio src={staticFile("audio/soundtrack-v4.m4a")} /> : null}
+        {hasSoundtrack ? <Audio src={staticFile("audio/soundtrack-v5.m4a")} /> : null}
       </AbsoluteFill>
     </SceneProvider>
   );
