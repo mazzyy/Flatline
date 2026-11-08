@@ -19,7 +19,11 @@ services:
     build:
       context: .
     env_file: .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
+      # Ollama on the host machine, seen from inside the container
+      OLLAMA_API_BASE: http://host.docker.internal:11434
       PAYPAL_ENVIRONMENT: ${PAYPAL_ENVIRONMENT:-MOCK}
       LLM_MODE: ${LLM_MODE:-mock}
       PYTHONPATH: /app
@@ -55,7 +59,11 @@ services:
     build:
       context: .
     env_file: .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
+      # Ollama on the host machine, seen from inside the container
+      OLLAMA_API_BASE: http://host.docker.internal:11434
       PAYPAL_ENVIRONMENT: ${PAYPAL_ENVIRONMENT:-MOCK}
       LLM_MODE: ${LLM_MODE:-mock}
       PYTHONPATH: /app

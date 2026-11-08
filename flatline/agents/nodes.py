@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import json
+import logging
 import time
 from pathlib import Path
 from typing import Any
 
-from pydantic import ValidationError
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from flatline.agents.schemas import DiagnosisOutput, RemediatorOutput, TriageOutput, VerifierOutput
@@ -18,6 +19,7 @@ from flatline.ingest.sse import HUB
 from flatline.llm import mock_llm
 
 PROMPTS = Path(__file__).resolve().parent / "prompts"
+log = logging.getLogger(__name__)
 
 
 def _prompt(name: str) -> str:
@@ -58,16 +60,34 @@ def _persist(
     return step
 
 
-def _live_or_mock(node: str, model_kind: str, fallback: Any) -> Any:
+def _ask_model[T: BaseModel](
+    node: str, model_kind: str, node_input: Any, draft: T
+) -> tuple[T, str]:
+    """Return this node's answer and the label to record for it.
+
+    The playbook answer (`draft`) is the JSON shape the model must return and the
+    fallback. Any failure (network, auth, quota, invalid JSON) keeps the draft and the
+    label says so, so the timeline never credits a model with an answer it did not give.
+    """
     cfg = settings()
     if cfg.is_mock_llm:
-        return fallback
+        return draft, "mock"
     from flatline.llm.models import live_complete, resolve_model
 
-    raw = live_complete(
-        resolve_model(model_kind, cfg), _prompt(node) + "\n\n" + json.dumps(fallback)
+    model = resolve_model(model_kind, cfg)
+    prompt = (
+        _prompt(node)
+        + "\n\nInput:\n"
+        + json.dumps(node_input, default=str)
+        + "\n\nPlaybook draft. Return this exact JSON shape, corrected from the input:\n"
+        + json.dumps(draft.model_dump(), default=str)
     )
-    return raw
+    try:
+        raw = live_complete(model, prompt)
+        return type(draft).model_validate_json(raw), model
+    except Exception as exc:
+        log.warning("%s: live call to %s failed, keeping the playbook answer: %s", node, model, exc)
+        return draft, f"{model} (failed, playbook fallback)"
 
 
 def run_triage(db: Session, incident: Incident, events: list[dict[str, Any]]) -> TriageOutput:
@@ -81,14 +101,9 @@ def run_triage(db: Session, incident: Incident, events: list[dict[str, Any]]) ->
         "scope_key": incident.scope_key,
         "scope_value": incident.scope_value,
     }
-    out = mock_llm.triage(body, events)
-    if not settings().is_mock_llm:
-        try:
-            raw = _live_or_mock("triage", "fast", out.model_dump())
-            if isinstance(raw, str):
-                out = TriageOutput.model_validate_json(raw)
-        except (ValidationError, Exception):
-            pass
+    out, model = _ask_model(
+        "triage", "fast", {"incident": body, "events": events[:50]}, mock_llm.triage(body, events)
+    )
     incident.severity = out.severity
     incident.status = "diagnosing"
     _persist(
@@ -97,7 +112,7 @@ def run_triage(db: Session, incident: Incident, events: list[dict[str, Any]]) ->
         "triage",
         body,
         out.model_dump(),
-        model="mock" if settings().is_mock_llm else settings().model_fast,
+        model=model,
         latency_ms=int((time.perf_counter() - started) * 1000),
     )
     return out
@@ -119,14 +134,12 @@ def run_diagnostician(
         "config_history": config_history,
         "tools": tool_bundle,
     }
-    out = mock_llm.diagnose(body, events, config_history, tool_bundle)
-    if not settings().is_mock_llm:
-        try:
-            raw = _live_or_mock("diagnostician", "reasoning", out.model_dump())
-            if isinstance(raw, str):
-                out = DiagnosisOutput.model_validate_json(raw)
-        except ValidationError:
-            out = mock_llm.diagnose(body, events, config_history, tool_bundle)
+    out, model = _ask_model(
+        "diagnostician",
+        "reasoning",
+        body,
+        mock_llm.diagnose(body, events, config_history, tool_bundle),
+    )
     incident.root_cause = out.root_cause
     incident.evidence = {"claims": [c.model_dump() for c in out.evidence], "tools": tool_bundle}
     _persist(
@@ -135,7 +148,7 @@ def run_diagnostician(
         "diagnostician",
         {"event_count": len(events), "tools": tool_bundle},
         out.model_dump(),
-        model="mock" if settings().is_mock_llm else settings().model_reasoning,
+        model=model,
         latency_ms=int((time.perf_counter() - started) * 1000),
         tool_calls=[{"tool": "events_by_group"}, {"tool": "config_history"}],
     )
@@ -149,14 +162,12 @@ def run_remediator(db: Session, incident: Incident, diagnosis: DiagnosisOutput) 
         "playbook": incident.playbook,
         "scope_value": incident.scope_value,
     }
-    out = mock_llm.remediate(body, diagnosis)
-    if not settings().is_mock_llm:
-        try:
-            raw = _live_or_mock("remediator", "reasoning", out.model_dump())
-            if isinstance(raw, str):
-                out = RemediatorOutput.model_validate_json(raw)
-        except ValidationError:
-            out = mock_llm.remediate(body, diagnosis)
+    out, model = _ask_model(
+        "remediator",
+        "reasoning",
+        {**body, "diagnosis": diagnosis.model_dump()},
+        mock_llm.remediate(body, diagnosis),
+    )
     incident.status = "awaiting_approval"
     _persist(
         db,
@@ -164,7 +175,7 @@ def run_remediator(db: Session, incident: Incident, diagnosis: DiagnosisOutput) 
         "remediator",
         body,
         out.model_dump(),
-        model="mock" if settings().is_mock_llm else settings().model_reasoning,
+        model=model,
         latency_ms=int((time.perf_counter() - started) * 1000),
     )
     return out
@@ -174,7 +185,14 @@ def run_verifier(
     db: Session, incident: Incident, resolved: bool, observation: str
 ) -> VerifierOutput:
     started = time.perf_counter()
-    out = mock_llm.verify(resolved, observation)
+    out, model = _ask_model(
+        "verifier",
+        "fast",
+        {"resolved": resolved, "observation": observation},
+        mock_llm.verify(resolved, observation),
+    )
+    # The metric check decides; the model only writes the words.
+    out = out.model_copy(update={"resolved": resolved})
     if resolved:
         incident.status = "resolved"
         incident.resolved_at = utcnow()
@@ -186,7 +204,7 @@ def run_verifier(
         "verifier",
         {"resolved": resolved, "observation": observation},
         out.model_dump(),
-        model="mock" if settings().is_mock_llm else settings().model_fast,
+        model=model,
         latency_ms=int((time.perf_counter() - started) * 1000),
     )
     HUB.publish("incident.updated", {"id": str(incident.id), "status": incident.status})

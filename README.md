@@ -83,7 +83,7 @@ This part is only needed if you want real sandbox traffic instead of the mock.
 3. Turn on Transaction Search for the app. Flatline only uses it as evidence, never for detection.
 4. Register a webhook pointing at `https://<your-api>/webhooks/paypal` for the event types listed in section 9.2 of the [spec](docs/spec.md), and put its ID in `PAYPAL_WEBHOOK_ID`.
 5. Create a catalog product and a monthly Coffee Club plan, then set `PAYPAL_SANDBOX_PLAN_ID` and `PAYPAL_SANDBOX_PRODUCT_ID`.
-6. For live models, add your Azure OpenAI keys (Claude on Azure AI Foundry works as well) and set the LiteLLM model strings in `MODEL_FAST` and `MODEL_REASONING`. Then install the extras with `pip install -r requirements-live.txt` and set `LLM_MODE=live`.
+6. For live models, pick any provider LiteLLM supports and set `MODEL_FAST` and `MODEL_REASONING` in `.env`. Gemini works on the free tier (`gemini/<model>` plus `GEMINI_API_KEY`), a local model such as Qwen runs through Ollama (`ollama_chat/<model>`), and Azure OpenAI uses `azure/<deployment>` with the `AZURE_*` values. Install the extras with `pip install -r requirements-live.txt`, check both models with `python scripts/llm_check.py`, then set `LLM_MODE=live`. If a live call ever fails, the agent keeps the playbook answer and its timeline entry says so.
 7. Point the demo shop at the same client ID so the JS SDK v6 buttons render.
 
 The tests never need any of these keys.
@@ -93,7 +93,7 @@ The tests never need any of these keys.
 The repo includes a [Blueprint](render.yaml).
 
 1. In Render, create a new Blueprint and pick this repo.
-2. Fill in the environment variables marked `sync: false`. That means the PayPal sandbox credentials, the webhook ID, the plan ID, your Azure keys, `DASHBOARD_PASSCODE`, `INJECT_TOKEN`, `APP_BASE_URL`, and `FLATLINE_API_URL` for the shop.
+2. Fill in the environment variables marked `sync: false`. That means the PayPal sandbox credentials, the webhook ID, the plan ID, your model keys (`GEMINI_API_KEY` or the Azure values, plus `MODEL_FAST` and `MODEL_REASONING`), `DASHBOARD_PASSCODE`, `INJECT_TOKEN`, `APP_BASE_URL`, and `FLATLINE_API_URL` for the shop.
 3. The Blueprint sets `PAYPAL_ENVIRONMENT` to `SANDBOX`. Leave it that way.
 
 ## Why you can trust it

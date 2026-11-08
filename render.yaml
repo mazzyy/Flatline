@@ -30,6 +30,8 @@ services:
         sync: false
       - key: PAYPAL_SANDBOX_PRODUCT_ID
         sync: false
+      - key: GEMINI_API_KEY
+        sync: false
       - key: AZURE_API_KEY
         sync: false
       - key: AZURE_API_BASE
@@ -83,6 +85,8 @@ services:
       - key: PAYPAL_CLIENT_ID
         sync: false
       - key: PAYPAL_CLIENT_SECRET
+        sync: false
+      - key: GEMINI_API_KEY
         sync: false
       - key: AZURE_API_KEY
         sync: false

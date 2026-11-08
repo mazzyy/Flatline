@@ -49,6 +49,8 @@ class Settings(BaseSettings):
     azure_api_key: str = Field(default="", alias="AZURE_API_KEY")
     azure_api_base: str = Field(default="", alias="AZURE_API_BASE")
     azure_api_version: str = Field(default="2024-08-01-preview", alias="AZURE_API_VERSION")
+    gemini_api_key: str = Field(default="", alias="GEMINI_API_KEY")
+    ollama_api_base: str = Field(default="", alias="OLLAMA_API_BASE")
 
     database_url: str = Field(
         default="postgresql+psycopg://flatline:flatline@localhost:5432/flatline",
