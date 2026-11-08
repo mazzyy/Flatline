@@ -16,3 +16,7 @@ allowed_actions:
   - subscription.capture_outstanding
   - shop.plan.pause_signups
 plan_price: 14.00
+# Runbook the agents get: typical causes to confirm or reject, and usual fixes.
+runbook:
+  causes: "Subscribers' payment methods failing on one plan (expired or declined cards); a plan misconfiguration when every renewal on the plan fails."
+  fixes: "Send each affected subscriber a payment reminder; capture the outstanding balance once they have fixed their payment method; pause sign-ups only if the plan itself is broken."

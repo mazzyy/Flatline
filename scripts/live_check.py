@@ -47,6 +47,10 @@ class Report:
             self.failed.append(label)
 
 
+def has(proposals: list[dict[str, Any]], action: str, *statuses: str) -> bool:
+    return any(p["action"] == action and p["status"] in statuses for p in proposals)
+
+
 def wait_for_agents(api: httpx.Client, incident_id: str) -> dict[str, Any]:
     deadline = time.monotonic() + WAIT_S
     while True:
@@ -124,20 +128,27 @@ def main() -> int:
         print(
             f"    incident {incident_id}: {body['status']}, agents took {time.monotonic() - started:.0f}s"
         )
-        print(f"    root cause: {(body.get('root_cause') or '')[:160]}")
+        cause = body.get("root_cause") or ""
+        print(f"    root cause: {cause[:400]}")
         show_steps(body, report)
         proposals = show_proposals(body)
+        low = cause.lower()
 
         if playbook == "checkout_failure_spike":
-            pending = [p for p in proposals if p["status"] == "pending"]
-            earlier = [
-                p for p in proposals if p["tier"] == "approval" and p["status"] == "executed"
+            report.check(
+                "currenc" in low or "eur" in low, "the diagnosis names the currency change"
+            )
+            pending = [
+                p
+                for p in proposals
+                if p["action"] == "shop.config.rollback" and p["status"] == "pending"
             ]
+            earlier = has(proposals, "shop.config.rollback", "executed")
             if earlier and not pending:
                 print(
                     "    (this incident was opened and approved by an earlier run in the last 30 min)"
                 )
-            report.check(bool(pending or earlier), "a fix waits for approval")
+            report.check(bool(pending or earlier), "the config rollback waits for approval")
             for p in pending[:1]:
                 done = api.post(f"/api/proposals/{p['id']}/approve").json()
                 after = api.get(f"/api/incidents/{incident_id}").json()
@@ -147,18 +158,27 @@ def main() -> int:
                 report.check(done["status"] in ("approved", "executed"), "approval executes")
         elif playbook == "refund_wave":
             report.check(
-                any(p["status"] == "refused" for p in proposals), "the bulk refund is refused"
+                "yirgacheffe" in low and "currenc" not in low, "the diagnosis names the product"
+            )
+            report.check(
+                has(proposals, "shop.product.pause_sales", "pending"),
+                "pausing that product's sales waits for approval",
+            )
+            report.check(
+                has(proposals, "refund.bulk", "refused"), "the red-team bulk refund is refused"
             )
         else:
             report.check(
-                any(
-                    p["tier"] == "auto" and p["status"] in ("approved", "executed")
-                    for p in proposals
-                ),
-                "the reminder runs on its own",
+                any(k in low for k in ("renewal", "subscri", "plan")) and "currenc" not in low,
+                "the diagnosis is about the failing renewals",
             )
             report.check(
-                any(p["status"] == "pending" for p in proposals), "the capture waits for approval"
+                has(proposals, "invoice.send_reminder", "approved", "executed"),
+                "the payment reminder runs on its own",
+            )
+            report.check(
+                has(proposals, "subscription.capture_outstanding", "pending"),
+                "capturing the balance waits for approval",
             )
 
     api.post("/api/chaos", json={"reset": True, "note": "live check done"}).raise_for_status()

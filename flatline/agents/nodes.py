@@ -148,6 +148,7 @@ def run_diagnostician(
         "playbook": incident.playbook,
         "scope_value": incident.scope_value,
         "evidence_to_check": playbook.evidence if playbook else [],
+        "runbook_typical_causes": playbook.runbook.get("causes", "") if playbook else "",
         "events": events[:50],
         "config_history": config_history,
         "tools": tool_bundle,
@@ -190,11 +191,12 @@ def run_remediator(db: Session, incident: Incident, diagnosis: DiagnosisOutput) 
     from flatline.policy.catalog import get as catalog_action
 
     allowed = {
+        "runbook_usual_fixes": playbook.runbook.get("fixes", "") if playbook else "",
         "allowed_actions": [
             {"action": spec.key, "description": spec.description, "params": spec.params}
             for spec in (catalog_action(a) for a in (playbook.allowed_actions if playbook else []))
             if spec is not None
-        ]
+        ],
     }
     out, model = _ask_model(
         "remediator",

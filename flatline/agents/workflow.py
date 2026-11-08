@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from flatline.agents import tools
@@ -46,12 +45,12 @@ def _event_dicts(rows: list[Event]) -> list[dict[str, Any]]:
 
 
 async def run_agents(db: Session, incident: Incident) -> WorkflowResult:
-    events = list(db.scalars(select(Event).order_by(Event.occurred_at.desc()).limit(50)).all())
+    events, background = tools.incident_events(db, incident)
     event_dicts = _event_dicts(events)
     result = WorkflowResult(incident)
     result.triage = run_triage(db, incident, event_dicts)
     history = tools.config_history(db)
-    grouped = tools.events_by_group(db, incident.id, incident.playbook)
+    grouped = tools.events_by_group(events, background)
     gateway = build_read_gateway()
     paypal = await tools.paypal_snapshot(
         gateway,

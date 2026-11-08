@@ -16,3 +16,7 @@ allowed_actions:
   - shop.banner.set
   - shop.config.rollback
 average_order_value: 18.00
+# Runbook the agents get: typical causes to confirm or reject, and usual fixes.
+runbook:
+  causes: "A shop config change deployed just before the failures (currency, product settings); buyer side card declines spread over many different buyers; PayPal answering with server errors."
+  fixes: "Put up an honest banner while checkout is broken; roll back to the last good config version when a config change caused it; alert the merchant."

@@ -92,6 +92,19 @@ const injectAndWait = async (chaosBody, playbook) => {
   return agentsDone(playbook);
 };
 
+// Scroll so a section heading (h2/h3) sits near the top of the viewport.
+const scrollToHeading = async (page, text, smooth = true) => {
+  await page.evaluate(
+    ([t, sm]) => {
+      const h = [...document.querySelectorAll("h2, h3")].find((el) => el.textContent.trim().startsWith(t));
+      if (h) window.scrollTo({ top: h.getBoundingClientRect().top + window.scrollY - 70, behavior: sm ? "smooth" : "auto" });
+    },
+    [text, smooth],
+  );
+};
+const scrollToBottom = (page, smooth = true) =>
+  page.evaluate((sm) => window.scrollTo({ top: document.body.scrollHeight, behavior: sm ? "smooth" : "auto" }), smooth);
+
 const firstIncident = async (page) => {
   const res = await page.request.get(`${DASH}/api/incidents`);
   const data = await res.json();
@@ -187,20 +200,28 @@ try {
     await login(page);
     await page.goto(`${DASH}/#/overview`, { waitUntil: "networkidle" });
     await page.getByRole("heading", { name: "Revenue health" }).waitFor();
-    await sleep(2500);
+    const readyAt = Date.now();
+    await sleep(4500);
+    return { readyAt };
   });
 
 
   await maybe("04-incident-detail.mp4", async (page) => {
+    // Three holds the video zooms into: the agent timeline (models, latencies, PayPal
+    // reads through MCP), the root cause with its evidence, then the proposals.
     await login(page);
     const id = await firstIncident(page);
     await page.goto(`${DASH}/#/incident/${id}`, { waitUntil: "networkidle" });
-    await page.getByRole("heading", { name: /checkout|Root cause|Proposals/i }).first().waitFor();
-    await sleep(800);
-    await page.evaluate(() => window.scrollTo(0, 280));
-    await sleep(1800);
-    await page.evaluate(() => window.scrollTo(0, 560));
-    await sleep(1600);
+    await page.getByRole("heading", { name: "Agent timeline" }).waitFor();
+    await scrollToBottom(page, false);
+    await sleep(500);
+    const readyAt = Date.now();
+    await sleep(5000);
+    await page.evaluate(() => window.scrollTo({ top: 0, behavior: "smooth" }));
+    await sleep(5500);
+    await scrollToHeading(page, "Proposals");
+    await sleep(5000);
+    return { readyAt };
   });
 
   await maybe("05-approve.mp4", async (page) => {
@@ -208,10 +229,13 @@ try {
     const id = await firstIncident(page);
     await page.goto(`${DASH}/#/incident/${id}`, { waitUntil: "networkidle" });
     await page.getByRole("button", { name: "Approve" }).first().waitFor();
-    await page.evaluate(() => window.scrollTo(0, 360));
-    await sleep(700);
+    await scrollToHeading(page, "Proposals", false);
+    await sleep(500);
+    const readyAt = Date.now();
+    await sleep(900);
     await page.getByRole("button", { name: "Approve" }).first().click();
-    await sleep(1800);
+    await sleep(2600);
+    return { readyAt };
   });
 
   if (!(skipExisting && existsSync(join(OUT, "06-refund-wave.mp4")))) {
@@ -219,16 +243,22 @@ try {
   }
   await maybe("06-refund-wave.mp4", async (page) => {
     await login(page);
-    await page.goto(`${DASH}/#/chaos`, { waitUntil: "networkidle" });
-    await sleep(3000); // the video trims these first 3 seconds
     const res = await page.request.get(`${DASH}/api/incidents`);
     const items = (await res.json()).items;
     const refund = items.find((i) => i.playbook === "refund_wave") ?? items[0];
     await page.goto(`${DASH}/#/incident/${refund.id}`, { waitUntil: "networkidle" });
-    await page.getByRole("heading", { name: /refund|Proposals/i }).first().waitFor();
-    await sleep(700);
-    await page.evaluate(() => window.scrollTo(0, 360));
-    await sleep(2200);
+    await page.getByRole("heading", { name: "Proposals" }).waitFor();
+    await sleep(400);
+    const readyAt = Date.now();
+    await sleep(2500); // root cause at the top
+    await scrollToHeading(page, "Proposals");
+    await sleep(4500); // pause sales waits for approval
+    await page.evaluate(() => {
+      const card = [...document.querySelectorAll(".card")].find((c) => c.textContent.includes("refund.bulk"));
+      if (card) window.scrollTo({ top: card.getBoundingClientRect().top + window.scrollY - 260, behavior: "smooth" });
+    });
+    await sleep(5500); // the red-team probe, refused
+    return { readyAt };
   });
 
   if (!(skipExisting && existsSync(join(OUT, "07-renewals.mp4")))) {
@@ -236,18 +266,18 @@ try {
   }
   await maybe("07-renewals.mp4", async (page) => {
     await login(page);
-    await page.goto(`${DASH}/#/chaos`, { waitUntil: "networkidle" });
-    await sleep(3000); // the video trims these first 3 seconds
     const res = await page.request.get(`${DASH}/api/incidents`);
     const items = (await res.json()).items;
     const renewal = items.find((i) => i.playbook === "subscription_renewal_failures") ?? items[0];
     await page.goto(`${DASH}/#/incident/${renewal.id}`, { waitUntil: "networkidle" });
-    await sleep(700);
-    await page.evaluate(() => window.scrollTo(0, 360));
-    await sleep(2200);
-    // Down to the agent timeline: the Diagnostician's PayPal reads through MCP.
-    await page.evaluate(() => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" }));
-    await sleep(2800);
+    await page.getByRole("heading", { name: "Agent timeline" }).waitFor();
+    await scrollToBottom(page, false);
+    await sleep(500);
+    const readyAt = Date.now();
+    await sleep(5000); // the Diagnostician read the real plan through MCP
+    await scrollToHeading(page, "Proposals");
+    await sleep(6500); // reminder auto, capture waits for approval
+    return { readyAt };
   });
 
   await maybe("08-audit-log.mp4", async (page) => {

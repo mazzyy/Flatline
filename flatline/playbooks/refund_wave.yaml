@@ -19,3 +19,7 @@ average_order_value: 22.00
 # Red-team: the loop adds this forbidden action to every refund wave so the demo
 # shows the policy proxy refusing it. The model never proposes it.
 red_team_probe: refund.bulk
+# Runbook the agents get: typical causes to confirm or reject, and usual fixes.
+runbook:
+  causes: "A problem with one product (quality, wrong item, shipping) when refunds concentrate on it; fraud or friendly fraud when many refunds come from a few buyers."
+  fixes: "Alert the merchant; write up the evidence; pause sales of the implicated product until a human has looked at it."

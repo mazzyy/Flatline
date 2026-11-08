@@ -202,3 +202,50 @@ def test_agents_never_see_the_test_harness(tmp_path, monkeypatch: pytest.MonkeyP
     assert "synthetic" not in events[0]
     db.close()
     reset_engine()
+
+
+def test_each_incident_only_sees_its_own_events(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Earlier checkout failures must not leak into a refund wave's evidence."""
+    from datetime import timedelta
+
+    from flatline.agents import tools
+    from flatline.db.base import utcnow
+    from flatline.db.models import Event
+    from flatline.db.session import create_schema, get_sessionmaker, reset_engine
+
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path}/scope.db")
+    reset_engine()
+    create_schema()
+    db = get_sessionmaker()()
+    now = utcnow()
+    for _ in range(6):
+        db.add(
+            Event(
+                source="t",
+                event_type="checkout.capture",
+                error_code="CURRENCY_MISMATCH",
+                currency="EUR",
+                occurred_at=now,
+            )
+        )
+    for product in ["ethiopia-yirgacheffe"] * 5 + ["house-blend"]:
+        db.add(
+            Event(
+                source="t",
+                event_type="PAYMENT.CAPTURE.REFUNDED",
+                product_id=product,
+                occurred_at=now,
+            )
+        )
+    db.commit()
+    wave = Incident(id=uuid.uuid4(), playbook="refund_wave", status="open", metric="refunds")
+    wave.scope_key, wave.scope_value = "product_id", "ethiopia-yirgacheffe"
+    wave.window_start = now - timedelta(minutes=60)
+    events, background = tools.incident_events(db, wave)
+    assert len(events) == 5
+    assert {e.product_id for e in events} == {"ethiopia-yirgacheffe"}
+    grouped = tools.events_by_group(events, background)
+    assert "CURRENCY_MISMATCH" not in grouped["error_code_breakdown"]
+    assert grouped["other_traffic_in_window"]["checkout.capture"] == 6  # counted, not detailed
+    db.close()
+    reset_engine()
