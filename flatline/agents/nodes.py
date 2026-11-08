@@ -65,9 +65,10 @@ def _ask_model[T: BaseModel](
 ) -> tuple[T, str]:
     """Return this node's answer and the label to record for it.
 
-    The playbook answer (`draft`) is the JSON shape the model must return and the
-    fallback. Any failure (network, auth, quota, invalid JSON) keeps the draft and the
-    label says so, so the timeline never credits a model with an answer it did not give.
+    The model answers from the input and the output schema alone. The playbook answer
+    (`draft`) is the fallback: any failure (network, auth, quota, invalid JSON) keeps it
+    and the label says so, so the timeline never credits a model with an answer it did
+    not give.
     """
     cfg = settings()
     if cfg.is_mock_llm:
@@ -78,12 +79,14 @@ def _ask_model[T: BaseModel](
     chain = [primary] + [
         m.strip() for m in cfg.model_fallbacks.split(",") if m.strip() and m.strip() != primary
     ]
+    # The model gets the evidence and the output schema. The playbook's own answer
+    # (`draft`) is never shown to it; it is only the labelled fallback below.
     prompt = (
         _prompt(node)
         + "\n\nInput:\n"
         + json.dumps(node_input, default=str)
-        + "\n\nPlaybook draft. Return this exact JSON shape, corrected from the input:\n"
-        + json.dumps(draft.model_dump(), default=str)
+        + "\n\nReply with one JSON object that matches this JSON Schema, and nothing else:\n"
+        + json.dumps(type(draft).model_json_schema())
     )
     for model in chain:
         try:
@@ -137,10 +140,14 @@ def run_diagnostician(
     tool_bundle: dict[str, Any],
 ) -> DiagnosisOutput:
     started = time.perf_counter()
+    from flatline.playbooks.loader import load_playbooks
+
+    playbook = load_playbooks().get(incident.playbook)
     body = {
         "id": str(incident.id),
         "playbook": incident.playbook,
         "scope_value": incident.scope_value,
+        "evidence_to_check": playbook.evidence if playbook else [],
         "events": events[:50],
         "config_history": config_history,
         "tools": tool_bundle,
@@ -180,7 +187,15 @@ def run_remediator(db: Session, incident: Incident, diagnosis: DiagnosisOutput) 
         "playbook": incident.playbook,
         "scope_value": incident.scope_value,
     }
-    allowed = {"allowed_actions": playbook.allowed_actions if playbook else []}
+    from flatline.policy.catalog import get as catalog_action
+
+    allowed = {
+        "allowed_actions": [
+            {"action": spec.key, "description": spec.description, "params": spec.params}
+            for spec in (catalog_action(a) for a in (playbook.allowed_actions if playbook else []))
+            if spec is not None
+        ]
+    }
     out, model = _ask_model(
         "remediator",
         "reasoning",

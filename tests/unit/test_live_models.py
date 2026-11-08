@@ -63,7 +63,8 @@ def test_live_answer_is_used_and_credited(live: None, monkeypatch: pytest.Monkey
     assert out.severity == "critical"
     assert label == "gemini/test-fast" == settings().model_fast
     assert "CURRENCY_MISMATCH" in seen["prompt"]  # the real input reaches the model
-    assert "Playbook draft" in seen["prompt"]
+    assert '"title": "TriageOutput"' in seen["prompt"]  # and the output schema
+    assert _draft().summary not in seen["prompt"]  # but never the playbook's answer
 
 
 @pytest.mark.parametrize("reply", [RuntimeError("429 quota"), "not json at all"])
@@ -155,3 +156,49 @@ def test_remediator_sees_the_allowed_actions(live: None, monkeypatch: pytest.Mon
     nodes.run_remediator(MagicMock(), incident, diagnosis)
     assert "invoice.send_reminder" in seen["prompt"]
     assert "allowed_actions" in seen["prompt"]
+
+
+def test_agents_never_see_the_test_harness(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Chaos flags, injected markers and chaos-only versions stay out of the agents' view."""
+    from flatline.agents import tools
+    from flatline.agents.workflow import _event_dicts
+    from flatline.db.base import utcnow
+    from flatline.db.models import Event, ShopConfigVersion
+    from flatline.db.session import create_schema, get_sessionmaker, reset_engine
+
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path}/view.db")
+    reset_engine()
+    create_schema()
+    db = get_sessionmaker()()
+    base = {"currency": "USD", "banner": ""}
+    rows = [
+        (1, base, "seed"),
+        (2, {**base, "chaos": {"inject": "refund_wave"}}, "live check: refund_wave"),
+        (
+            3,
+            {**base, "currency": "EUR", "chaos": {"bad_currency": True}},
+            "Storefront currency set to EUR",
+        ),
+    ]
+    for version, config, note in rows:
+        db.add(
+            ShopConfigVersion(
+                version=version, config=config, author="human", note=note, active=version == 3
+            )
+        )
+    db.add(
+        Event(
+            source="synthetic", event_type="checkout.capture", occurred_at=utcnow(), synthetic=True
+        )
+    )
+    db.commit()
+
+    history = tools.config_history(db)
+    assert [h["version"] for h in history] == [1, 3]  # the chaos-only version is folded in
+    assert all("chaos" not in h["config"] for h in history)
+    assert "live check" not in str(history)
+    assert history[-1]["active"] and history[-1]["config"]["currency"] == "EUR"
+    events = _event_dicts(list(db.query(Event).all()))
+    assert "synthetic" not in events[0]
+    db.close()
+    reset_engine()

@@ -2,6 +2,20 @@
 
 Unspecified choices and any difference from the spec (`docs/spec.md`). Newest first.
 
+## D-020 — The models reason from evidence, not from a prepared answer
+
+Each live call used to include the playbook's deterministic answer with
+"return this exact JSON shape, corrected from the input", so the model mostly
+polished an answer it was handed, and the shop config it read still carried the
+Chaos panel's `chaos` flags. Now the model gets the evidence and the JSON schema
+of its answer only; the deterministic answer is the labelled fallback. The
+agents' config history drops `chaos` and folds chaos-only versions, injected
+events carry PayPal-shaped ids and no `synthetic` flag in the agents' view, and
+config changes made from the Chaos panel get merchant-style notes (the test
+intent is in the audit log as `chaos.inject`). The bulk refund is no longer in
+the Remediator's draft: the refund playbook's `red_team_probe` makes the loop
+add it, labelled as a probe, so the proxy's refusal is shown honestly.
+
 ## D-019 — The video is recorded by script, not by hand
 
 `docs/DEMO_SCRIPT.md` (spec 15) described a manual click path. The clips are

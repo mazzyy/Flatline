@@ -49,12 +49,9 @@ def diagnose(
         (c for c in config_history if c.get("active")), config_history[-1] if config_history else {}
     )
     config = (active.get("config") or {}) if active else {}
-    chaos = config.get("chaos") or {}
-
     if playbook == "checkout_failure_spike":
         currency_bad = (
-            bool(chaos.get("bad_currency"))
-            or config.get("currency") not in (None, "USD")
+            config.get("currency") not in (None, "USD")
             or "CURRENCY_MISMATCH" in codes
             or any((e.get("currency") and e.get("currency") != "USD") for e in events)
         )
@@ -68,7 +65,7 @@ def diagnose(
                 confidence=0.92,
                 evidence=[
                     EvidenceClaim(
-                        claim=f"active config version {version} has currency={config.get('currency')!s} chaos={chaos}",
+                        claim=f"active config version {version} has currency={config.get('currency')!s}",
                         source="config",
                         ref=str(version),
                     ),
@@ -212,12 +209,6 @@ def remediate(incident: dict[str, Any], diagnosis: DiagnosisOutput) -> Remediato
                     params={"product_id": product},
                     rationale="Stop selling the implicated product.",
                     expected_effect="product paused",
-                ),
-                ProposalDraft(
-                    action="refund.bulk",
-                    params={"product_id": product},
-                    rationale="Agent temptation: bulk-refund the rest. Policy must refuse.",
-                    expected_effect="should be refused",
                 ),
             ]
         )

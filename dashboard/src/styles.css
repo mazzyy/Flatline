@@ -336,3 +336,5 @@ pre {
   main.pp-main { padding: 1.2rem 1rem 3rem; }
   .hero { padding: 1.5rem 1.2rem; }
 }
+
+.paypal-read { display: flex; align-items: center; gap: 0.5rem; margin: 0.35rem 0 0 1.1rem; font-size: 0.85rem; font-weight: 400; }

@@ -32,20 +32,33 @@ def events_by_group(
 
 
 def config_history(db: Session) -> list[dict[str, Any]]:
+    """The shop's config versions as a merchant would see them.
+
+    The Chaos panel keeps its test flags under `chaos` and writes a version even
+    when only those flags change. The agents see the real settings only: `chaos`
+    is removed and versions identical to the one before are folded into it, so a
+    diagnosis has to come from the settings that actually changed.
+    """
     rows = list(
         db.scalars(select(ShopConfigVersion).order_by(ShopConfigVersion.version.asc())).all()
     )
-    return [
-        {
-            "version": r.version,
-            "active": r.active,
-            "author": r.author,
-            "note": r.note,
-            "config": r.config,
-            "id": str(r.id),
-        }
-        for r in rows
-    ]
+    history: list[dict[str, Any]] = []
+    for r in rows:
+        settings = {k: v for k, v in (r.config or {}).items() if k != "chaos"}
+        if history and history[-1]["config"] == settings:
+            history[-1]["active"] = history[-1]["active"] or r.active
+            continue
+        history.append(
+            {
+                "version": r.version,
+                "active": r.active,
+                "author": r.author,
+                "note": r.note,
+                "config": settings,
+                "id": str(r.id),
+            }
+        )
+    return history
 
 
 async def paypal_snapshot(

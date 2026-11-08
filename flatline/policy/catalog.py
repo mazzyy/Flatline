@@ -14,48 +14,86 @@ class ActionSpec:
     tier: Tier
     description: str
     notes: str = ""
+    params: str = ""  # what the executor reads, shown to the Remediator
 
 
 ACTIONS: dict[str, ActionSpec] = {
     "notify.alert": ActionSpec(
-        "notify.alert", "auto", "Log an alert and optionally POST NOTIFY_WEBHOOK_URL"
+        "notify.alert",
+        "auto",
+        "Log an alert and optionally POST NOTIFY_WEBHOOK_URL",
+        params='{"message": str}',
     ),
     "report.create": ActionSpec(
-        "report.create", "auto", "Attach a markdown report to the incident"
+        "report.create",
+        "auto",
+        "Attach a markdown report to the incident",
+        params='{"markdown": str}',
     ),
-    "shop.banner.set": ActionSpec("shop.banner.set", "auto", "Set the shop-wide banner"),
+    "shop.banner.set": ActionSpec(
+        "shop.banner.set", "auto", "Set the shop-wide banner", params='{"text": str}'
+    ),
     "shop.banner.clear": ActionSpec("shop.banner.clear", "auto", "Clear the shop-wide banner"),
     "invoice.send_reminder": ActionSpec(
-        "invoice.send_reminder", "auto", "Send a reminder to one subscriber"
+        "invoice.send_reminder",
+        "auto",
+        "Send a reminder to one subscriber",
+        params='{"invoice_id": str, "subscription_id": str}',
     ),
     "shop.config.rollback": ActionSpec(
-        "shop.config.rollback", "approval", "Activate a previous shop config version"
+        "shop.config.rollback",
+        "approval",
+        "Activate a previous shop config version",
+        params='{"version": int, the last good version}',
     ),
     "shop.product.pause_sales": ActionSpec(
-        "shop.product.pause_sales", "approval", "Pause sales of one product"
+        "shop.product.pause_sales",
+        "approval",
+        "Pause sales of one product",
+        params='{"product_id": str}',
     ),
     "shop.product.resume_sales": ActionSpec(
-        "shop.product.resume_sales", "approval", "Resume sales of one product"
+        "shop.product.resume_sales",
+        "approval",
+        "Resume sales of one product",
+        params='{"product_id": str}',
     ),
     "shop.plan.pause_signups": ActionSpec(
-        "shop.plan.pause_signups", "approval", "Pause new sign-ups on a plan"
+        "shop.plan.pause_signups",
+        "approval",
+        "Pause new sign-ups on a plan",
+        params='{"plan_id": str}',
     ),
     "shop.plan.resume_signups": ActionSpec(
-        "shop.plan.resume_signups", "approval", "Resume plan sign-ups"
+        "shop.plan.resume_signups", "approval", "Resume plan sign-ups", params='{"plan_id": str}'
     ),
     "subscription.capture_outstanding": ActionSpec(
-        "subscription.capture_outstanding", "approval", "Capture outstanding balance via REST"
+        "subscription.capture_outstanding",
+        "approval",
+        "Capture outstanding balance via REST",
+        params='{"subscription_id": str}',
     ),
     "subscription.suspend": ActionSpec(
-        "subscription.suspend", "approval", "Suspend one subscription"
+        "subscription.suspend",
+        "approval",
+        "Suspend one subscription",
+        params='{"subscription_id": str, "reason": str}',
     ),
     "subscription.activate": ActionSpec(
-        "subscription.activate", "approval", "Activate one subscription"
+        "subscription.activate",
+        "approval",
+        "Activate one subscription",
+        params='{"subscription_id": str, "reason": str}',
     ),
     "refund.single": ActionSpec(
-        "refund.single", "approval", "Refund one capture if amount ≤ REFUND_APPROVAL_MAX"
+        "refund.single",
+        "approval",
+        "Refund one capture if amount ≤ REFUND_APPROVAL_MAX",
+        params='{"capture_id": str, "amount": str, "currency": str}',
     ),
-    "events.replay": ActionSpec("events.replay", "approval", "Replay missing webhook events"),
+    "events.replay": ActionSpec(
+        "events.replay", "approval", "Replay missing webhook events", params='{"event_ids": [str]}'
+    ),
     "refund.bulk": ActionSpec("refund.bulk", "forbidden", "Bulk refunds are never agent-initiated"),
     "subscription.cancel": ActionSpec("subscription.cancel", "forbidden", "Cancel is human-only"),
     "subscription.cancel_at_period_end": ActionSpec(

@@ -16,3 +16,6 @@ allowed_actions:
   - report.create
   - shop.product.pause_sales
 average_order_value: 22.00
+# Red-team: the loop adds this forbidden action to every refund wave so the demo
+# shows the policy proxy refusing it. The model never proposes it.
+red_team_probe: refund.bulk

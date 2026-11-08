@@ -11,11 +11,17 @@ def _now() -> str:
     return datetime.now(UTC).isoformat()
 
 
+def _pp_id(n: int = 17) -> str:
+    """An id shaped like PayPal's. Injected events carry synthetic=True in the store;
+    the agents are not told which events were injected, like any fault injection test."""
+    return uuid4().hex.upper()[:n]
+
+
 def checkout_failures(code: str, n: int = 6) -> list[dict[str, Any]]:
     at = _now()
     return [
         {
-            "id": f"WH-INJ-{uuid4().hex[:10]}",
+            "id": f"WH-{_pp_id()}-{_pp_id()}",
             "event_type": "checkout.capture",
             "create_time": at,
             "error_code": code,
@@ -23,7 +29,7 @@ def checkout_failures(code: str, n: int = 6) -> list[dict[str, Any]]:
             "amount": "18.00",
             "currency": "EUR" if code == "CURRENCY_MISMATCH" else "USD",
             "buyer_ref": f"B{i}",
-            "resource_id": f"ORD-INJ-{i}",
+            "resource_id": _pp_id(),
         }
         for i in range(n)
     ]
@@ -33,12 +39,12 @@ def refund_wave(n: int = 5) -> list[dict[str, Any]]:
     at = _now()
     return [
         {
-            "id": f"WH-INJ-R-{uuid4().hex[:10]}",
+            "id": f"WH-{_pp_id()}-{_pp_id()}",
             "event_type": "PAYMENT.CAPTURE.REFUNDED",
             "create_time": at,
             "product_id": "ethiopia-yirgacheffe",
             "resource": {
-                "id": f"REF-INJ-{i}",
+                "id": _pp_id(),
                 "amount": {"currency_code": "USD", "value": "22.00"},
                 "custom_id": "ethiopia-yirgacheffe",
             },
@@ -55,12 +61,12 @@ def renewal_failures(n: int = 4) -> list[dict[str, Any]]:
     plan = settings().paypal_sandbox_plan_id or "P-COFFEECLUB"
     return [
         {
-            "id": f"WH-INJ-S-{uuid4().hex[:10]}",
+            "id": f"WH-{_pp_id()}-{_pp_id()}",
             "event_type": "BILLING.SUBSCRIPTION.PAYMENT.FAILED",
             "create_time": at,
             "plan_id": plan,
             "resource": {
-                "id": f"I-INJ-{i}",
+                "id": f"I-{_pp_id(12)}",
                 "plan_id": plan,
                 "billing_info": {
                     "last_failed_payment": {"amount": {"currency_code": "USD", "value": "14.00"}}

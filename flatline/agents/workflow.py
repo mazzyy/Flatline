@@ -40,7 +40,6 @@ def _event_dicts(rows: list[Event]) -> list[dict[str, Any]]:
             "buyer_ref": r.buyer_ref,
             "currency": r.currency,
             "amount": str(r.amount) if r.amount is not None else None,
-            "synthetic": r.synthetic,
         }
         for r in rows
     ]

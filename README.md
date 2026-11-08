@@ -29,11 +29,25 @@ Every proposal then hits the policy proxy. Small, safe fixes like putting up a s
 
 ![Checkout incident with root cause and proposals](docs/media/incident.png)
 
-Here is the checkout scenario from the demo. A bad config set the currency to EUR on a USD shop. The Diagnostician traced the failures back to config version 2, the warning banner went up by itself, and the rollback sat waiting for my approval.
+Here is the checkout scenario from the demo. A config change set the currency to EUR on a USD shop. The Diagnostician compared the config versions, matched them against the CURRENCY_MISMATCH errors and named the version that did it, the warning banner went up by itself, and the rollback sat waiting for my approval.
 
 ![The policy proxy refusing a bulk refund](docs/media/refused.png)
 
-In the refund scenario the agent spotted one product behind most of the refunds and proposed pausing its sales, which needs approval. Then it got bold and tried a bulk refund. Bulk refunds are forbidden in the catalog, so the proxy refused and escalated the incident with a written recommendation instead. Agents can ask. Code decides.
+In the refund scenario the agent spotted one product behind most of the refunds and proposed pausing its sales, which needs approval. Then I red-team it: the playbook slips a forbidden bulk refund in next to the agent's proposals, clearly labelled as a probe. Bulk refunds are forbidden in the catalog, so the proxy refuses it and escalates the incident. Agents can ask. Code decides.
+
+### Where the AI is, and where it is not
+
+| Part | What decides | How |
+| --- | --- | --- |
+| Detector | Code | Playbook thresholds against a rolling baseline, every 30 seconds |
+| Triage | LLM (`MODEL_FAST`) | Severity, scope and money at risk, from the incident and recent events |
+| Diagnostician | LLM (`MODEL_REASONING`) | Root cause from events, config history and PayPal reads through MCP; every claim must cite evidence |
+| Remediator | LLM (`MODEL_REASONING`) | Proposes fixes, limited to the playbook's allowed actions and their parameters |
+| Policy proxy | Code | Catalog lookup: auto, approval or forbidden. No LLM involved |
+| Executor | Code | The only writer to PayPal and the shop |
+| Verifier | Code, then LLM | The metric decides whether it recovered; the LLM only writes the explanation |
+
+The models see the evidence and the shape of the answer they must return, never a prepared answer. Each playbook also has a deterministic answer that is used only when a model call fails, for example on a free tier rate limit, and the timeline then labels that step as a fallback. The agents are not told which events the Chaos panel injected; they have to work the cause out from the data, as in any fault injection test.
 
 A quick note on detection. PayPal Transaction Search can lag by up to three hours, so it is useless as a clock for minute level alerts. Flatline detects from webhooks and shop telemetry only, and uses Transaction Search purely as evidence. There is more detail in [docs/architecture.md](docs/architecture.md).
 
@@ -62,15 +76,13 @@ The API and dashboard come up on http://localhost:8000 (the passcode is `demo-ju
 
 ## Try the scenarios
 
-With the stack running, seed some normal traffic and then break something:
+`make up` already seeds ten minutes of normal traffic. Then break something, either from the Chaos panel in the dashboard or from the command line:
 
 ```bash
-python scripts/seed.py --minutes 10
 python scripts/inject.py checkout_failure_spike
-python scripts/replay.py
 ```
 
-The detector runs every 30 seconds, so you can either wait for it or run `replay.py` to skip ahead. You can also do all of this by clicking around in the Chaos panel of the dashboard. Synthetic events get a simulated badge in the Transactions grid, so it is always clear what is real.
+The API writes the injected events and runs the detector straight away, so the incident opens within seconds and the agents start on it. Injected events get a simulated badge in the Transactions grid, so it is always clear what is real. The agents are not told which events were injected; they have to work out the cause from the data, like in any fault injection test.
 
 Three playbooks ship enabled. A checkout failure spike fires when capture failures in a five minute window reach three times the baseline. A refund wave fires when refunds jump far above baseline or more than half of them share one product. Subscription renewal failures fire when failed renewals cluster on one plan within an hour. Thresholds live in `flatline/playbooks/*.yaml`, and the expected outcome for each one is in [docs/playbooks.md](docs/playbooks.md). The demo video is made in code: `demo-video/scripts/record-clips.mjs` records the dashboard against the running stack and Remotion builds the film around those clips (see [demo-video/NOTES.md](demo-video/NOTES.md)).
 

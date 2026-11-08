@@ -27,6 +27,8 @@ class Playbook:
     plan_price: float = 14.0
     concentration_ratio: float = 0.5
     reconcile_lag_hours: int = 3
+    # A forbidden action the loop adds on purpose, to prove the policy proxy refuses it.
+    red_team_probe: str = ""
     raw: dict[str, Any] = field(default_factory=dict)
 
 
@@ -51,6 +53,7 @@ def load_playbooks(directory: Path | None = None) -> dict[str, Playbook]:
             plan_price=float(data.get("plan_price") or 14),
             concentration_ratio=float(data.get("concentration_ratio") or 0.5),
             reconcile_lag_hours=int(data.get("reconcile_lag_hours") or 3),
+            red_team_probe=str(data.get("red_team_probe") or ""),
             raw=data,
         )
     return out

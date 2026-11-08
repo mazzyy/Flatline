@@ -32,10 +32,11 @@ const H = 900;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-const toMp4 = (src, dest) => {
+const toMp4 = (src, dest, startSec = 0) => {
+  const trim = startSec > 0 ? ["-ss", startSec.toFixed(2)] : [];
   const r = spawnSync(
     "ffmpeg",
-    ["-y", "-i", src, "-an", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "18", dest],
+    ["-y", ...trim, "-i", src, "-an", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "18", dest],
     { stdio: "inherit" },
   );
   if (r.status !== 0) throw new Error(`ffmpeg failed for ${src}`);
@@ -108,14 +109,18 @@ const record = async (browser, name, fn) => {
     recordVideo: { dir, size: { width: W, height: H } },
   });
   const page = await context.newPage();
+  const startedAt = Date.now();
+  let result;
   try {
-    await fn(page);
+    result = await fn(page);
   } finally {
     await context.close();
   }
   const files = readdirSync(dir).filter((f) => f.endsWith(".webm"));
   if (!files.length) throw new Error(`no video for ${name}`);
-  toMp4(join(dir, files[0]), join(OUT, name));
+  // A clip can return { readyAt } to cut the page-loading time off its start.
+  const startSec = result?.readyAt ? Math.max(0, (result.readyAt - startedAt) / 1000 - 0.2) : 0;
+  toMp4(join(dir, files[0]), join(OUT, name), startSec);
   console.log("wrote", name);
 };
 
@@ -166,15 +171,16 @@ try {
   }
 
   await maybe("02-shop-failing.mp4", async (page) => {
-    await page.goto(SHOP, { waitUntil: "networkidle" });
+    // The checkout page: the agents' warning banner, the price now in EUR on a USD
+    // shop, and the real PayPal JS SDK v6 button from the sandbox.
+    await page.goto(`${SHOP}/checkout/house-blend`, { waitUntil: "networkidle" });
+    await page.locator("#paypal-btn:not([hidden])").waitFor({ timeout: 20000 }).catch(() => {
+      console.log("PayPal button did not show; recording the page anyway");
+    });
     await sleep(600);
-    const pay = page.getByRole("button", { name: /Pay/i }).first();
-    if (await pay.count()) {
-      await pay.click();
-      await sleep(1800);
-    } else {
-      await sleep(2000);
-    }
+    const readyAt = Date.now();
+    await sleep(3000);
+    return { readyAt };
   });
 
   await maybe("03-incident-opens.mp4", async (page) => {
@@ -239,6 +245,9 @@ try {
     await sleep(700);
     await page.evaluate(() => window.scrollTo(0, 360));
     await sleep(2200);
+    // Down to the agent timeline: the Diagnostician's PayPal reads through MCP.
+    await page.evaluate(() => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" }));
+    await sleep(2800);
   });
 
   await maybe("08-audit-log.mp4", async (page) => {

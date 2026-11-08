@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { get, post } from "../api";
 
 type Evidence = { claim: string; source: string; ref: string };
-type Step = { id: string; node: string; model: string; latency_ms: number; input: unknown; output: unknown; tool_calls: unknown };
+type ToolCall = { tool: string; via?: string; result?: string; mcp_error?: string };
+type Step = { id: string; node: string; model: string; latency_ms: number; input: unknown; output: unknown; tool_calls: ToolCall[] | null };
 type Execution = { id: string; success: boolean; error?: string; response: unknown };
 type Proposal = {
   id: string;
@@ -79,6 +80,7 @@ export default function IncidentPage({ id }: { id: string }) {
             <code>{p.action}</code>
             <span className={`badge ${p.tier}`}>{p.tier}</span>
             <span className={`badge ${p.status}`}>{p.status}</span>
+            {p.rationale.startsWith("Red-team probe") && <span className="badge info">red-team probe</span>}
           </div>
           <p style={{ color: "var(--pp-ink-2)" }}>{p.rationale}</p>
           {p.status === "pending" && (
@@ -104,6 +106,13 @@ export default function IncidentPage({ id }: { id: string }) {
         <details key={s.id}>
           <summary>
             <strong>{s.node}</strong> <span className="muted">· {s.model} · {s.latency_ms}ms</span>
+            {(s.tool_calls || []).filter((c) => c.via).map((c, i) => (
+              <span key={i} className="paypal-read">
+                <span className="badge info">PayPal {c.via === "mcp" ? "MCP" : "REST"}</span>
+                <code>{c.tool.replace(/^paypal\./, "")}</code>
+                {c.result && <span className="muted">→ {c.result}</span>}
+              </span>
+            ))}
           </summary>
           <pre>{JSON.stringify({ input: s.input, output: s.output, tool_calls: s.tool_calls }, null, 2)}</pre>
         </details>

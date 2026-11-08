@@ -42,11 +42,28 @@ class SandboxGateway:
         self._client = client
         self.read_log: list[dict[str, str]] = []
 
-    def _log_read(self, tool: str, via: str, error: Exception | None = None) -> None:
+    def _log_read(self, tool: str, via: str, error: Exception | None = None) -> dict[str, str]:
         entry = {"tool": f"paypal.{tool}", "via": via}
         if error is not None:
             entry["mcp_error"] = f"{type(error).__name__}: {error}"[:200]
         self.read_log.append(entry)
+        return entry
+
+    @staticmethod
+    def _note_result(entry: dict[str, str], tool: str, data: Any) -> None:
+        """A one line summary of what PayPal returned, shown on the agent timeline."""
+        try:
+            if tool == "list_transactions":
+                items = data if isinstance(data, list) else data.get("transaction_details") or []
+                entry["result"] = f"{len(items)} transactions in the last 30 days"
+            elif tool == "show_subscription_plan_details":
+                price = data["billing_cycles"][0]["pricing_scheme"]["fixed_price"]
+                entry["result"] = (
+                    f"{data.get('name')} · {data.get('status')} · "
+                    f"{price['value']} {price['currency_code']} per cycle"
+                )
+        except (AttributeError, IndexError, KeyError, TypeError):
+            pass
 
     async def _auth_headers(self) -> dict[str, str]:
         token = await self.tokens.get_token()
@@ -81,11 +98,13 @@ class SandboxGateway:
         try:
             await self.pool.ensure()
             data = await self.pool.call_read(tool, arguments)
-            self._log_read(tool, "mcp")
+            self._note_result(self._log_read(tool, "mcp"), tool, data)
             return data if isinstance(data, dict) else {"items": data}
         except Exception as exc:
-            self._log_read(tool, "rest", exc)
-            return await self._rest("GET", rest_path)
+            entry = self._log_read(tool, "rest", exc)
+            rest = await self._rest("GET", rest_path)
+            self._note_result(entry, tool, rest)
+            return rest
 
     async def list_transactions(self, **filters: Any) -> list[dict[str, Any]]:
         # Transaction Search needs a date range of at most 31 days and cannot filter
@@ -99,14 +118,15 @@ class SandboxGateway:
         try:
             await self.pool.ensure()
             data = await self.pool.call_read("list_transactions", {**window, "page_size": 100})
-            self._log_read("list_transactions", "mcp")
+            self._note_result(self._log_read("list_transactions", "mcp"), "list_transactions", data)
             if isinstance(data, list):
                 return data
             return list(data.get("transaction_details") or data.get("items") or [])
         except Exception as exc:
-            self._log_read("list_transactions", "rest", exc)
+            entry = self._log_read("list_transactions", "rest", exc)
             query = urlencode({**window, "fields": "all", "page_size": 100})
             data = await self._rest("GET", f"/v1/reporting/transactions?{query}")
+            self._note_result(entry, "list_transactions", data)
             return list(data.get("transaction_details") or [])
 
     async def get_order(self, order_id: str) -> dict[str, Any]:

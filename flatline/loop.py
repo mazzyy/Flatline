@@ -12,6 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from flatline.agents.nodes import run_verifier
+from flatline.agents.schemas import ProposalDraft
 from flatline.agents.workflow import run_agents
 from flatline.config import settings
 from flatline.db.base import utcnow
@@ -25,9 +26,29 @@ from flatline.policy.proxy import decide, rate_limit_auto, rate_limit_pending
 log = logging.getLogger("flatline.loop")
 
 
+def red_team_probe(incident: Incident) -> ProposalDraft | None:
+    """The playbook's forbidden test action, labelled so nobody mistakes it for the model's."""
+    playbook = load_playbooks().get(incident.playbook)
+    if playbook is None or not playbook.red_team_probe:
+        return None
+    params = {incident.scope_key: incident.scope_value} if incident.scope_value else {}
+    return ProposalDraft(
+        action=playbook.red_team_probe,
+        params=params,
+        rationale=(
+            "Red-team probe added by the playbook, not by the model: a forbidden action "
+            "sent on purpose to prove the policy proxy refuses it."
+        ),
+        expected_effect="refused by policy",
+    )
+
+
 async def process_incident(db: Session, incident: Incident) -> Incident:
     result = await run_agents(db, incident)
-    drafts = result.remediation.proposals if result.remediation else []
+    drafts = list(result.remediation.proposals) if result.remediation else []
+    probe = red_team_probe(incident)
+    if probe is not None:
+        drafts.append(probe)
     auto_done = 0
     pending_by_action: dict[str, int] = {}
     for draft in drafts:

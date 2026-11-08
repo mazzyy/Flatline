@@ -17,7 +17,7 @@ Flatline is on call for a merchant's PayPal integration. It watches checkout, re
 3. **Remediator** proposes fixes, chosen only from a fixed catalog of actions.
 4. **Verifier** waits for a quiet window and confirms recovery against the metric.
 
-Every proposal then goes through a policy proxy written in plain Python, not a prompt. Small reversible fixes, like a warning banner on the shop or a payment reminder, run on their own. Anything that moves money or changes config waits for a human in the dashboard. Anything outside the catalog is refused, such as the bulk refund the agent tries in the demo. Only the executor behind the proxy can write to PayPal, and every detection, step, decision, approval and execution lands in an audit log.
+Every proposal then goes through a policy proxy written in plain Python, not a prompt. Small reversible fixes, like a warning banner on the shop or a payment reminder, run on their own. Anything that moves money or changes config waits for a human in the dashboard. Anything outside the catalog is refused, such as the bulk refund I slip in as a red-team probe in the demo. Only the executor behind the proxy can write to PayPal, and every detection, step, decision, approval and execution lands in an audit log.
 
 The demo runs three playbooks: a checkout failure spike caused by a bad currency config, a refund wave concentrated on one product, and failed subscription renewals on one plan.
 
@@ -41,8 +41,8 @@ The backend is Python 3.12 with FastAPI for ingest, webhooks, the dashboard API 
 ## How it uses AI
 
 1. Each agent calls a model through LiteLLM. Triage and Verifier use a fast model, Diagnostician and Remediator a stronger one. The demo uses Google Gemini on the free tier (Gemini 2.5 Flash for Triage and Verifier, Gemini 3.5 Flash for Diagnostician and Remediator); the same build runs fully on premises with Qwen through Ollama, or on Azure OpenAI, by changing two settings.
-2. Each agent receives the real incident data (events, config history, PayPal reads) and a deterministic playbook answer that fixes the JSON shape and serves as the fallback.
-3. If a model call fails, for example on a rate limit, the agent keeps the playbook answer and the timeline labels that step as a fallback. A step is never credited to a model that did not produce it.
+2. Each agent receives the real incident data (events, config history, PayPal reads through MCP) and the JSON schema of its answer, never a prepared answer. The Diagnostician must back every claim with evidence (an event id, config version or PayPal id), and the Remediator can only choose from the playbook's allowed actions. The agents are not told which events were injected, so they have to find the cause in the data.
+3. If a model call fails, for example on a rate limit, the next model in `MODEL_FALLBACKS` is tried; if all fail, the agent keeps the playbook's deterministic answer and the timeline labels that step as a fallback. A step is always credited to the model that actually answered.
 4. The model never acts alone. Its proposals pass the policy proxy, and the Verifier's resolved flag comes from the metric check; the model only writes the explanation.
 5. `LLM_MODE=mock` runs the identical flow with deterministic stand ins, so anyone can run the project with no keys.
 
@@ -57,7 +57,7 @@ The backend is Python 3.12 with FastAPI for ingest, webhooks, the dashboard API 
 
 1. The whole loop runs end to end against the PayPal sandbox: detect, diagnose, gate, execute, verify.
 2. The write boundary is enforced three ways: agents get a read only gateway whose write methods raise, an import boundary test keeps agent code away from the writer, and the PayPal MCP read session does not even load write tools.
-3. The refund scenario shows the safety model on screen: the agent asks for a bulk refund, and the proxy refuses it.
+3. The refund scenario shows the safety model on screen: a red-team probe slips a forbidden bulk refund in next to the agent's proposals, and the proxy refuses it.
 4. More than 80 automated tests run in CI with no keys.
 
 ## What I learned

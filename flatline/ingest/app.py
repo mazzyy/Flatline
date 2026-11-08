@@ -284,7 +284,25 @@ def create_app() -> FastAPI:
                 cfg["currency"] = "EUR"
             injected = _inject_from_chaos(db, incoming)
         cfg["chaos"] = chaos
-        row = _new_config(db, cfg, author="human", note=str(body.get("note") or "chaos update"))
+        # Notes read like a merchant's change log; the test intent stays in the audit log.
+        if body.get("reset"):
+            note = "Restore default storefront settings"
+        elif (body.get("chaos") or body).get("bad_currency"):
+            note = "Storefront currency set to EUR"
+        else:
+            note = str(body.get("note") or "chaos update")
+        row = _new_config(db, cfg, author="human", note=note)
+        audit(
+            db,
+            actor="human",
+            action="chaos.reset" if body.get("reset") else "chaos.inject",
+            details={
+                "chaos": body.get("chaos") or {},
+                "note": body.get("note"),
+                "config_version": row.version,
+                "synthetic_events": len(injected),
+            },
+        )
         incidents = _run_scan(db)
         HUB.publish("incident.updated", {"reason": "chaos", "version": row.version})
         out = config_out(row)

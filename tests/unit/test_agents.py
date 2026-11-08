@@ -53,13 +53,26 @@ def test_checkout_declines_no_rollback() -> None:
     assert "shop.config.rollback" not in actions
 
 
-def test_refund_wave_includes_bulk_temptation() -> None:
+def test_bulk_refund_is_a_labelled_red_team_probe_not_a_model_answer() -> None:
+    import uuid
+
+    from flatline.db.models import Incident
+    from flatline.loop import red_team_probe
+
     incident = {"playbook": "refund_wave", "scope_value": "ethiopia-yirgacheffe", "id": "x"}
     out = diagnose(incident, [{"id": "r1"}], [], {})
     assert "ethiopia" in out.root_cause
     actions = [p.action for p in remediate(incident, out).proposals]
     assert "shop.product.pause_sales" in actions
-    assert "refund.bulk" in actions
+    assert "refund.bulk" not in actions  # no answer of the remediator contains it
+
+    row = Incident(id=uuid.uuid4(), playbook="refund_wave", status="open")
+    row.scope_key, row.scope_value = "product_id", "ethiopia-yirgacheffe"
+    probe = red_team_probe(row)
+    assert probe is not None and probe.action == "refund.bulk"
+    assert "Red-team probe added by the playbook, not by the model" in probe.rationale
+    row.playbook = "checkout_failure_spike"
+    assert red_team_probe(row) is None
 
 
 def test_evidence_claim_rejects_empty() -> None:
