@@ -37,8 +37,6 @@ export const S10Close: React.FC = () => {
           <LineReveal delay={t(1.6)} style={{ marginTop: 64 }}>
             <div style={{ display: "flex", gap: 56, fontFamily: fonts.mono, fontSize: type.label, color: colors.accent }}>
               <span>{product.repoUrl}</span>
-              <span style={{ color: colors.line }}>|</span>
-              <span>{product.demoUrl}</span>
             </div>
           </LineReveal>
         </div>

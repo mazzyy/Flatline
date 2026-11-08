@@ -82,5 +82,4 @@ export const product = {
   tagline: "An on-call SRE agent for your PayPal revenue.",
   closeTagline: "On call for your revenue.",
   repoUrl: "github.com/mazzyy/Flatline",
-  demoUrl: "flatline-api.onrender.com",
 } as const;

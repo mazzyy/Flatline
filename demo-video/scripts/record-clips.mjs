@@ -155,6 +155,16 @@ try {
     await sleep(1200);
   });
 
+  // The banner is set by the agents (shop.banner.set, auto), so film the shop after they finish.
+  const have = (name) => skipExisting && existsSync(join(OUT, name));
+  if (!(have("02-shop-failing.mp4") && have("04-incident-detail.mp4") && have("05-approve.mp4"))) {
+    if (have("01-chaos-bad-currency.mp4")) {
+      await injectAndWait({ bad_currency: true }, "checkout_failure_spike"); // resumed run
+    } else {
+      await agentsDone("checkout_failure_spike");
+    }
+  }
+
   await maybe("02-shop-failing.mp4", async (page) => {
     await page.goto(SHOP, { waitUntil: "networkidle" });
     await sleep(600);
@@ -174,10 +184,6 @@ try {
     await sleep(2500);
   });
 
-  const have = (name) => skipExisting && existsSync(join(OUT, name));
-  if (!(have("04-incident-detail.mp4") && have("05-approve.mp4"))) {
-    await agentsDone("checkout_failure_spike");
-  }
 
   await maybe("04-incident-detail.mp4", async (page) => {
     await login(page);

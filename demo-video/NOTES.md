@@ -18,7 +18,7 @@
 
 `{{PROJECT_NAME}}` → **Flatline**  
 `{{REPO_URL}}` → `github.com/mazzyy/Flatline`  
-`{{DEMO_URL}}` → `flatline-api.onrender.com` (not yet live; swap the string in `src/theme.ts` `product.demoUrl` when Render is up)
+The closing card shows only the repo URL; the hosted demo link lives in the README and the Devpost text.
 
 ## Scenes
 

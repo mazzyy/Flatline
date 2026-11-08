@@ -20,14 +20,14 @@ export const CLIP_H = 900;
 
 /** Target points inside each clip (clip pixel space). Adjust per recording. */
 export const S5_TARGETS = {
-  chaosButton: { x: 1180, y: 360, w: 140, h: 52 },
+  chaosButton: { x: 1069, y: 347, w: 96, h: 48 },
   overviewTile: { x: 280, y: 500, w: 440, h: 160 },
   /** Centre and size of the checkout-failure tile itself (ring while zoomed). */
   overviewTileBox: { x: 400, y: 486, w: 390, h: 136 },
   banner: { x: 800, y: 28, w: 900, h: 40 },
-  approve: { x: 160, y: 490 },
-  triageRow: { x: 220, y: 730 },
-  diagRow: { x: 220, y: 780 },
+  approve: { x: 300, y: 603 },
+  triageRow: { x: 236, y: 709 },
+  diagRow: { x: 236, y: 758 },
 };
 
 const toScene = (frame: { x: number; y: number; w: number }, pt: { x: number; y: number }) => {
