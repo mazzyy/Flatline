@@ -4,7 +4,17 @@ import { colors, fonts, layout, type } from "../theme";
 import { uiSpring } from "../anim";
 
 /** Small title + subtitle in the bottom-left safe corner with an accent bar. */
-export const LowerThird: React.FC<{ title: string; sub?: string; delay?: number; color?: string; top?: number; left?: number; hideAfter?: number }> = ({
+export const LowerThird: React.FC<{
+  title: string;
+  sub?: string;
+  delay?: number;
+  color?: string;
+  top?: number;
+  left?: number;
+  hideAfter?: number;
+  /** Dark backing, for labels laid over a (light) dashboard clip. */
+  backdrop?: boolean;
+}> = ({
   title,
   sub,
   delay = 0,
@@ -12,6 +22,7 @@ export const LowerThird: React.FC<{ title: string; sub?: string; delay?: number;
   top,
   left,
   hideAfter,
+  backdrop = false,
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -28,6 +39,9 @@ export const LowerThird: React.FC<{ title: string; sub?: string; delay?: number;
         alignItems: "stretch",
         opacity: p * leave,
         translate: `${(1 - p) * -24}px 0px`,
+        ...(backdrop
+          ? { padding: "14px 24px 14px 14px", borderRadius: 16, background: "rgba(9, 11, 16, 0.9)", boxShadow: "0 10px 30px rgba(0,0,0,0.35)" }
+          : {}),
       }}
     >
       <div style={{ width: 6, borderRadius: 3, background: color }} />

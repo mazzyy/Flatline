@@ -149,7 +149,7 @@
   "start": 57.4,
   "end": 58.59,
   "dur": 1.19,
-  "limit": 2.08,
+  "limit": 3.08,
   "speed": 1.1,
   "over": 0,
   "peaks_limited": 0,
@@ -158,8 +158,8 @@
  {
   "i": 13,
   "scene": 3,
-  "start": 59.6,
-  "end": 62.87,
+  "start": 60.6,
+  "end": 63.87,
   "dur": 3.27,
   "limit": 3.68,
   "speed": 1.1,
@@ -170,8 +170,8 @@
  {
   "i": 14,
   "scene": 3,
-  "start": 63.4,
-  "end": 64.04,
+  "start": 64.4,
+  "end": 65.04,
   "dur": 0.64,
   "limit": 1.48,
   "speed": 1.1,
@@ -182,14 +182,14 @@
  {
   "i": 15,
   "scene": 3,
-  "start": 65.0,
-  "end": 68.11,
-  "dur": 3.11,
-  "limit": 6.23,
+  "start": 66.0,
+  "end": 70.02,
+  "dur": 4.02,
+  "limit": 5.23,
   "speed": 1.1,
   "over": 0,
   "peaks_limited": 8,
-  "text": "From the first failed checkout to a root cause, in under a minute."
+  "text": "Detected in seconds, diagnosed from evidence, fixed with one approval."
  },
  {
   "i": 16,
@@ -399,13 +399,13 @@
   "i": 33,
   "scene": 8,
   "start": 145.4,
-  "end": 148.58,
-  "dur": 3.18,
+  "end": 150.17,
+  "dur": 4.77,
   "limit": 4.78,
   "speed": 1.1,
   "over": 0,
-  "peaks_limited": 0,
-  "text": "with Google Gemini, Python, FastAPI and React."
+  "peaks_limited": 9,
+  "text": "with Gemini or a local Qwen model, Python, FastAPI and React."
  },
  {
   "i": 34,

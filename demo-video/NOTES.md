@@ -18,7 +18,7 @@ Order and lengths live in `src/timeline.ts`. The demo starts at 0:26.
 | S1 | Hook | 8 | 0:00 |
 | S2 | The problem (Recurly estimate, sourced on screen) | 10 | 0:08 |
 | S3 | Introducing | 8 | 0:18 |
-| S5 | Demo 1 · checkout spike (chaos panel, shop with the PayPal button, overview, incident, approve, recovery) | 45 | 0:26 |
+| S5 | Demo 1 · checkout spike (chaos panel, shop, overview, incident, approve, recovery) | 45 | 0:26 |
 | S4 | How it works | 14 | 1:11 |
 | S6 | Demo 2 · refund wave and the red-team probe | 22 | 1:25 |
 | S7 | Demo 3 · renewals | 18 | 1:47 |
@@ -35,7 +35,7 @@ All eight clips are recorded against the Docker stack (`localhost:8000` and `:30
 | File | What |
 |---|---|
 | `01-chaos-bad-currency.mp4` | Chaos panel, click **Ship bad currency config** |
-| `02-shop-failing.mp4` | Checkout page after the agents ran: their banner, EUR on a USD shop, the PayPal JS SDK v6 button |
+| `02-shop-failing.mp4` | Checkout page after the agents ran: their banner, EUR on a USD shop (the PayPal button renders once the shop loads the sandbox SDK; rebuild with `make up` before recording) |
 | `03-incident-opens.mp4` | Overview: checkout tile in breach, the incident with money at risk per hour |
 | `04-incident-detail.mp4` | Agent timeline (models, PayPal reads through MCP), root cause, proposals |
 | `05-approve.mp4` | Approve on the config rollback, held until it shows as executed |

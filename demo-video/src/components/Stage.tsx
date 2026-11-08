@@ -22,27 +22,31 @@ export const onStage = (pt: { x: number; y: number }) => ({
  * Plays a clip from `from` (frames, scene-relative) and holds its last frame
  * for as long as the beat lasts.
  */
-export const ClipBeat: React.FC<{ name: string; available: boolean; from: number; clipSeconds: number }> = ({
+export const ClipBeat: React.FC<{ name: string; available: boolean; from: number; clipSeconds: number; startAt?: number }> = ({
   name,
   available,
   from,
   clipSeconds,
+  startAt = 0, // seconds into the clip to start from
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const last = Math.max(0, Math.floor(clipSeconds * fps) - 2);
+  const trimBefore = Math.round(startAt * fps);
+  const last = Math.max(0, Math.floor((clipSeconds - startAt) * fps) - 2);
   if (!available) return <Clip name={name} available={false} />;
-  const local = frame - from;
-  if (local >= last) {
-    return (
-      <Freeze frame={last}>
-        <OffthreadVideo src={staticFile(`clips/${name}`)} muted style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top left" }} />
-      </Freeze>
-    );
-  }
+  const video = (
+    <OffthreadVideo
+      src={staticFile(`clips/${name}`)}
+      muted
+      trimBefore={trimBefore || undefined}
+      style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top left" }}
+    />
+  );
+  if (frame < from) return <Freeze frame={0}>{video}</Freeze>; // hold the first frame until it plays
+  if (frame - from >= last) return <Freeze frame={last}>{video}</Freeze>;
   return (
     <Sequence from={from} layout="none">
-      <OffthreadVideo src={staticFile(`clips/${name}`)} muted style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top left" }} />
+      {video}
     </Sequence>
   );
 };

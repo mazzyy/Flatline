@@ -1,70 +1,58 @@
-Voiceover script v2 (excited, gap-free). Timings are absolute seconds in the 170 s video.
+Voiceover script. Timings are absolute seconds in the 155 s video.
 Generated with scripts/audio-v2/build-voiceover-v2.py; captions in src/captions.ts match these lines.
 
 
 [S1 Hook]
-   0.3s  Friday night. Checkout starts failing... one error, then ten, then a hundred!
-   5.3s  And nobody notices. Because nobody is on call for revenue!
-   8.8s  Shops monitor their servers... not their money.
+   0.3s  Friday night. Checkout starts failing... and nobody notices.
+   4.1s  Shops monitor their servers. Not their money.
 
 [S2 The problem]
-  12.3s  A broken checkout. A refund wave. A failing renewal.
-  15.6s  Every hour nobody notices, money quietly leaks away. Look at that number climb!
-  21.3s  And most merchants? They only find out days later, from a payout report, or an angry customer!
+   8.3s  Broken checkouts. Refund waves. Failed renewals.
+  11.5s  One estimate: failed payments could cost subscription companies over a hundred and twenty-nine billion dollars in twenty twenty-five.
 
 [S3 Introducing]
-  28.3s  That's why I built Flatline!
-  29.6s  An on-call SRE agent, for your PayPal revenue.
-  32.6s  It detects, diagnoses, and fixes... safely.
-  35.6s  Like a teammate who never sleeps, and never moves money without asking.
+  18.4s  So I built Flatline: an on-call AI agent for PayPal revenue.
+  22.6s  It diagnoses and fixes... but never moves money without asking.
+
+[S5 Demo 1 · checkout spike]
+  26.4s  Let's break something. I ship a config that switches this US shop to euros.
+  31.2s  Here's the checkout: euros, on a US shop. Captures fail, and a warning banner is already up.
+  37.8s  Within seconds, the incident is open, with the money at risk per hour.
+  42.2s  The AI agents take over. The Diagnostician reads PayPal through MCP...
+  47.6s  ...compares the config versions with the errors, and finds it: a config change switched the shop to euros.
+  53.2s  The banner went up on its own. The rollback waits for me.
+  57.4s  One click... approved!
+  60.6s  Failures drop back to baseline, and the Verifier confirms it.
+  64.4s  Resolved!
+  66.0s  Detected in seconds, diagnosed from evidence, fixed with one approval.
 
 [S4 How it works]
-  40.4s  Here's how it works. Flatline listens to PayPal webhooks and checkout telemetry.
-  44.7s  The moment a metric breaks its baseline... boom! Incident open.
-  48.2s  Four agents jump in. Triage scopes the damage.
-  51.0s  The Diagnostician finds the root cause, reading PayPal data through MCP.
-  56.0s  The Remediator proposes a fix.
-  57.7s  Every proposal hits a policy proxy. Plain code, not a prompt!
-  61.6s  Agents read. Code decides. Only the executor writes!
-
-[S5 Demo 1 · checkout]
-  65.3s  Okay, let's break something! I'm shipping a bad currency config.
-  69.0s  Euros, on a US-dollar shop. What could possibly go wrong?
-  72.3s  Checkouts start failing, and within seconds, the incident is open!
-  75.8s  And look! The shop already shows a warning banner.
-  79.0s  Triage scopes it, and the Diagnostician goes hunting...
-  82.2s  Found it! Config version three set the wrong currency.
-  85.3s  The banner? Already handled, automatically.
-  88.2s  But rolling back the config? That needs me.
-  90.9s  One click... approved!
-  94.2s  Failures drop right back to baseline, and the Verifier confirms it.
-  97.8s  Resolved!
+  71.3s  Under the hood: agents only read. A policy proxy, in plain code, decides. Only the executor writes.
+  77.8s  Safe fixes run on their own, money waits for a human, and anything else is refused.
 
 [S6 Demo 2 · refund wave]
- 100.2s  Next up: a refund wave!
- 101.8s  One product, the Ethiopia Yirgacheffe, is behind most of the refunds.
- 106.7s  So it proposes pausing sales of that product, and that waits for my approval.
- 111.6s  Then it gets bold... and tries a bulk refund!
- 114.4s  Refused! Bulk refunds are forbidden, full stop.
- 119.3s  The agent asked. The policy said no.
- 121.8s  Agents can ask... but code decides!
+  85.3s  Next, a refund wave.
+  87.3s  The agents trace it to one product, Ethiopia Yirgacheffe, and propose pausing its sales. That needs my approval.
+  94.3s  Now I red-team it, and slip a forbidden bulk refund in next to their proposals.
+  99.2s  Refused! Bulk refunds aren't in the catalog. Full stop.
+ 102.8s  Whoever asks, the code decides.
 
 [S7 Demo 3 · renewals]
- 125.3s  Now, four subscription renewals fail within an hour.
- 128.4s  A payment reminder goes out automatically.
- 131.0s  But capturing the outstanding balance? That waits for a human.
- 134.5s  Small fixes run on their own. Money only moves with a human!
+ 107.3s  Then four Coffee Club renewals fail within an hour.
+ 110.8s  The Diagnostician reads the real plan from PayPal, through MCP.
+ 115.2s  The plan is healthy. It's the subscribers' payments, so reminders go out automatically.
+ 120.2s  The agent does the legwork. I keep the final say on money.
 
 [S8 Trust and audit]
- 140.3s  And it's built to be trusted. It only runs in the PayPal sandbox.
- 145.0s  Agents never hold write credentials.
- 147.2s  Unknown actions are forbidden.
- 149.0s  And every single step lands in the audit log: who did what, and why.
- 153.0s  Nothing happens in the dark.
+ 125.3s  And it's built to be trusted. It only runs in the PayPal sandbox.
+ 130.0s  Agents never hold write credentials.
+ 132.2s  Unknown actions are forbidden.
+ 134.0s  And every single step lands in the audit log: who did what, and why.
+ 138.0s  Nothing happens in the dark.
 
 [S9 Built with]
- 155.3s  Built on PayPal's REST APIs, MCP server, and JavaScript SDK...
- 160.4s  with Google Gemini, Python, FastAPI and React.
+ 140.3s  Built on PayPal's REST APIs, MCP server, and JavaScript SDK...
+ 145.4s  with Gemini or a local Qwen model, Python, FastAPI and React.
 
 [S10 Close]
- 165.3s  Flatline. On call for your revenue!
+ 150.3s  Flatline. On call for your revenue!

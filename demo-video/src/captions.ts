@@ -25,10 +25,10 @@ export const NARRATION: Narration[] = [
   { scene: 3, from: 16.15, to: 21.55, text: "The AI agents take over. The Diagnostician reads PayPal through MCP..." },
   { scene: 3, from: 21.55, to: 27.15, text: "...compares the config versions with the errors, and finds it: a config change switched the shop to euros." },
   { scene: 3, from: 27.15, to: 31.35, text: "The banner went up on its own. The rollback waits for me." },
-  { scene: 3, from: 31.35, to: 33.55, text: "One click... approved!" },
-  { scene: 3, from: 33.55, to: 37.35, text: "Failures drop back to baseline, and the Verifier confirms it." },
-  { scene: 3, from: 37.35, to: 38.95, text: "Resolved!" },
-  { scene: 3, from: 38.95, to: 42.61, text: "From the first failed checkout to a root cause, in under a minute." },
+  { scene: 3, from: 31.35, to: 34.55, text: "One click... approved!" },
+  { scene: 3, from: 34.55, to: 38.35, text: "Failures drop back to baseline, and the Verifier confirms it." },
+  { scene: 3, from: 38.35, to: 39.95, text: "Resolved!" },
+  { scene: 3, from: 39.95, to: 44.52, text: "Detected in seconds, diagnosed from evidence, fixed with one approval." },
   // How it works
   { scene: 4, from: 0.30, to: 6.75, text: "Under the hood: agents only read. A policy proxy, in plain code, decides. Only the executor writes." },
   { scene: 4, from: 6.75, to: 12.24, text: "Safe fixes run on their own, money waits for a human, and anything else is refused." },
@@ -51,7 +51,7 @@ export const NARRATION: Narration[] = [
   { scene: 7, from: 12.95, to: 14.71, text: "Nothing happens in the dark." },
   // Built with
   { scene: 8, from: 0.25, to: 5.35, text: "Built on PayPal's REST APIs, MCP server, and JavaScript SDK..." },
-  { scene: 8, from: 5.35, to: 9.08, text: "with Google Gemini, Python, FastAPI and React." },
+  { scene: 8, from: 5.35, to: 9.95, text: "with Gemini or a local Qwen model, Python, FastAPI and React." },
   // Close
   { scene: 9, from: 0.25, to: 2.43, text: "Flatline. On call for your revenue!" },
 ];

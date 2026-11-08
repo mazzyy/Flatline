@@ -62,7 +62,7 @@ export const S6Refunds: React.FC = () => {
             </StageFrame>
           </div>
           <div style={{ opacity: labelOpacity }}>
-            <LowerThird title="Refund wave" sub="5 refunds on one product in an hour" delay={t(0.2)} top={110} left={150} color={colors.critical} />
+            <LowerThird title="Refund wave" sub="5 refunds on one product in an hour" delay={t(0.2)} top={110} left={150} color={colors.critical} backdrop />
           </div>
         </div>
 

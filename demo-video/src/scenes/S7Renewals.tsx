@@ -54,7 +54,7 @@ export const S7Renewals: React.FC = () => {
           </StageFrame>
         </div>
         <div style={{ opacity: labelOpacity }}>
-          <LowerThird title="Subscription renewal failures" sub="Coffee Club · 4 failed renewals in 60 min" delay={t(0.2)} top={110} left={150} color={colors.warn} />
+          <LowerThird title="Subscription renewal failures" sub="Coffee Club · 4 failed renewals in 60 min" delay={t(0.2)} top={110} left={150} color={colors.warn} backdrop />
         </div>
       </div>
 

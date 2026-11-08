@@ -52,9 +52,9 @@ LINES = [
     (47.6, "...compares the config versions with the errors, and finds it: a config change switched the shop to euros."),
     (53.2, "The banner went up on its own. The rollback waits for me."),
     (57.4, "One click... approved!"),
-    (59.6, "Failures drop back to baseline, and the Verifier confirms it."),
-    (63.4, "Resolved!"),
-    (65.0, "From the first failed checkout to a root cause, in under a minute."),
+    (60.6, "Failures drop back to baseline, and the Verifier confirms it."),
+    (64.4, "Resolved!"),
+    (66.0, "Detected in seconds, diagnosed from evidence, fixed with one approval."),
     # S5 How it works
     (71.35, "Under the hood: agents only read. A policy proxy, in plain code, decides. Only the executor writes."),
     (77.8, "Safe fixes run on their own, money waits for a human, and anything else is refused."),
@@ -77,7 +77,7 @@ LINES = [
     (138.0, "Nothing happens in the dark."),
     # S9 Built with
     (140.3, "Built on PayPal's REST APIs, MCP server, and JavaScript SDK..."),
-    (145.4, "with Google Gemini, Python, FastAPI and React."),
+    (145.4, "with Gemini or a local Qwen model, Python, FastAPI and React."),
     # S10 Close
     (150.3, "Flatline. On call for your revenue!"),
 ]

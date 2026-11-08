@@ -119,6 +119,7 @@ SFX_CLICKS = [27.2, 58.3]  # chaos Inject click, Approve click
 SFX_BREACH = 38.0  # overview: checkout tile in breach
 SFX_FOUND = 51.0  # "finds it"
 SFX_BANNER = 53.6  # banner auto
+SFX_RESOLVED = 64.25  # "Resolved." lands
 
 TENSION = [[45, 57, 60, 64], [41, 57, 60, 65], [38, 57, 62, 65], [40, 56, 59, 64]]  # Am F Dm E
 UPLIFT = [[41, 57, 60, 65], [36, 55, 60, 64], [43, 55, 59, 62], [45, 57, 60, 64]]  # F C G Am
@@ -405,7 +406,7 @@ def make_sfx():
     for i, m in enumerate([72, 76, 79]):  # approve chime
         place(s, verb(stereo(bell(mtof(m + 12), 1.4, 0.45), -0.3 + 0.3 * i)), SFX_CLICKS[1] + 0.2 + i * 0.07, db(-24))
     for i, m in enumerate([72, 76, 79, 84]):  # Resolved! chime
-        place(s, verb(stereo(bell(mtof(m + 12), 2.0, 0.7), -0.45 + 0.3 * i), wet=0.45), 63.4 + i * 0.075, db(-21))
+        place(s, verb(stereo(bell(mtof(m + 12), 2.0, 0.7), -0.45 + 0.3 * i), wet=0.45), SFX_RESOLVED + i * 0.075, db(-21))
     # How it works (71-85, the old 25 s animation at 1.79x)
     place(s, stereo(blip(1318, 0.18, 0.06) * 0.8), 73.69, db(-24))  # alert two-tone
     place(s, stereo(blip(1109, 0.25, 0.08) * 0.8), 73.77, db(-24))
