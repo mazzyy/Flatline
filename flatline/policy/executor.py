@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 from typing import Any
 
 from sqlalchemy import func, select
@@ -139,6 +140,11 @@ def _perform(db: Session, proposal: Proposal) -> dict[str, Any]:
     return _run(_paypal_write(action, params))
 
 
+def _version_number(value: Any) -> int | None:
+    match = re.search(r"\d+", str(value)) if value is not None else None
+    return int(match.group()) if match else None
+
+
 def _from_injected_events(db: Session, proposal: Proposal) -> bool:
     """True when every event behind the incident came from the Chaos panel (sandbox only)."""
     if settings().is_mock_paypal:
@@ -211,12 +217,17 @@ def _shop_action(db: Session, action: str, params: dict[str, Any]) -> dict[str, 
         row = _write_config(db, cfg, author="flatline", note="resume signups")
         return {"version": row.version}
     if action == "shop.config.rollback":
-        target_version = params.get("version")
-        if target_version:
+        # Models write the version as 2, "2", "v2" or "version 2"; anything else, or a
+        # version that is not an earlier inactive one, falls back to the last inactive.
+        prev = None
+        wanted = _version_number(params.get("version"))
+        if wanted is not None:
             prev = db.scalar(
-                select(ShopConfigVersion).where(ShopConfigVersion.version == int(target_version))
+                select(ShopConfigVersion).where(
+                    ShopConfigVersion.version == wanted, ShopConfigVersion.active.is_(False)
+                )
             )
-        else:
+        if prev is None:
             prev = db.scalar(
                 select(ShopConfigVersion)
                 .where(ShopConfigVersion.active.is_(False))

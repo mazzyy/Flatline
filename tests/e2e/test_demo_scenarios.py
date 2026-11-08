@@ -201,3 +201,37 @@ async def test_sandbox_writes_for_injected_incidents_are_simulated(
         assert sent == []  # fake ids never reach PayPal
     else:
         assert sent and "simulated" not in row.response
+
+
+@pytest.mark.parametrize("version", [2, "2", "v2", "version 2", "the last good version", None])
+def test_rollback_understands_how_models_write_the_version(db: Session, version: Any) -> None:
+    _add_config(db, dict(DEFAULT_SHOP_CONFIG), 2, active=False)
+    bad = dict(DEFAULT_SHOP_CONFIG)
+    bad["currency"] = "EUR"
+    _add_config(db, bad, 3, active=True)
+    from flatline.db.models import Incident
+
+    now = utcnow()
+    incident = Incident(
+        playbook="checkout_failure_spike",
+        status="awaiting_approval",
+        metric="capture_failures",
+        window_start=now - timedelta(minutes=5),
+        window_end=now,
+    )
+    db.add(incident)
+    db.commit()
+    proposal = Proposal(
+        incident_id=incident.id,
+        action="shop.config.rollback",
+        params={"version": version},
+        rationale="r",
+        tier="approval",
+        status="approved",
+    )
+    db.add(proposal)
+    db.flush()
+    row = execute_proposal(db, proposal)
+    assert row.success, row.error
+    active = db.query(ShopConfigVersion).filter(ShopConfigVersion.active.is_(True)).one()
+    assert active.config["currency"] == "USD"

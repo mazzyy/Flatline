@@ -36,6 +36,7 @@ def _event_dicts(rows: list[Event]) -> list[dict[str, Any]]:
             "error_code": r.error_code,
             "product_id": r.product_id,
             "plan_id": r.plan_id,
+            "subscription_id": r.subscription_id,
             "buyer_ref": r.buyer_ref,
             "currency": r.currency,
             "amount": str(r.amount) if r.amount is not None else None,
