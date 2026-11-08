@@ -1,6 +1,5 @@
 # Optional live-LLM extras. Mock mode never imports these.
 # Pin away from the March 2026 compromised LiteLLM releases.
 -r requirements.txt
-google-adk>=1.28.0
 litellm>=1.84.0,!=1.82.7,!=1.82.8
 mcp>=1.12.0

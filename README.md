@@ -82,9 +82,10 @@ This part is only needed if you want real sandbox traffic instead of the mock.
 2. Copy the Client ID and Secret into `.env` and keep `PAYPAL_ENVIRONMENT=SANDBOX`.
 3. Turn on Transaction Search for the app. Flatline only uses it as evidence, never for detection.
 4. Register a webhook pointing at `https://<your-api>/webhooks/paypal` for the event types listed in section 9.2 of the [spec](docs/spec.md), and put its ID in `PAYPAL_WEBHOOK_ID`.
-5. Create a catalog product and a monthly Coffee Club plan, then set `PAYPAL_SANDBOX_PLAN_ID` and `PAYPAL_SANDBOX_PRODUCT_ID`.
+5. Run `python scripts/sandbox_setup.py`. It creates the Coffee Club product and its monthly plan and prints `PAYPAL_SANDBOX_PRODUCT_ID` and `PAYPAL_SANDBOX_PLAN_ID` for `.env`.
 6. For live models, pick any provider LiteLLM supports and set `MODEL_FAST` and `MODEL_REASONING` in `.env`. Gemini works on the free tier (`gemini/<model>` plus `GEMINI_API_KEY`), a local model such as Qwen runs through Ollama (`ollama_chat/<model>`), and Azure OpenAI uses `azure/<deployment>` with the `AZURE_*` values. Install the extras with `pip install -r requirements-live.txt`, check both models with `python scripts/llm_check.py`, then set `LLM_MODE=live`. If a live call ever fails, the agent keeps the playbook answer and its timeline entry says so.
-7. Point the demo shop at the same client ID so the JS SDK v6 buttons render.
+7. Run `python scripts/mcp_check.py` to start both PayPal MCP sessions (read and write scope) and do one Transaction Search through the read one. It needs Node for `npx`.
+8. Point the demo shop at the same client ID so the JS SDK v6 buttons render.
 
 The tests never need any of these keys.
 
@@ -108,7 +109,7 @@ The repo includes a [Blueprint](render.yaml).
 
 ## Built with
 
-Python 3.12, FastAPI, SQLAlchemy 2, Alembic, Google ADK and LiteLLM for the live models, the official `@paypal/mcp` server, PayPal REST and JS SDK v6, React, Vite, TypeScript, AG Grid Community, Docker and PostgreSQL 16.
+Python 3.12, FastAPI, SQLAlchemy 2, Alembic, LiteLLM for the live models (Gemini, a local Qwen through Ollama, or Azure OpenAI), the official `@paypal/mcp` server, PayPal REST and JS SDK v6, React, Vite, TypeScript, AG Grid Community, Docker and PostgreSQL 16.
 
 The demo video is made in code with Remotion. Its source, the narration script and the soundtrack scripts are in `demo-video/`.
 

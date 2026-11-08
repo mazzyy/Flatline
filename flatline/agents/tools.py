@@ -61,4 +61,6 @@ async def paypal_snapshot(
             snap["plan"] = await gateway.get_plan(plan_id)
         except Exception as exc:
             snap["plan_error"] = str(exc)
+    # Which PayPal reads ran, and whether each went through MCP or REST.
+    snap["calls"] = list(getattr(gateway, "read_log", []))
     return snap

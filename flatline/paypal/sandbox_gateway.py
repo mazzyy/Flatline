@@ -1,20 +1,26 @@
 """Real PayPal sandbox gateway.
 
-Read methods prefer the read-scoped MCP server and fall back to REST.
+Read methods prefer the read-scoped MCP server and fall back to REST; every
+read is logged in `read_log` with how it was served.
 Write methods go through write-scoped MCP where it exists, otherwise REST
-(subscription suspend / activate / capture — not in @paypal/mcp).
+(subscription suspend / activate / capture — not in @paypal/mcp). A write
+falls back to REST only when MCP provably sent nothing to PayPal (server not
+running, or arguments rejected); any other failure is raised, never retried,
+so money is never moved twice.
 
 This module never talks to live PayPal hosts.
 """
 
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
 from typing import Any
+from urllib.parse import urlencode
 
 import httpx
 
 from flatline.config import Settings, settings
-from flatline.paypal.mcp_pool import McpPool, get_pool
+from flatline.paypal.mcp_pool import McpPool, McpRejected, McpUnavailable, get_pool
 from flatline.paypal.token import TokenManager
 
 
@@ -34,6 +40,13 @@ class SandboxGateway:
         self.tokens = token_manager or TokenManager(self.cfg)
         self.pool = pool or get_pool()
         self._client = client
+        self.read_log: list[dict[str, str]] = []
+
+    def _log_read(self, tool: str, via: str, error: Exception | None = None) -> None:
+        entry = {"tool": f"paypal.{tool}", "via": via}
+        if error is not None:
+            entry["mcp_error"] = f"{type(error).__name__}: {error}"[:200]
+        self.read_log.append(entry)
 
     async def _auth_headers(self) -> dict[str, str]:
         token = await self.tokens.get_token()
@@ -67,19 +80,33 @@ class SandboxGateway:
     ) -> dict[str, Any]:
         try:
             await self.pool.ensure()
-            return await self.pool.call_read(tool, arguments)
-        except Exception:
+            data = await self.pool.call_read(tool, arguments)
+            self._log_read(tool, "mcp")
+            return data if isinstance(data, dict) else {"items": data}
+        except Exception as exc:
+            self._log_read(tool, "rest", exc)
             return await self._rest("GET", rest_path)
 
     async def list_transactions(self, **filters: Any) -> list[dict[str, Any]]:
+        # Transaction Search needs a date range of at most 31 days and cannot filter
+        # by product, so `filters` only narrows nothing here; callers match locally.
+        del filters
+        end = datetime.now(UTC).replace(microsecond=0)
+        window = {
+            "start_date": (end - timedelta(days=30)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "end_date": end.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        }
         try:
             await self.pool.ensure()
-            data = await self.pool.call_read("list_transactions", filters)
+            data = await self.pool.call_read("list_transactions", {**window, "page_size": 100})
+            self._log_read("list_transactions", "mcp")
             if isinstance(data, list):
                 return data
             return list(data.get("transaction_details") or data.get("items") or [])
-        except Exception:
-            data = await self._rest("GET", "/v1/reporting/transactions")
+        except Exception as exc:
+            self._log_read("list_transactions", "rest", exc)
+            query = urlencode({**window, "fields": "all", "page_size": 100})
+            data = await self._rest("GET", f"/v1/reporting/transactions?{query}")
             return list(data.get("transaction_details") or [])
 
     async def get_order(self, order_id: str) -> dict[str, Any]:
@@ -110,10 +137,12 @@ class SandboxGateway:
         try:
             await self.pool.ensure()
             data = await self.pool.call_read("list_disputes", filters)
+            self._log_read("list_disputes", "mcp")
             if isinstance(data, list):
                 return data
             return list(data.get("items") or [])
-        except Exception:
+        except Exception as exc:
+            self._log_read("list_disputes", "rest", exc)
             data = await self._rest("GET", "/v1/customer/disputes")
             return list(data.get("items") or [])
 
@@ -134,7 +163,7 @@ class SandboxGateway:
             return await self.pool.call_write(
                 "create_refund", {"capture_id": capture_id, **payload}
             )
-        except Exception:
+        except (McpUnavailable, McpRejected):
             return await self._rest(
                 "POST", f"/v2/payments/captures/{capture_id}/refund", json=payload
             )
@@ -169,19 +198,19 @@ class SandboxGateway:
         try:
             await self.pool.ensure()
             return await self.pool.call_write("send_invoice_reminder", {"invoice_id": invoice_id})
-        except Exception:
+        except (McpUnavailable, McpRejected):
             return await self._rest("POST", f"/v2/invoicing/invoices/{invoice_id}/remind")
 
     async def create_invoice(self, payload: dict[str, Any]) -> dict[str, Any]:
         try:
             await self.pool.ensure()
             return await self.pool.call_write("create_invoice", payload)
-        except Exception:
+        except (McpUnavailable, McpRejected):
             return await self._rest("POST", "/v2/invoicing/invoices", json=payload)
 
     async def send_invoice(self, invoice_id: str) -> dict[str, Any]:
         try:
             await self.pool.ensure()
             return await self.pool.call_write("send_invoice", {"invoice_id": invoice_id})
-        except Exception:
+        except (McpUnavailable, McpRejected):
             return await self._rest("POST", f"/v2/invoicing/invoices/{invoice_id}/send")

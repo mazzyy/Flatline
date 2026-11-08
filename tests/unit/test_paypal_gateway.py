@@ -93,3 +93,39 @@ def test_no_live_host_in_paypal_package() -> None:
         stripped = stripped.replace("api.sandbox.paypal.com", "")
         assert "api-m.paypal.com" not in stripped, path.name
         assert "api.paypal.com" not in stripped or "sandbox" in text
+
+
+class _NoMcp:
+    async def ensure(self) -> None:
+        raise RuntimeError("MCP server not available")
+
+
+@pytest.mark.asyncio
+async def test_transaction_search_fallback_sends_a_date_range() -> None:
+    from datetime import datetime
+    from urllib.parse import parse_qs
+
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        if request.url.path == "/v1/oauth2/token":
+            return httpx.Response(200, json={"access_token": "tok", "expires_in": 3600})
+        return httpx.Response(200, json={"transaction_details": [{"id": "T1"}]})
+
+    cfg = Settings(PAYPAL_ENVIRONMENT="SANDBOX", PAYPAL_CLIENT_ID="id", PAYPAL_CLIENT_SECRET="s")
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    gw = SandboxGateway(
+        cfg, token_manager=TokenManager(cfg, client=client), pool=_NoMcp(), client=client
+    )  # type: ignore[arg-type]
+    txs = await gw.list_transactions(product_id="house-blend")
+    await client.aclose()
+
+    assert txs == [{"id": "T1"}]
+    search = seen[-1]
+    assert search.url.path == "/v1/reporting/transactions"
+    q = parse_qs(search.url.query.decode())
+    start = datetime.fromisoformat(q["start_date"][0].replace("Z", "+00:00"))
+    end = datetime.fromisoformat(q["end_date"][0].replace("Z", "+00:00"))
+    assert 0 < (end - start).days <= 31
+    assert q["fields"] == ["all"]

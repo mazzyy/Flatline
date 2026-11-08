@@ -150,7 +150,11 @@ def run_diagnostician(
         out.model_dump(),
         model=model,
         latency_ms=int((time.perf_counter() - started) * 1000),
-        tool_calls=[{"tool": "events_by_group"}, {"tool": "config_history"}],
+        tool_calls=[
+            {"tool": "events_by_group"},
+            {"tool": "config_history"},
+            *tool_bundle.get("paypal", {}).get("calls", []),
+        ],
     )
     return out
 

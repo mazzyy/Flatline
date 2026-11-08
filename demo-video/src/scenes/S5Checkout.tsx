@@ -186,7 +186,7 @@ export const S5Checkout: React.FC = () => {
       {/* Beat E: recovery */}
       {inBeat(E) ? (
         <div style={{ position: "absolute", inset: 0, opacity: ease(frame, t(E.from), 10) }}>
-          <LowerThird title="Checkout failures · last 15 min" sub="synthetic incident · MOCK" delay={t(E.from)} top={200} />
+          <LowerThird title="Checkout failures · last 15 min" sub="injected incident · PayPal sandbox" delay={t(E.from)} top={200} />
           <div style={{ position: "absolute", left: chart.x, top: chart.y, width: chart.w, height: chart.h }}>
             <svg width={chart.w} height={chart.h} style={{ overflow: "visible" }}>
               <line x1={0} y1={base} x2={chart.w} y2={base} stroke={colors.line} strokeDasharray="6 8" />

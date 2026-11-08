@@ -1,7 +1,7 @@
 """Sequential agent workflow: Triage → Diagnostician → Remediator.
 
 Orchestration is plain Python (same reason as original Flatline: inspectable
-handoffs). Live nodes can use ADK + LiteLLM; mock mode never imports them.
+handoffs). Live nodes call LiteLLM; mock mode never imports it.
 This module must not import the executor or any write-side PayPal client.
 """
 

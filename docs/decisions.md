@@ -2,6 +2,24 @@
 
 Unspecified choices and any difference from the spec (`docs/spec.md`). Newest first.
 
+## D-016 — PayPal MCP wired for real; writes never retried blindly
+
+`@paypal/mcp` 1.8.1 accepts dotted names in `--tools` (`orders.get`) and exposes
+snake_case tool names over MCP (`get_order`). The old pool passed snake_case
+names to `--tools`, so the server refused to start, and its call method was a
+placeholder, so every read silently used REST. `mcp_pool.py` now opens an MCP
+client session per scope over stdio. Reads still fall back to REST and record
+`via: mcp|rest` in the Diagnostician's tool calls. A write falls back to REST
+only on `McpUnavailable` or `McpRejected` (nothing reached PayPal); any other
+error is raised so a refund can never be sent twice.
+
+## D-015 — Models through LiteLLM only; Google ADK dropped
+
+The nodes always called `litellm.completion` directly (D-007), so `google-adk`
+was installed but never imported. It is removed from `requirements-live.txt`.
+`MODEL_FAST` / `MODEL_REASONING` take any LiteLLM string: `gemini/...` (free tier
+works), `ollama_chat/...` for a local model such as Qwen, or `azure/...`.
+
 ## D-014 — Repo cleanup before submission
 
 The build brief for the coding agent (`AGENT_PROMPT.md`, `launch_cursor_agent.py`,
