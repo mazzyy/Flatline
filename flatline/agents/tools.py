@@ -42,6 +42,9 @@ def incident_events(
         )
         if matches:
             signal.append(row)
+        elif scoped and scope_of(row, str(incident.scope_key)) == incident.scope_value:
+            # Healthy traffic on the same plan or product: is the scope itself broken?
+            background[f"{row.event_type} on this {incident.scope_key}"] += 1
         else:
             background[row.event_type] += 1
     return signal[:limit], background
