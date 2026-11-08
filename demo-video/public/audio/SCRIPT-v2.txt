@@ -64,7 +64,7 @@ Generated with scripts/audio-v2/build-voiceover-v2.py; captions in src/captions.
 
 [S9 Built with]
  155.3s  Built on PayPal's REST APIs, MCP server, and JavaScript SDK...
- 160.4s  with Azure OpenAI, Python, FastAPI and React.
+ 160.4s  with Google Gemini, Python, FastAPI and React.
 
 [S10 Close]
  165.3s  Flatline. On call for your revenue!

@@ -3,7 +3,7 @@
 
     python scripts/llm_check.py          # one short call to MODEL_FAST and MODEL_REASONING
     python scripts/llm_check.py --list   # models your Gemini key or local Ollama offers
-    python scripts/llm_check.py --try gemini/gemini-2.5-flash gemini/gemini-2.5-pro
+    python scripts/llm_check.py --try gemini/gemini-2.5-flash gemini/gemini-3.5-flash
 
 Works with any LiteLLM model string: gemini/<model>, ollama_chat/<model>,
 azure/<deployment>. Needs `pip install -r requirements-live.txt`.

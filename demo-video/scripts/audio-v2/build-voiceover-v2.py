@@ -87,7 +87,7 @@ LINES = [
     (153.0, "Nothing happens in the dark."),
     # S9 Built with
     (155.3, "Built on PayPal's REST APIs, MCP server, and JavaScript SDK..."),
-    (160.4, "with Azure OpenAI, Python, FastAPI and React."),
+    (160.4, "with Google Gemini, Python, FastAPI and React."),
     # S10 Close
     (165.3, "Flatline. On call for your revenue!"),
 ]

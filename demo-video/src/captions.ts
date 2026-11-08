@@ -64,7 +64,7 @@ export const NARRATION: Narration[] = [
   { scene: 7, from: 12.95, to: 14.56, text: "Nothing happens in the dark." },
   // S9
   { scene: 8, from: 0.25, to: 5.35, text: "Built on PayPal's REST APIs, MCP server, and JavaScript SDK..." },
-  { scene: 8, from: 5.35, to: 9.13, text: "with Azure OpenAI, Python, FastAPI and React." },
+  { scene: 8, from: 5.35, to: 9.13, text: "with Google Gemini, Python, FastAPI and React." },
   // S10
   { scene: 9, from: 0.25, to: 2.28, text: `${product.name}. On call for your revenue!` },
 ];

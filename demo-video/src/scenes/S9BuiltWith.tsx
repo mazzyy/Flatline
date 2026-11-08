@@ -11,7 +11,7 @@ const STACK = [
   "PayPal MCP server",
   "PayPal JS SDK v6",
   "Webhooks",
-  "Azure OpenAI",
+  "Google Gemini",
   "Python",
   "FastAPI",
   "React",

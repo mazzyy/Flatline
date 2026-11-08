@@ -40,6 +40,7 @@ def live_complete(model: str, prompt: str, *, json_mode: bool = True) -> str:
     configure_litellm_env()
     import litellm
 
+    litellm.suppress_debug_info = True  # no "Give Feedback" banner on every error
     kwargs: dict[str, Any] = {
         "model": model,
         "messages": [{"role": "user", "content": prompt}],

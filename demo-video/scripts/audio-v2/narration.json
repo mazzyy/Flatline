@@ -543,13 +543,13 @@
   "i": 45,
   "scene": 8,
   "start": 160.4,
-  "end": 163.785,
-  "dur": 3.385,
+  "end": 163.58,
+  "dur": 3.18,
   "limit": 4.78,
   "speed": 1.1,
   "over": 0,
-  "peaks_limited": 8,
-  "text": "with Azure OpenAI, Python, FastAPI and React."
+  "peaks_limited": 0,
+  "text": "with Google Gemini, Python, FastAPI and React."
  },
  {
   "i": 46,

@@ -40,7 +40,7 @@ The backend is Python 3.12 with FastAPI for ingest, webhooks, the dashboard API 
 
 ## How it uses AI
 
-1. Each agent calls a model through LiteLLM. Triage and Verifier use a fast model, Diagnostician and Remediator a stronger one. The demo uses Google Gemini on the free tier (Gemini 2.5 Flash for Triage and Verifier, Gemini 2.5 Pro for Diagnostician and Remediator); the same build runs fully on premises with Qwen through Ollama, or on Azure OpenAI, by changing two settings.
+1. Each agent calls a model through LiteLLM. Triage and Verifier use a fast model, Diagnostician and Remediator a stronger one. The demo uses Google Gemini on the free tier (Gemini 2.5 Flash for Triage and Verifier, Gemini 3.5 Flash for Diagnostician and Remediator); the same build runs fully on premises with Qwen through Ollama, or on Azure OpenAI, by changing two settings.
 2. Each agent receives the real incident data (events, config history, PayPal reads) and a deterministic playbook answer that fixes the JSON shape and serves as the fallback.
 3. If a model call fails, for example on a rate limit, the agent keeps the playbook answer and the timeline labels that step as a fallback. A step is never credited to a model that did not produce it.
 4. The model never acts alone. Its proposals pass the policy proxy, and the Verifier's resolved flag comes from the metric check; the model only writes the explanation.

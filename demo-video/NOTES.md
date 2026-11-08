@@ -6,7 +6,7 @@
 |---|---|
 | `out/demo-video-v3.mp4` | **Submission cut.** 1920×1080, 170 s, H.264. Narration, music and SFX; captions matched to the voice |
 | `out/demo-video-v2.mp4` | Previous cut (before the S4 layout fix and the S5 zoom). Safe to delete once v3 is approved |
-| `public/audio/soundtrack-v2.m4a` | Final mix (voice + music + SFX), -15.5 LUFS. Rendered under the picture when `hasSoundtrack` is on (the default) |
+| `public/audio/soundtrack-v3.m4a` | Final mix (voice + music + SFX), -15.5 LUFS. Rendered under the picture when `hasSoundtrack` is on (the default) |
 | `public/audio/SCRIPT-v2.txt` | Narration with start times |
 | `scripts/audio-v2/` | `build-voiceover-v2.py` → `compose-music-sfx.py` → `mix-soundtrack.py`; `narration.json` holds the line timings that `src/captions.ts` uses |
 | `out/poster.png` | YouTube thumbnail, S3 introducing frame, no captions |
@@ -52,7 +52,7 @@ All eight clips were recorded against the live Docker stack (`localhost:8000` + 
 | `06-refund-wave.mp4` | First ~3 s is the Chaos click; composition trims those (`trimBefore={90}`) to land on the incident (`refund.bulk` refused) |
 | `07-renewals.mp4` | Same trim; reminder auto + capture outstanding pending |
 | `08-audit-log.mp4` | Audit table with policy / executor / agent rows |
-| `audio/soundtrack-v2.m4a` | Final mix. Music and SFX are synthesized in `scripts/audio-v2/compose-music-sfx.py` (no licensed audio); the voice is Kokoro `am_fenrir` |
+| `audio/soundtrack-v3.m4a` | Final mix. Music and SFX are synthesized in `scripts/audio-v2/compose-music-sfx.py` (no licensed audio); the voice is Kokoro `am_fenrir` |
 
 Re-record clips: with the stack up (`make up`),
 
