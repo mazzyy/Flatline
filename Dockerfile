@@ -11,7 +11,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends curl ca-certificates nodejs npm \
     && rm -rf /var/lib/apt/lists/*
 # requirements-live.txt pulls in requirements.txt plus the live model stack
-# (Google ADK, LiteLLM, MCP); mock mode never imports them.
+# (LiteLLM, MCP); mock mode never imports them.
 COPY requirements.txt requirements-live.txt ./
 RUN pip install --no-cache-dir -r requirements-live.txt
 COPY flatline ./flatline
@@ -26,4 +26,5 @@ ENV PYTHONPATH=/app
 ENV PAYPAL_ENVIRONMENT=MOCK
 ENV LLM_MODE=mock
 EXPOSE 8000
-CMD ["uvicorn", "flatline.ingest.app:app", "--host", "0.0.0.0", "--port", "8000"]
+# Render passes PORT; locally it is 8000.
+CMD ["sh", "-c", "exec uvicorn flatline.ingest.app:app --host 0.0.0.0 --port ${PORT:-8000}"]

@@ -166,3 +166,38 @@ async def test_renewal_failures(db: Session) -> None:
     assert by["invoice.send_reminder"].status == "executed"
     assert by["subscription.capture_outstanding"].tier == "approval"
     assert by["subscription.capture_outstanding"].status == "pending"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("injected", [True, False])
+async def test_sandbox_writes_for_injected_incidents_are_simulated(
+    db: Session, monkeypatch: pytest.MonkeyPatch, injected: bool
+) -> None:
+    from flatline.config import reset_settings
+    from flatline.db.models import Event as EventRow
+    from flatline.policy import executor
+
+    await test_renewal_failures(db)
+    if not injected:
+        for row in db.query(EventRow).all():
+            row.synthetic = False
+        db.commit()
+    capture = db.query(Proposal).filter(Proposal.action == "subscription.capture_outstanding").one()
+
+    sent: list[str] = []
+
+    class Gateway:
+        async def capture_subscription_outstanding(self, sub: str, note: str) -> dict[str, Any]:
+            sent.append(sub)
+            return {"ok": True}
+
+    monkeypatch.setattr(executor, "build_gateway", Gateway)
+    monkeypatch.setenv("PAYPAL_ENVIRONMENT", "SANDBOX")
+    reset_settings()
+    row = execute_proposal(db, capture)
+    assert row.success
+    if injected:
+        assert row.response["simulated"] is True
+        assert sent == []  # fake ids never reach PayPal
+    else:
+        assert sent and "simulated" not in row.response

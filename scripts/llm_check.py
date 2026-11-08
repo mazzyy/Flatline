@@ -3,6 +3,7 @@
 
     python scripts/llm_check.py          # one short call to MODEL_FAST and MODEL_REASONING
     python scripts/llm_check.py --list   # models your Gemini key or local Ollama offers
+    python scripts/llm_check.py --try gemini/gemini-2.5-flash gemini/gemini-2.5-pro
 
 Works with any LiteLLM model string: gemini/<model>, ollama_chat/<model>,
 azure/<deployment>. Needs `pip install -r requirements-live.txt`.
@@ -57,14 +58,15 @@ def list_models() -> None:
         print(f"Ollama: nothing answering at {base}")
 
 
-def check() -> int:
+def check(models: list[tuple[str, str]] | None = None) -> int:
     cfg = settings()
-    if cfg.llm_mode != "live":
+    if cfg.llm_mode != "live" and not models:
         print("Note: LLM_MODE is not live yet; the stack will keep using the playbook answers.")
     configure_litellm_env(cfg)
+    if not models:
+        models = [(kind, resolve_model(kind, cfg)) for kind in ("fast", "reasoning")]
     failed = 0
-    for kind in ("fast", "reasoning"):
-        model = resolve_model(kind, cfg)
+    for kind, model in models:
         started = time.perf_counter()
         try:
             answer = live_complete(model, PROMPT).strip()
@@ -85,10 +87,13 @@ def check() -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--list", action="store_true", help="list available models")
+    parser.add_argument("--try", dest="try_models", nargs="+", metavar="MODEL", help="test these")
     args = parser.parse_args()
     if args.list:
         list_models()
         return 0
+    if args.try_models:
+        return check([("try", m) for m in args.try_models])
     return check()
 
 

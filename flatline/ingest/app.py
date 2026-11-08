@@ -68,6 +68,8 @@ def create_app() -> FastAPI:
             ensure_default_config(db)
         finally:
             db.close()
+        if settings().run_workers:
+            _start_workers()
 
     @app.get("/healthz")
     def healthz() -> dict[str, Any]:
@@ -470,6 +472,18 @@ def _inject_from_chaos(db: Session, chaos: dict[str, Any]) -> list[str]:
     if kind in {"renewal_failures", "renewals"}:
         return _ingest_payloads(db, renewal_failures())
     return []
+
+
+def _start_workers() -> None:
+    """Detector and agent loops as daemon threads, for a single hosted service."""
+    import threading
+
+    from flatline.detector.worker import run_forever as detector_forever
+    from flatline.loop import run_forever as agents_forever
+
+    for name, target in (("detector", detector_forever), ("agents", agents_forever)):
+        threading.Thread(target=target, name=f"flatline-{name}", daemon=True).start()
+    log.info("detector and agent loops running in the API process")
 
 
 def _run_scan(db: Session) -> list[str]:

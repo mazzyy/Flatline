@@ -85,17 +85,21 @@ This part is only needed if you want real sandbox traffic instead of the mock.
 5. Run `python scripts/sandbox_setup.py`. It creates the Coffee Club product and its monthly plan and prints `PAYPAL_SANDBOX_PRODUCT_ID` and `PAYPAL_SANDBOX_PLAN_ID` for `.env`.
 6. For live models, pick any provider LiteLLM supports and set `MODEL_FAST` and `MODEL_REASONING` in `.env`. Gemini works on the free tier (`gemini/<model>` plus `GEMINI_API_KEY`), a local model such as Qwen runs through Ollama (`ollama_chat/<model>`), and Azure OpenAI uses `azure/<deployment>` with the `AZURE_*` values. Install the extras with `pip install -r requirements-live.txt`, check both models with `python scripts/llm_check.py`, then set `LLM_MODE=live`. If a live call ever fails, the agent keeps the playbook answer and its timeline entry says so.
 7. Run `python scripts/mcp_check.py` to start both PayPal MCP sessions (read and write scope) and do one Transaction Search through the read one. It needs Node for `npx`.
-8. Point the demo shop at the same client ID so the JS SDK v6 buttons render.
+8. With the stack up (`make up`), `python scripts/live_check.py` runs all three scenarios against the sandbox and the live models and prints every agent step with its model and PayPal reads. Injected scenarios use made up PayPal ids, so their PayPal writes are recorded as simulated instead of being sent.
+9. Point the demo shop at the same client ID so the JS SDK v6 buttons render.
 
 The tests never need any of these keys.
 
 ## Deploy to Render
 
-The repo includes a [Blueprint](render.yaml).
+The repo includes a [Blueprint](render.yaml) that fits Render's free instances: one web service runs the API, the detector and the agent loop together (`RUN_WORKERS=true`), a second one runs the demo shop, and a free Postgres holds the data.
 
 1. In Render, create a new Blueprint and pick this repo.
-2. Fill in the environment variables marked `sync: false`. That means the PayPal sandbox credentials, the webhook ID, the plan ID, your model keys (`GEMINI_API_KEY` or the Azure values, plus `MODEL_FAST` and `MODEL_REASONING`), `DASHBOARD_PASSCODE`, `INJECT_TOKEN`, `APP_BASE_URL`, and `FLATLINE_API_URL` for the shop.
+2. Fill in the environment variables marked `sync: false`: the PayPal sandbox credentials, the webhook ID, the plan and product IDs, `GEMINI_API_KEY`, `MODEL_FAST`, `MODEL_REASONING`, `DASHBOARD_PASSCODE`, `INJECT_TOKEN`, `APP_BASE_URL`, and `FLATLINE_API_URL` for the shop.
 3. The Blueprint sets `PAYPAL_ENVIRONMENT` to `SANDBOX`. Leave it that way.
+4. Check the deploy with `python scripts/live_check.py --url https://<your-api>.onrender.com`.
+
+Free services sleep after 15 minutes without traffic, so the first request takes about a minute. Render deletes a free database 30 days after it is created.
 
 ## Why you can trust it
 

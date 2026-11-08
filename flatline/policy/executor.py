@@ -9,6 +9,7 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from flatline.config import settings
 from flatline.db.base import utcnow
 from flatline.db.models import (
     DEFAULT_SHOP_CONFIG,
@@ -19,6 +20,7 @@ from flatline.db.models import (
     ShopConfigVersion,
     audit,
 )
+from flatline.detector.rules import event_matches_metric
 from flatline.ingest.sse import HUB
 from flatline.notify.sinks import send_alert
 from flatline.paypal.factory import build_gateway
@@ -128,7 +130,27 @@ def _perform(db: Session, proposal: Proposal) -> dict[str, Any]:
         return {"attached": True}
     if action in CONFIG_ACTIONS:
         return _shop_action(db, action, params)
+    if _from_injected_events(db, proposal):
+        return {
+            "simulated": True,
+            "reason": "This incident was built from injected test events, so its PayPal ids "
+            "are not real objects. Nothing was sent to PayPal.",
+        }
     return _run(_paypal_write(action, params))
+
+
+def _from_injected_events(db: Session, proposal: Proposal) -> bool:
+    """True when every event behind the incident came from the Chaos panel (sandbox only)."""
+    if settings().is_mock_paypal:
+        return False  # the mock gateway answers every id
+    incident = db.get(Incident, proposal.incident_id)
+    if incident is None or incident.window_start is None:
+        return False
+    stmt = select(Event).where(Event.occurred_at >= incident.window_start)
+    if incident.window_end is not None:
+        stmt = stmt.where(Event.occurred_at <= incident.window_end)
+    behind = [e for e in db.scalars(stmt).all() if event_matches_metric(e, incident.metric or "")]
+    return bool(behind) and all(e.synthetic for e in behind)
 
 
 async def _paypal_write(action: str, params: dict[str, Any]) -> dict[str, Any]:

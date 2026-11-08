@@ -10,7 +10,7 @@ const express = require("express");
 const path = require("path");
 const products = require("./products");
 
-const PORT = Number(process.env.SHOP_PORT || 3000);
+const PORT = Number(process.env.PORT || process.env.SHOP_PORT || 3000); // Render sets PORT
 const FLATLINE = process.env.FLATLINE_API_URL || "http://localhost:8000";
 const PAYPAL_ENV = (process.env.PAYPAL_ENVIRONMENT || "MOCK").toUpperCase();
 const CLIENT_ID = process.env.PAYPAL_CLIENT_ID || "";

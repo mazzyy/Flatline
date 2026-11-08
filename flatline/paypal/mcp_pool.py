@@ -148,6 +148,11 @@ class McpPool:
                     slot.session = session
                     ready.set_result(None)
                     await stop.wait()
+            except asyncio.CancelledError:
+                # The event loop is closing (the agent loop runs one asyncio.run per job).
+                # The next ensure() starts a fresh session.
+                if not ready.done():
+                    ready.set_exception(McpUnavailable(f"{slot.name} MCP start was cancelled"))
             except BaseException as exc:
                 if not ready.done():
                     ready.set_exception(McpUnavailable(f"{slot.name} MCP did not start: {exc}"))

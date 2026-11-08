@@ -37,6 +37,8 @@ class Settings(BaseSettings):
     app_base_url: str = Field(default="http://localhost:8000", alias="APP_BASE_URL")
     verify_minutes: int = Field(default=10, alias="VERIFY_MINUTES")
     demo_mode: bool = Field(default=False, alias="DEMO_MODE")
+    # Run the detector and agent loops inside the API process (one free Render service).
+    run_workers: bool = Field(default=False, alias="RUN_WORKERS")
 
     paypal_client_id: str = Field(default="", alias="PAYPAL_CLIENT_ID")
     paypal_client_secret: str = Field(default="", alias="PAYPAL_CLIENT_SECRET")
@@ -44,8 +46,8 @@ class Settings(BaseSettings):
     paypal_sandbox_plan_id: str = Field(default="", alias="PAYPAL_SANDBOX_PLAN_ID")
     paypal_sandbox_product_id: str = Field(default="", alias="PAYPAL_SANDBOX_PRODUCT_ID")
 
-    model_fast: str = Field(default="azure/gpt-4o-mini", alias="MODEL_FAST")
-    model_reasoning: str = Field(default="azure/gpt-4o", alias="MODEL_REASONING")
+    model_fast: str = Field(default="gemini/gemini-2.5-flash", alias="MODEL_FAST")
+    model_reasoning: str = Field(default="gemini/gemini-2.5-pro", alias="MODEL_REASONING")
     azure_api_key: str = Field(default="", alias="AZURE_API_KEY")
     azure_api_base: str = Field(default="", alias="AZURE_API_BASE")
     azure_api_version: str = Field(default="2024-08-01-preview", alias="AZURE_API_VERSION")

@@ -4,14 +4,27 @@
  */
 import { chromium } from "playwright";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, rmSync, existsSync, readdirSync } from "node:fs";
+import { mkdirSync, rmSync, existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+
+const ROOT = join(import.meta.dirname, "..");
+
+// Passcode and inject token come from the repo's .env, like the stack itself.
+const dotenv = {};
+const envFile = join(ROOT, "..", ".env");
+if (existsSync(envFile)) {
+  for (const line of readFileSync(envFile, "utf8").split("\n")) {
+    const m = line.match(/^\s*([A-Z_]+)\s*=\s*(.*?)\s*$/);
+    if (m) dotenv[m[1]] = m[2].replace(/^["']|["']$/g, "");
+  }
+}
+const env = (key, fallback) => process.env[key] ?? dotenv[key] ?? fallback;
 
 const DASH = "http://127.0.0.1:8000";
 const SHOP = "http://127.0.0.1:3000";
-const PASS = "demo-judge";
-const TOKEN = "change-me";
-const ROOT = join(import.meta.dirname, "..");
+const PASS = env("DASHBOARD_PASSCODE", "demo-judge");
+const TOKEN = env("INJECT_TOKEN", "change-me");
+const HEADERS = { "x-passcode": PASS, "x-inject-token": TOKEN, "content-type": "application/json" };
 const TMP = join(ROOT, "out", "clip-raw");
 const OUT = join(ROOT, "public", "clips");
 const W = 1600;
@@ -44,6 +57,38 @@ const chaos = async (page, label) => {
   const card = page.getByRole("heading", { name: label }).locator("..");
   await card.getByRole("button").first().click();
   await page.locator(".result-bar").waitFor({ timeout: 15000 });
+};
+
+// Live agents take a while; wait off camera so the clips stay short.
+const api = async (path, body) => {
+  const res = await fetch(`${DASH}${path}`, {
+    method: body ? "POST" : "GET",
+    headers: HEADERS,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) throw new Error(`${path}: HTTP ${res.status}`);
+  return res.json();
+};
+
+const agentsDone = async (playbook, timeoutMs = 300000) => {
+  const until = Date.now() + timeoutMs;
+  while (Date.now() < until) {
+    const { items } = await api(`/api/incidents?playbook=${playbook}`);
+    if (items?.length) {
+      const detail = await api(`/api/incidents/${items[0].id}`);
+      if (detail.proposals?.length) {
+        console.log(`agents done for ${playbook}:`, detail.steps.map((s) => s.model).join(", "));
+        return detail;
+      }
+    }
+    await sleep(3000);
+  }
+  throw new Error(`agents did not finish ${playbook}`);
+};
+
+const injectAndWait = async (chaosBody, playbook) => {
+  await api("/api/chaos", { chaos: chaosBody, note: `clips: ${playbook}` });
+  return agentsDone(playbook);
 };
 
 const firstIncident = async (page) => {
@@ -129,6 +174,8 @@ try {
     await sleep(2500);
   });
 
+  await agentsDone("checkout_failure_spike");
+
   await maybe("04-incident-detail.mp4", async (page) => {
     await login(page);
     const id = await firstIncident(page);
@@ -152,10 +199,13 @@ try {
     await sleep(1800);
   });
 
+  if (!(skipExisting && existsSync(join(OUT, "06-refund-wave.mp4")))) {
+    await injectAndWait({ inject: "refund_wave" }, "refund_wave");
+  }
   await maybe("06-refund-wave.mp4", async (page) => {
     await login(page);
-    await chaos(page, "Inject refund wave");
-    await sleep(2500);
+    await page.goto(`${DASH}/#/chaos`, { waitUntil: "networkidle" });
+    await sleep(3000); // the video trims these first 3 seconds
     const res = await page.request.get(`${DASH}/api/incidents`);
     const items = (await res.json()).items;
     const refund = items.find((i) => i.playbook === "refund_wave") ?? items[0];
@@ -166,10 +216,13 @@ try {
     await sleep(2200);
   });
 
+  if (!(skipExisting && existsSync(join(OUT, "07-renewals.mp4")))) {
+    await injectAndWait({ inject: "renewal_failures" }, "subscription_renewal_failures");
+  }
   await maybe("07-renewals.mp4", async (page) => {
     await login(page);
-    await chaos(page, "Inject subscription renewal failures");
-    await sleep(2500);
+    await page.goto(`${DASH}/#/chaos`, { waitUntil: "networkidle" });
+    await sleep(3000); // the video trims these first 3 seconds
     const res = await page.request.get(`${DASH}/api/incidents`);
     const items = (await res.json()).items;
     const renewal = items.find((i) => i.playbook === "subscription_renewal_failures") ?? items[0];

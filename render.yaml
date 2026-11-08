@@ -1,12 +1,18 @@
 databases:
+  # Render deletes free databases 30 days after creation; upgrade this one
+  # before then if the demo has to stay up longer.
   - name: flatline-db
     plan: free
     databaseName: flatline
     user: flatline
 
 services:
+  # One web service runs the API, the detector and the agent loop (RUN_WORKERS),
+  # so the whole demo fits Render's free instances. Locally, docker compose runs
+  # them as three processes.
   - type: web
     name: flatline-api
+    plan: free
     runtime: docker
     dockerfilePath: ./Dockerfile
     dockerContext: .
@@ -16,6 +22,8 @@ services:
         value: SANDBOX
       - key: LLM_MODE
         value: live
+      - key: RUN_WORKERS
+        value: "true"
       - key: DATABASE_URL
         fromDatabase:
           name: flatline-db
@@ -32,12 +40,6 @@ services:
         sync: false
       - key: GEMINI_API_KEY
         sync: false
-      - key: AZURE_API_KEY
-        sync: false
-      - key: AZURE_API_BASE
-        sync: false
-      - key: AZURE_API_VERSION
-        value: 2024-08-01-preview
       - key: MODEL_FAST
         sync: false
       - key: MODEL_REASONING
@@ -49,56 +51,9 @@ services:
       - key: APP_BASE_URL
         sync: false
 
-  - type: worker
-    name: flatline-detector
-    runtime: docker
-    dockerfilePath: ./Dockerfile
-    dockerCommand: python -m flatline.detector.worker
-    envVars:
-      - key: PAYPAL_ENVIRONMENT
-        value: SANDBOX
-      - key: LLM_MODE
-        value: live
-      - key: DATABASE_URL
-        fromDatabase:
-          name: flatline-db
-          property: connectionString
-      - key: PAYPAL_CLIENT_ID
-        sync: false
-      - key: PAYPAL_CLIENT_SECRET
-        sync: false
-
-  - type: worker
-    name: flatline-agents
-    runtime: docker
-    dockerfilePath: ./Dockerfile
-    dockerCommand: python -m flatline.loop
-    envVars:
-      - key: PAYPAL_ENVIRONMENT
-        value: SANDBOX
-      - key: LLM_MODE
-        value: live
-      - key: DATABASE_URL
-        fromDatabase:
-          name: flatline-db
-          property: connectionString
-      - key: PAYPAL_CLIENT_ID
-        sync: false
-      - key: PAYPAL_CLIENT_SECRET
-        sync: false
-      - key: GEMINI_API_KEY
-        sync: false
-      - key: AZURE_API_KEY
-        sync: false
-      - key: AZURE_API_BASE
-        sync: false
-      - key: MODEL_FAST
-        sync: false
-      - key: MODEL_REASONING
-        sync: false
-
   - type: web
     name: demo-shop
+    plan: free
     runtime: docker
     dockerfilePath: ./demo-shop/Dockerfile
     dockerContext: ./demo-shop

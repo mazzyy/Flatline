@@ -2,6 +2,21 @@
 
 Unspecified choices and any difference from the spec (`docs/spec.md`). Newest first.
 
+## D-018 — Writes for injected incidents are simulated in the sandbox
+
+The Chaos panel injects events with made up PayPal ids (`I-INJ-0`, `REF-INJ-0`).
+Sending a reminder or a capture for those ids to the sandbox can only fail with
+a 404. When every event behind an incident is synthetic and PayPal is not MOCK,
+the executor records the PayPal write as `{"simulated": true}` and sends
+nothing. Shop config actions, reads, OAuth and Transaction Search stay real.
+
+## D-017 — One Render web service for the hosted demo
+
+Render has no free background workers, so the Blueprint runs the detector and
+the agent loop as daemon threads inside the API service (`RUN_WORKERS=true`).
+Docker Compose keeps them as separate processes. Free services sleep after 15
+minutes idle; the loops resume on the next request.
+
 ## D-016 — PayPal MCP wired for real; writes never retried blindly
 
 `@paypal/mcp` 1.8.1 accepts dotted names in `--tools` (`orders.get`) and exposes
