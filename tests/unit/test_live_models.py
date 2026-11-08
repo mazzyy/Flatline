@@ -237,6 +237,15 @@ def test_each_incident_only_sees_its_own_events(tmp_path, monkeypatch: pytest.Mo
                 occurred_at=now,
             )
         )
+    for _ in range(3):  # healthy sales of the same product
+        db.add(
+            Event(
+                source="t",
+                event_type="checkout.capture",
+                product_id="ethiopia-yirgacheffe",
+                occurred_at=now,
+            )
+        )
     db.commit()
     wave = Incident(id=uuid.uuid4(), playbook="refund_wave", status="open", metric="refunds")
     wave.scope_key, wave.scope_value = "product_id", "ethiopia-yirgacheffe"
@@ -247,5 +256,6 @@ def test_each_incident_only_sees_its_own_events(tmp_path, monkeypatch: pytest.Mo
     grouped = tools.events_by_group(events, background)
     assert "CURRENCY_MISMATCH" not in grouped["error_code_breakdown"]
     assert grouped["other_traffic_in_window"]["checkout.capture"] == 6  # counted, not detailed
+    assert grouped["other_traffic_in_window"]["checkout.capture on this product_id"] == 3
     db.close()
     reset_engine()
