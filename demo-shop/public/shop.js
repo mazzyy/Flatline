@@ -48,7 +48,12 @@ async function renderCheckout(cfg) {
     return;
   }
   if (cfg.paypal_environment === "SANDBOX" && cfg.paypal_client_id) {
-    await renderPaypalV6(cfg, p);
+    try {
+      await renderPaypalV6(cfg, p);
+    } catch (e) {
+      console.error("PayPal SDK", e);
+      document.getElementById("err").textContent = "The PayPal button could not load.";
+    }
   } else {
     const btn = document.createElement("button");
     btn.id = "mock-pay";
@@ -76,7 +81,9 @@ async function renderCheckout(cfg) {
 async function renderPaypalV6(cfg, p) {
   await new Promise((resolve, reject) => {
     const s = document.createElement("script");
-    s.src = "https://www.paypal.com/web-sdk/v6/core";
+    // A sandbox client id only works with the sandbox build of the SDK.
+    const host = cfg.paypal_environment === "SANDBOX" ? "https://www.sandbox.paypal.com" : "https://www.paypal.com";
+    s.src = `${host}/web-sdk/v6/core`;
     s.onload = resolve;
     s.onerror = reject;
     document.head.appendChild(s);
