@@ -45,7 +45,7 @@ def live_complete(model: str, prompt: str, *, json_mode: bool = True) -> str:
         "model": model,
         "messages": [{"role": "user", "content": prompt}],
         "timeout": 90,
-        "num_retries": 2,  # free tiers answer 429 now and then
+        "num_retries": 1,  # then the next model in MODEL_FALLBACKS
     }
     if json_mode:
         kwargs["response_format"] = {"type": "json_object"}

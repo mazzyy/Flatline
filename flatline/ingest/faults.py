@@ -48,16 +48,20 @@ def refund_wave(n: int = 5) -> list[dict[str, Any]]:
 
 
 def renewal_failures(n: int = 4) -> list[dict[str, Any]]:
+    from flatline.config import settings
+
     at = _now()
+    # The real sandbox Coffee Club plan when it exists, so the Diagnostician reads it.
+    plan = settings().paypal_sandbox_plan_id or "P-COFFEECLUB"
     return [
         {
             "id": f"WH-INJ-S-{uuid4().hex[:10]}",
             "event_type": "BILLING.SUBSCRIPTION.PAYMENT.FAILED",
             "create_time": at,
-            "plan_id": "P-COFFEECLUB",
+            "plan_id": plan,
             "resource": {
                 "id": f"I-INJ-{i}",
-                "plan_id": "P-COFFEECLUB",
+                "plan_id": plan,
                 "billing_info": {
                     "last_failed_payment": {"amount": {"currency_code": "USD", "value": "14.00"}}
                 },

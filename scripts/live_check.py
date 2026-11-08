@@ -97,6 +97,7 @@ def main() -> int:
     parser.add_argument("--url", default="http://localhost:8000")
     parser.add_argument("--passcode", default=cfg.dashboard_passcode)
     parser.add_argument("--token", default=cfg.inject_token)
+    parser.add_argument("--pause", type=float, default=20, help="seconds between scenarios")
     args = parser.parse_args()
 
     api = httpx.Client(
@@ -111,7 +112,9 @@ def main() -> int:
     report.check(health["llm_mode"] == "live", "LLM_MODE=live")
 
     api.post("/api/chaos", json={"reset": True, "note": "live check"}).raise_for_status()
-    for playbook, label, chaos in SCENARIOS:
+    for n, (playbook, label, chaos) in enumerate(SCENARIOS):
+        if n:
+            time.sleep(args.pause)  # free tier models allow only a few calls a minute
         print(f"\n{label}")
         started = time.monotonic()
         resp = api.post("/api/chaos", json={"chaos": chaos, "note": f"live check: {playbook}"})

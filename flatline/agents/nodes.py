@@ -74,7 +74,10 @@ def _ask_model[T: BaseModel](
         return draft, "mock"
     from flatline.llm.models import live_complete, resolve_model
 
-    model = resolve_model(model_kind, cfg)
+    primary = resolve_model(model_kind, cfg)
+    chain = [primary] + [
+        m.strip() for m in cfg.model_fallbacks.split(",") if m.strip() and m.strip() != primary
+    ]
     prompt = (
         _prompt(node)
         + "\n\nInput:\n"
@@ -82,12 +85,20 @@ def _ask_model[T: BaseModel](
         + "\n\nPlaybook draft. Return this exact JSON shape, corrected from the input:\n"
         + json.dumps(draft.model_dump(), default=str)
     )
-    try:
-        raw = live_complete(model, prompt)
-        return type(draft).model_validate_json(raw), model
-    except Exception as exc:
-        log.warning("%s: live call to %s failed, keeping the playbook answer: %s", node, model, exc)
-        return draft, f"{model} (failed, playbook fallback)"
+    for model in chain:
+        try:
+            raw = live_complete(model, prompt)
+            return type(draft).model_validate_json(_json_object(raw)), model
+        except Exception as exc:
+            log.warning("%s: live call to %s failed: %s", node, model, str(exc)[:500])
+    log.warning("%s: every model failed, keeping the playbook answer", node)
+    return draft, f"{primary} (failed, playbook fallback)"
+
+
+def _json_object(raw: str) -> str:
+    """The JSON object in a reply, without Markdown fences or chatter around it."""
+    start, end = raw.find("{"), raw.rfind("}")
+    return raw[start : end + 1] if start != -1 and end > start else raw
 
 
 def run_triage(db: Session, incident: Incident, events: list[dict[str, Any]]) -> TriageOutput:

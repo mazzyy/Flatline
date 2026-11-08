@@ -55,7 +55,9 @@ async def run_agents(db: Session, incident: Incident) -> WorkflowResult:
     grouped = tools.events_by_group(db, incident.id, incident.playbook)
     gateway = build_read_gateway()
     paypal = await tools.paypal_snapshot(
-        gateway, plan_id=incident.scope_value, product_hint=incident.scope_value
+        gateway,
+        plan_id=incident.scope_value if incident.scope_key == "plan_id" else None,
+        product_hint=incident.scope_value,
     )
     result.diagnosis = run_diagnostician(
         db, incident, event_dicts, history, {"events": grouped, "paypal": paypal}

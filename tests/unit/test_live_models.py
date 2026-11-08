@@ -108,3 +108,22 @@ def test_provider_keys_reach_litellm(monkeypatch: pytest.MonkeyPatch) -> None:
 
     assert os.environ["GEMINI_API_KEY"] == "k"
     assert os.environ["OLLAMA_API_BASE"] == "http://localhost:11434"
+
+
+def test_a_429_moves_on_to_the_next_model(live: None, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("MODEL_FALLBACKS", "gemini/test-fast, gemini/backup")
+    reset_settings()
+    tried: list[str] = []
+    answer = _draft().model_copy(update={"severity": "critical"})
+
+    def fake(model: str, prompt: str, **_k: object) -> str:
+        tried.append(model)
+        if model == "gemini/test-fast":
+            raise RuntimeError("429 RESOURCE_EXHAUSTED")
+        return "```json\n" + answer.model_dump_json() + "\n```"  # fenced, still parsed
+
+    monkeypatch.setattr(models, "live_complete", fake)
+    out, label = nodes._ask_model("triage", "fast", {"incident": INCIDENT}, _draft())
+    assert tried == ["gemini/test-fast", "gemini/backup"]  # the primary is not tried twice
+    assert out.severity == "critical"
+    assert label == "gemini/backup"  # credited to the model that answered
