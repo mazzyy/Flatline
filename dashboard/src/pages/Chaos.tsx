@@ -26,7 +26,7 @@ const ACTIONS: Action[] = [
   },
   {
     label: "Inject subscription renewal failures",
-    blurb: "Four failed renewals on Coffee Club. Expect: reminder (auto) + capture outstanding (approval).",
+    blurb: "Four failed renewals on Coffee Club. Expect: reminder (auto); capturing a balance needs approval.",
     body: { chaos: { inject: "renewal_failures" }, note: "renewals" },
   },
   {

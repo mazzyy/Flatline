@@ -19,6 +19,7 @@ export { CLIP_H, CLIP_W } from "../components/Stage";
  */
 export const S5_TARGETS = {
   chaosInject: { x: 1069, y: 347, w: 96, h: 48 },
+  chaosResult: { x: 700, y: 830 },
   shopBanner: { x: 800, y: 22 },
   shopPay: { x: 560, y: 330 },
   overviewTile: { x: 400, y: 486, w: 390, h: 136 },
@@ -52,9 +53,11 @@ const z = (pt: { x: number; y: number }, s: number, at: number): CamKey => ({ at
 const T = S5_TARGETS;
 const CAM: CamKey[] = [
   WIDE(0),
-  WIDE(1.0),
-  z(T.chaosInject, 1.6, 2.2),
-  z(T.chaosInject, 1.6, 4.0),
+  WIDE(0.4),
+  z(T.chaosInject, 1.6, 1.05), // the click lands at 1.2 s
+  z(T.chaosInject, 1.6, 2.3),
+  z(T.chaosResult, 1.5, 3.0), // "6 synthetic events · 1 incident touched"
+  z(T.chaosResult, 1.5, 4.3),
   WIDE(4.9),
   WIDE(5.6),
   z(T.shopPay, 1.7, 6.6),
@@ -129,8 +132,8 @@ export const S5Checkout: React.FC = () => {
               label="Ship bad currency config"
               target={onStage(T.chaosInject)}
               at={{ x: onStage(T.chaosInject).x + 200, y: onStage(T.chaosInject).y - 200 }}
-              delay={t(1.2)}
-              hideAfter={t(4.6)}
+              delay={t(0.9)}
+              hideAfter={t(2.3)}
               ring={{ w: T.chaosInject.w + 18, h: T.chaosInject.h + 18 }}
               color={colors.warn}
             />

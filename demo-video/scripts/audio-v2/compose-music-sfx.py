@@ -115,7 +115,7 @@ DROP = (99.2, 103.8)  # drums out for the REFUSED beat
 FINAL_HIT = 150.2
 
 # Checkout demo beats, measured on the recorded clips.
-SFX_CLICKS = [27.6, 58.0]  # chaos Inject click, Approve click
+SFX_CLICKS = [27.2, 58.3]  # chaos Inject click, Approve click
 SFX_BREACH = 38.0  # overview: checkout tile in breach
 SFX_FOUND = 51.0  # "finds it"
 SFX_BANNER = 53.6  # banner auto

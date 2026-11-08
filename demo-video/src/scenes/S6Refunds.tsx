@@ -11,28 +11,31 @@ import { useClips, useT } from "../SceneContext";
 
 /** Points inside 06-refund-wave.mp4 (clip pixels), measured on the live recording. */
 export const S6_TARGETS = {
-  rootCause: { x: 700, y: 230 },
-  pauseSales: { x: 600, y: 520 },
-  probe: { x: 600, y: 520 },
+  rootCause: { x: 800, y: 330 },
+  productLine: { x: 700, y: 195 },
+  pauseSales: { x: 800, y: 585 },
+  probe: { x: 800, y: 750 },
 };
 const CLIP = "06-refund-wave.mp4";
-const CLIP_SECONDS = 12.9;
+const CLIP_SECONDS = 12.64;
 const T = S6_TARGETS;
 const z = (pt: { x: number; y: number }, s: number, at: number): CamKey => ({ at, s, ...onStage(pt) });
 
-// Clip phases (seconds after the clip starts at 0.3): root cause 0-2.5, proposals 3.3-7.0, probe 7.8-12.9.
+// Clip phases (the clip starts at scene 0.3): root cause 0-2.5, then the proposals view
+// (the notify card names the product, then pause_sales, then the refused probe).
 const CAM: CamKey[] = [
   WIDE(0),
-  WIDE(0.9),
-  z(T.rootCause, 1.6, 1.6),
-  z(T.rootCause, 1.6, 2.8),
-  WIDE(3.5),
-  z(T.pauseSales, 1.6, 4.4),
-  z(T.pauseSales, 1.6, 7.3),
-  WIDE(8.0),
-  z(T.probe, 1.7, 8.9),
-  z(T.probe, 1.7, 12.0),
-  WIDE(12.7),
+  WIDE(0.6),
+  z(T.rootCause, 1.45, 1.3),
+  z(T.rootCause, 1.45, 2.6),
+  WIDE(3.2),
+  z(T.productLine, 1.6, 3.9),
+  z(T.productLine, 1.6, 4.9),
+  z(T.pauseSales, 1.6, 5.7),
+  z(T.pauseSales, 1.6, 8.0),
+  z(T.probe, 1.7, 8.8),
+  z(T.probe, 1.7, 11.4),
+  WIDE(12.1),
 ];
 
 export const S6Refunds: React.FC = () => {
@@ -45,7 +48,8 @@ export const S6Refunds: React.FC = () => {
   const dimClip = interpolate(frame, [gateAt, gateAt + 14], [1, 0.16], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   const lineAt = t(17.5);
   const dimAll = interpolate(frame, [lineAt - 6, lineAt + 8], [1, 0.12], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  const labelOpacity = Math.max(0, Math.min(1, 1 - (cam.s - 1.05) / 0.3));
+  // The label belongs to the opening wide shot only.
+  const labelOpacity = frame < t(3.0) ? Math.max(0, Math.min(1, 1 - (cam.s - 1.05) / 0.3)) : 0;
 
   return (
     <AbsoluteFill>

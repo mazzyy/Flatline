@@ -67,7 +67,7 @@ LINES = [
     # S7 Demo 3: renewals
     (107.35, "Then four Coffee Club renewals fail within an hour."),
     (110.8, "The Diagnostician reads the real plan from PayPal, through MCP."),
-    (115.2, "A payment reminder goes out automatically. Capturing the balance waits for a human."),
+    (115.2, "The plan is healthy. It's the subscribers' payments, so reminders go out automatically."),
     (120.2, "The agent does the legwork. I keep the final say on money."),
     # S8 Trust
     (125.3, "And it's built to be trusted. It only runs in the PayPal sandbox."),

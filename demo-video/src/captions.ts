@@ -41,7 +41,7 @@ export const NARRATION: Narration[] = [
   // Renewals
   { scene: 6, from: 0.30, to: 3.75, text: "Then four Coffee Club renewals fail within an hour." },
   { scene: 6, from: 3.75, to: 8.15, text: "The Diagnostician reads the real plan from PayPal, through MCP." },
-  { scene: 6, from: 8.15, to: 13.15, text: "A payment reminder goes out automatically. Capturing the balance waits for a human." },
+  { scene: 6, from: 8.15, to: 13.15, text: "The plan is healthy. It's the subscribers' payments, so reminders go out automatically." },
   { scene: 6, from: 13.15, to: 16.90, text: "The agent does the legwork. I keep the final say on money." },
   // Trust
   { scene: 7, from: 0.25, to: 4.95, text: "And it's built to be trusted. It only runs in the PayPal sandbox." },
