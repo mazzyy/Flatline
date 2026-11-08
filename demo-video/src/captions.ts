@@ -22,7 +22,7 @@ export const NARRATION: Narration[] = [
   { scene: 3, from: 0.30, to: 5.15, text: "Let's break something. I ship a config that switches this US shop to euros." },
   { scene: 3, from: 5.15, to: 11.75, text: "Here's the checkout: euros, on a US shop. Captures fail, and a warning banner is already up." },
   { scene: 3, from: 11.75, to: 16.15, text: "Within seconds, the incident is open, with the money at risk per hour." },
-  { scene: 3, from: 16.15, to: 21.55, text: "Gemini agents take over. The Diagnostician reads PayPal through MCP..." },
+  { scene: 3, from: 16.15, to: 21.55, text: "The AI agents take over. The Diagnostician reads PayPal through MCP..." },
   { scene: 3, from: 21.55, to: 27.15, text: "...compares the config versions with the errors, and finds it: a config change switched the shop to euros." },
   { scene: 3, from: 27.15, to: 31.35, text: "The banner went up on its own. The rollback waits for me." },
   { scene: 3, from: 31.35, to: 33.55, text: "One click... approved!" },

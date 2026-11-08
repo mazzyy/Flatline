@@ -148,7 +148,7 @@ export const S5Checkout: React.FC = () => {
       </div>
       {inBeat(D) && frame < t(21.4) ? (
         <div style={{ position: "absolute", left: 150, bottom: 70, display: "flex", gap: 12, opacity: ease(frame, t(17.4), 8) * (1 - ease(frame, t(21.0), 8)) }}>
-          <Chip text="Gemini · live" delay={t(17.4)} size={type.min} mono color={colors.accent} />
+          <Chip text="live models · named per step" delay={t(17.4)} size={type.min} mono color={colors.accent} />
           <Chip text="PayPal reads · MCP" delay={t(17.8)} size={type.min} mono color={colors.accent} />
         </div>
       ) : null}

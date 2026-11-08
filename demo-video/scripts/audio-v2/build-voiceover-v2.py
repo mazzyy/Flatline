@@ -48,7 +48,7 @@ LINES = [
     (26.35, "Let's break something. I ship a config that switches this US shop to euros."),
     (31.2, "Here's the checkout: euros, on a US shop. Captures fail, and a warning banner is already up."),
     (37.8, "Within seconds, the incident is open, with the money at risk per hour."),
-    (42.2, "Gemini agents take over. The Diagnostician reads PayPal through MCP..."),
+    (42.2, "The AI agents take over. The Diagnostician reads PayPal through MCP..."),
     (47.6, "...compares the config versions with the errors, and finds it: a config change switched the shop to euros."),
     (53.2, "The banner went up on its own. The rollback waits for me."),
     (57.4, "One click... approved!"),
