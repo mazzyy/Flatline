@@ -118,7 +118,12 @@ def main() -> int:
     api.post("/api/chaos", json={"reset": True, "note": "live check"}).raise_for_status()
     for n, (playbook, label, chaos) in enumerate(SCENARIOS):
         if n:
-            time.sleep(args.pause)  # free tier models allow only a few calls a minute
+            # A clean shop for every scenario (no banner, USD), and a pause because
+            # free tier models allow only a few calls a minute.
+            api.post(
+                "/api/chaos", json={"reset": True, "note": "live check: reset"}
+            ).raise_for_status()
+            time.sleep(args.pause)
         print(f"\n{label}")
         started = time.monotonic()
         resp = api.post("/api/chaos", json={"chaos": chaos, "note": f"live check: {playbook}"})

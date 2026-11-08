@@ -49,7 +49,16 @@ async def run_agents(db: Session, incident: Incident) -> WorkflowResult:
     event_dicts = _event_dicts(events)
     result = WorkflowResult(incident)
     result.triage = run_triage(db, incident, event_dicts)
-    history = tools.config_history(db)
+    # Config history is evidence only where the playbook says so (a config diff);
+    # elsewhere it only invites the model to blame an unrelated earlier change.
+    from flatline.playbooks.loader import load_playbooks
+
+    playbook = load_playbooks().get(incident.playbook)
+    history = (
+        tools.config_history(db)
+        if playbook is not None and "active_config_diff" in playbook.evidence
+        else []
+    )
     grouped = tools.events_by_group(events, background)
     gateway = build_read_gateway()
     paypal = await tools.paypal_snapshot(

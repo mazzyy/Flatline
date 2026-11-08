@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import uuid4
 
 
-def _now() -> str:
-    return datetime.now(UTC).isoformat()
+def _at(offset_seconds: float) -> str:
+    """Event times spread like real traffic instead of one shared timestamp."""
+    return (datetime.now(UTC) + timedelta(seconds=offset_seconds)).isoformat()
 
 
 def _pp_id(n: int = 17) -> str:
@@ -18,12 +19,11 @@ def _pp_id(n: int = 17) -> str:
 
 
 def checkout_failures(code: str, n: int = 6) -> list[dict[str, Any]]:
-    at = _now()
     return [
         {
             "id": f"WH-{_pp_id()}-{_pp_id()}",
             "event_type": "checkout.capture",
-            "create_time": at,
+            "create_time": _at(0),
             "error_code": code,
             "product_id": "house-blend",
             "amount": "18.00",
@@ -36,12 +36,11 @@ def checkout_failures(code: str, n: int = 6) -> list[dict[str, Any]]:
 
 
 def refund_wave(n: int = 5) -> list[dict[str, Any]]:
-    at = _now()
     return [
         {
             "id": f"WH-{_pp_id()}-{_pp_id()}",
             "event_type": "PAYMENT.CAPTURE.REFUNDED",
-            "create_time": at,
+            "create_time": _at(-60 * (2 + 9 * i)),  # over the last 40 minutes
             "product_id": "ethiopia-yirgacheffe",
             "resource": {
                 "id": _pp_id(),
@@ -56,14 +55,13 @@ def refund_wave(n: int = 5) -> list[dict[str, Any]]:
 def renewal_failures(n: int = 4) -> list[dict[str, Any]]:
     from flatline.config import settings
 
-    at = _now()
     # The real sandbox Coffee Club plan when it exists, so the Diagnostician reads it.
     plan = settings().paypal_sandbox_plan_id or "P-COFFEECLUB"
     return [
         {
             "id": f"WH-{_pp_id()}-{_pp_id()}",
             "event_type": "BILLING.SUBSCRIPTION.PAYMENT.FAILED",
-            "create_time": at,
+            "create_time": _at(-60 * (3 + 13 * i)),  # over the last 45 minutes
             "plan_id": plan,
             "resource": {
                 "id": f"I-{_pp_id(12)}",

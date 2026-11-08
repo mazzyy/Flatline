@@ -46,8 +46,8 @@ class Settings(BaseSettings):
     paypal_sandbox_plan_id: str = Field(default="", alias="PAYPAL_SANDBOX_PLAN_ID")
     paypal_sandbox_product_id: str = Field(default="", alias="PAYPAL_SANDBOX_PRODUCT_ID")
 
-    model_fast: str = Field(default="gemini/gemini-2.5-flash", alias="MODEL_FAST")
-    model_reasoning: str = Field(default="gemini/gemini-3.5-flash", alias="MODEL_REASONING")
+    model_fast: str = Field(default="gemini/gemini-2.5-flash-lite", alias="MODEL_FAST")
+    model_reasoning: str = Field(default="gemini/gemini-2.5-flash", alias="MODEL_REASONING")
     # Comma separated. Tried in order when the agent's own model fails (a free tier 429).
     model_fallbacks: str = Field(default="", alias="MODEL_FALLBACKS")
     azure_api_key: str = Field(default="", alias="AZURE_API_KEY")

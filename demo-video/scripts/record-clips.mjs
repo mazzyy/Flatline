@@ -88,6 +88,10 @@ const agentsDone = async (playbook, timeoutMs = 300000) => {
 };
 
 const injectAndWait = async (chaosBody, playbook) => {
+  // Each scenario starts from a clean shop (no banner, USD), like a merchant who
+  // closed the last incident, and after a pause so free tier models have recovered.
+  await api("/api/chaos", { reset: true, note: "clips: reset between scenarios" });
+  await sleep(20000);
   await api("/api/chaos", { chaos: chaosBody, note: `clips: ${playbook}` });
   return agentsDone(playbook);
 };
