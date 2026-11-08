@@ -12,7 +12,7 @@ Built for the PayPal AI Hackathon. MIT licensed. Copyright 2026 Abdul Musawar So
 
 ## Watch the demo
 
-The GIF above is a short cut of the main moments. The full walkthrough with narration is about three minutes long: [docs/media/flatline_demo.mp4](docs/media/flatline_demo.mp4). Click the GIF or that link to play it.
+The GIF above is a short cut of the main moments. The full walkthrough with narration runs two and a half minutes: [docs/media/flatline_demo.mp4](docs/media/flatline_demo.mp4). Click the GIF or that link to play it.
 
 ## How it works
 
