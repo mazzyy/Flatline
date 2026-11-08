@@ -4,9 +4,8 @@
 
 | File | What |
 |---|---|
-| `out/demo-video-v3.mp4` | **Submission cut.** 1920×1080, 170 s, H.264. Narration, music and SFX; captions matched to the voice |
-| `out/demo-video-v2.mp4` | Previous cut (before the S4 layout fix and the S5 zoom). Safe to delete once v3 is approved |
-| `public/audio/soundtrack-v3.m4a` | Final mix (voice + music + SFX), -15.5 LUFS. Rendered under the picture when `hasSoundtrack` is on (the default) |
+| `out/flatline-demo.mp4` | **Submission cut.** 1920×1080, 170 s, H.264. Narration, music and SFX; captions matched to the voice |
+| `public/audio/soundtrack-v4.m4a` | Final mix (voice + music + SFX), -15.5 LUFS. Rendered under the picture when `hasSoundtrack` is on (the default) |
 | `public/audio/SCRIPT-v2.txt` | Narration with start times |
 | `scripts/audio-v2/` | `build-voiceover-v2.py` → `compose-music-sfx.py` → `mix-soundtrack.py`; `narration.json` holds the line timings that `src/captions.ts` uses |
 | `out/poster.png` | YouTube thumbnail, S3 introducing frame, no captions |
@@ -40,7 +39,7 @@
 
 ## Assets
 
-All eight clips were recorded against the live Docker stack (`localhost:8000` + `:3000`) with Playwright at 1600×900, then transcoded to H.264.
+All eight clips were recorded against the Docker stack (`localhost:8000` + `:3000`) running on the PayPal sandbox with live Gemini models (`LLM_MODE=live`), with Playwright at 1600×900, then transcoded to H.264. The script waits off camera while the agents work.
 
 | File | Notes |
 |---|---|
@@ -49,10 +48,10 @@ All eight clips were recorded against the live Docker stack (`localhost:8000` + 
 | `03-incident-opens.mp4` | Overview: checkout tile in Breach, incident awaiting approval, $108/h |
 | `04-incident-detail.mp4` | Root cause + proposals + agent timeline |
 | `05-approve.mp4` | Approve click on config rollback |
-| `06-refund-wave.mp4` | First ~3 s is the Chaos click; composition trims those (`trimBefore={90}`) to land on the incident (`refund.bulk` refused) |
+| `06-refund-wave.mp4` | The refund wave is injected off camera; the first ~3 s show the Chaos panel and are trimmed (`trimBefore={90}`) to land on the incident (`refund.bulk` refused) |
 | `07-renewals.mp4` | Same trim; reminder auto + capture outstanding pending |
 | `08-audit-log.mp4` | Audit table with policy / executor / agent rows |
-| `audio/soundtrack-v3.m4a` | Final mix. Music and SFX are synthesized in `scripts/audio-v2/compose-music-sfx.py` (no licensed audio); the voice is Kokoro `am_fenrir` |
+| `audio/soundtrack-v4.m4a` | Final mix. Music and SFX are synthesized in `scripts/audio-v2/compose-music-sfx.py` (no licensed audio); the voice is Kokoro `am_fenrir` |
 
 Re-record clips: with the stack up (`make up`),
 

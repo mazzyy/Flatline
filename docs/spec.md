@@ -1,5 +1,7 @@
 # Warden for Payments — Build Specification
 
+> Written before the build under the working title "Warden for Payments". The project shipped as **Flatline**, the package is `flatline/`, and every difference from this spec is logged in [decisions.md](decisions.md).
+
 > An on-call SRE agent for a merchant's revenue. It watches a PayPal integration, detects revenue incidents within minutes, diagnoses the root cause, and fixes them inside strict, deterministic guardrails, with every step audited.
 
 This file is the single source of truth for the build. If anything here conflicts with an instinct or a framework default, this file wins. If something is unspecified, make the simplest reasonable choice and record it in `DECISIONS.md`.

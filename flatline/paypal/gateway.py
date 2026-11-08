@@ -31,8 +31,6 @@ class PayPalGateway(Protocol):
         self, subscription_id: str, note: str = ""
     ) -> dict[str, Any]: ...
     async def send_invoice_reminder(self, invoice_id: str) -> dict[str, Any]: ...
-    async def create_invoice(self, payload: dict[str, Any]) -> dict[str, Any]: ...
-    async def send_invoice(self, invoice_id: str) -> dict[str, Any]: ...
 
 
 WRITE_METHODS = frozenset(
@@ -42,8 +40,6 @@ WRITE_METHODS = frozenset(
         "activate_subscription",
         "capture_subscription_outstanding",
         "send_invoice_reminder",
-        "create_invoice",
-        "send_invoice",
     }
 )
 

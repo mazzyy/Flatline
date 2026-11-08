@@ -37,4 +37,10 @@ PayPal Transaction Search can lag by up to three hours. Minute-level detection u
 | `flatline.loop` | Agents + proxy + executor + verifier |
 | `demo-shop` | Lumen Coffee Co. (MOCK pay or JS SDK v6) |
 
+Docker Compose runs the three Python processes separately. On Render, one free web service runs all of them (`RUN_WORKERS=true` starts the detector and the agent loop as threads inside the API).
+
 Storage is PostgreSQL 16 in Docker/Render. Tests use SQLite.
+
+## Models
+
+Every agent calls a model through LiteLLM. `MODEL_FAST` serves Triage and Verifier, `MODEL_REASONING` serves Diagnostician and Remediator, and `MODEL_FALLBACKS` lists models to try when one is rate limited. The hosted demo uses Gemini; a local model such as Qwen through Ollama works the same way. A step is always labelled with the model that actually answered, or as a playbook fallback.

@@ -21,7 +21,7 @@ import { S10Close } from "./scenes/S10Close";
 export type DemoVideoProps = {
   /** 1 = 170 s. >1 when the voiceover is longer; every scene stretches proportionally. */
   scale: number;
-  /** Lay the final mix (voice + music + SFX, public/audio/soundtrack-v3.m4a) under the picture. */
+  /** Lay the final mix (voice + music + SFX, public/audio/soundtrack-v4.m4a) under the picture. */
   hasSoundtrack: boolean;
   clips: ClipAvailability;
 };
@@ -52,7 +52,7 @@ export const DemoVideo: React.FC<DemoVideoProps> = ({ scale, hasSoundtrack, clip
           })}
         </TransitionSeries>
         <CaptionTrack segments={captions} />
-        {hasSoundtrack ? <Audio src={staticFile("audio/soundtrack-v3.m4a")} /> : null}
+        {hasSoundtrack ? <Audio src={staticFile("audio/soundtrack-v4.m4a")} /> : null}
       </AbsoluteFill>
     </SceneProvider>
   );

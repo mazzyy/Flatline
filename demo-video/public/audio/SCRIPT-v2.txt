@@ -33,7 +33,7 @@ Generated with scripts/audio-v2/build-voiceover-v2.py; captions in src/captions.
   72.3s  Checkouts start failing, and within seconds, the incident is open!
   75.8s  And look! The shop already shows a warning banner.
   79.0s  Triage scopes it, and the Diagnostician goes hunting...
-  82.2s  Found it! Config version two set the wrong currency.
+  82.2s  Found it! Config version three set the wrong currency.
   85.3s  The banner? Already handled, automatically.
   88.2s  But rolling back the config? That needs me.
   90.9s  One click... approved!

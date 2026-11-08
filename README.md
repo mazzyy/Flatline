@@ -72,7 +72,7 @@ python scripts/replay.py
 
 The detector runs every 30 seconds, so you can either wait for it or run `replay.py` to skip ahead. You can also do all of this by clicking around in the Chaos panel of the dashboard. Synthetic events get a simulated badge in the Transactions grid, so it is always clear what is real.
 
-Three playbooks ship enabled. A checkout failure spike fires when capture failures in a five minute window reach three times the baseline. A refund wave fires when refunds jump far above baseline or more than half of them share one product. Subscription renewal failures fire when failed renewals cluster on one plan within an hour. Thresholds live in `flatline/playbooks/*.yaml`, the expected outcome for each one is in [docs/playbooks.md](docs/playbooks.md), and [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) is the exact click path I used for the video.
+Three playbooks ship enabled. A checkout failure spike fires when capture failures in a five minute window reach three times the baseline. A refund wave fires when refunds jump far above baseline or more than half of them share one product. Subscription renewal failures fire when failed renewals cluster on one plan within an hour. Thresholds live in `flatline/playbooks/*.yaml`, and the expected outcome for each one is in [docs/playbooks.md](docs/playbooks.md). The demo video is made in code: `demo-video/scripts/record-clips.mjs` records the dashboard against the running stack and Remotion builds the film around those clips (see [demo-video/NOTES.md](demo-video/NOTES.md)).
 
 ## Connect the PayPal sandbox
 

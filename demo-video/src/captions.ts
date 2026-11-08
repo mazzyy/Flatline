@@ -37,7 +37,7 @@ export const NARRATION: Narration[] = [
   { scene: 4, from: 7.25, to: 10.75, text: "Checkouts start failing, and within seconds, the incident is open!" },
   { scene: 4, from: 10.75, to: 13.33, text: "And look! The shop already shows a warning banner." },
   { scene: 4, from: 13.95, to: 17.02, text: "Triage scopes it, and the Diagnostician goes hunting..." },
-  { scene: 4, from: 17.15, to: 20.15, text: "Found it! Config version two set the wrong currency." },
+  { scene: 4, from: 17.15, to: 20.15, text: "Found it! Config version three set the wrong currency." },
   { scene: 4, from: 20.25, to: 22.47, text: "The banner? Already handled, automatically." },
   { scene: 4, from: 23.15, to: 25.66, text: "But rolling back the config? That needs me." },
   { scene: 4, from: 25.85, to: 27.44, text: "One click... approved!" },

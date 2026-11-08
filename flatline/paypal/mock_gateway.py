@@ -119,16 +119,3 @@ class MockGateway:
         rec = {"id": invoice_id, "status": "REMINDED"}
         self.writes.append({"op": "send_invoice_reminder", **rec})
         return rec
-
-    async def create_invoice(self, payload: dict[str, Any]) -> dict[str, Any]:
-        invoice_id = f"INV-{uuid4().hex[:10]}"
-        body = {"id": invoice_id, "status": "DRAFT", **payload}
-        self.store.setdefault("invoices", {})[invoice_id] = body
-        self.writes.append({"op": "create_invoice", **body})
-        return body
-
-    async def send_invoice(self, invoice_id: str) -> dict[str, Any]:
-        inv = (self.store.get("invoices") or {}).get(invoice_id, {"id": invoice_id})
-        inv["status"] = "SENT"
-        self.writes.append({"op": "send_invoice", "id": invoice_id})
-        return inv

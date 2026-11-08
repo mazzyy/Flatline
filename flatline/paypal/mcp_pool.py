@@ -40,8 +40,6 @@ READ_TOOL_FLAGS = {
 }
 WRITE_TOOL_FLAGS = {
     "create_refund": "payments.createRefund",
-    "create_invoice": "invoices.create",
-    "send_invoice": "invoices.send",
     "send_invoice_reminder": "invoices.sendReminder",
 }
 READ_TOOLS = tuple(READ_TOOL_FLAGS)
@@ -183,13 +181,6 @@ class McpPool:
     async def close(self) -> None:
         await self._stop(self.read)
         await self._stop(self.write)
-
-    def read_instance(self) -> McpProcess:
-        return self.read
-
-    def write_instance(self) -> McpProcess:
-        """Executor-only. Agents must not call this."""
-        return self.write
 
     async def call_read(self, tool: str, arguments: dict[str, Any]) -> Any:
         if tool not in READ_TOOLS:

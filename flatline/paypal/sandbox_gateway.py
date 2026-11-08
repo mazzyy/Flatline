@@ -200,17 +200,3 @@ class SandboxGateway:
             return await self.pool.call_write("send_invoice_reminder", {"invoice_id": invoice_id})
         except (McpUnavailable, McpRejected):
             return await self._rest("POST", f"/v2/invoicing/invoices/{invoice_id}/remind")
-
-    async def create_invoice(self, payload: dict[str, Any]) -> dict[str, Any]:
-        try:
-            await self.pool.ensure()
-            return await self.pool.call_write("create_invoice", payload)
-        except (McpUnavailable, McpRejected):
-            return await self._rest("POST", "/v2/invoicing/invoices", json=payload)
-
-    async def send_invoice(self, invoice_id: str) -> dict[str, Any]:
-        try:
-            await self.pool.ensure()
-            return await self.pool.call_write("send_invoice", {"invoice_id": invoice_id})
-        except (McpUnavailable, McpRejected):
-            return await self._rest("POST", f"/v2/invoicing/invoices/{invoice_id}/send")

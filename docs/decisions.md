@@ -2,6 +2,15 @@
 
 Unspecified choices and any difference from the spec (`docs/spec.md`). Newest first.
 
+## D-019 — The video is recorded by script, not by hand
+
+`docs/DEMO_SCRIPT.md` (spec 15) described a manual click path. The clips are
+recorded by `demo-video/scripts/record-clips.mjs` against the running stack,
+so the file was removed. The renewal clip showed that the Remediator never
+received the playbook's `allowed_actions` (the live model invented action
+names); its input now carries them. Unused invoice create/send writes were
+removed, so the write MCP session loads two tools.
+
 ## D-018 — Writes for injected incidents are simulated in the sandbox
 
 The Chaos panel injects events with made up PayPal ids (`I-INJ-0`, `REF-INJ-0`).
@@ -161,8 +170,8 @@ https://www.npmjs.com/package/@paypal/mcp) uses snake_case:
   `show_subscription_details`, `show_subscription_plan_details`,
   `list_subscription_plans`, `list_disputes`, `get_dispute`,
   `list_invoices`, `get_invoice`
-- write: `create_refund`, `create_invoice`, `send_invoice`,
-  `send_invoice_reminder`
+- write: `create_refund`, `send_invoice_reminder` (the only two the executor
+  uses; invoice creation was dropped so the write session holds less)
 
 `mcp_pool.py` uses the official names. Subscription suspend / activate /
 capture are not MCP tools; SandboxGateway calls the sandbox REST endpoints.

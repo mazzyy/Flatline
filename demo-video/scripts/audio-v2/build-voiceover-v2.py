@@ -60,7 +60,7 @@ LINES = [
     (72.3, "Checkouts start failing, and within seconds, the incident is open!"),
     (75.8, "And look! The shop already shows a warning banner."),
     (79.0, "Triage scopes it, and the Diagnostician goes hunting..."),
-    (82.2, "Found it! Config version two set the wrong currency."),
+    (82.2, "Found it! Config version three set the wrong currency."),
     (85.3, "The banner? Already handled, automatically."),
     (88.2, "But rolling back the config? That needs me."),
     (90.9, "One click... approved!"),

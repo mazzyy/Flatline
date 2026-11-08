@@ -162,9 +162,9 @@ export const S5Checkout: React.FC = () => {
 
           {/* Root cause pull-out */}
           {frame >= t(17.4) ? (
-            <IncidentCard x={colX} y={frameC.y} width={colW} sub="root cause · from evidence" title="Config version 2 introduced the wrong currency." delay={t(17.4)} big>
+            <IncidentCard x={colX} y={frameC.y} width={colW} sub="root cause · from evidence" title="Config version 3 introduced the wrong currency." delay={t(17.4)} big>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 20 }}>
-                {["config v2 · EUR on a USD shop", "6 failed captures", "CURRENCY_MISMATCH"].map((c, i) => (
+                {["config v3 · EUR on a USD shop", "6 failed captures", "CURRENCY_MISMATCH"].map((c, i) => (
                   <Chip key={c} text={c} delay={t(18.2) + i * 5} size={type.min} mono color={colors.critical} />
                 ))}
               </div>
