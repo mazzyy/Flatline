@@ -1,6 +1,6 @@
 # Flatline: Devpost submission text
 
-Paste each section into the matching Devpost field. Fill the three links under "Try it" once they exist.
+Paste each section into the matching Devpost field. Replace YOUTUBE_LINK once the video is uploaded.
 
 ## Inspiration
 
@@ -73,13 +73,16 @@ An agent that touches money is mostly a permissions problem, not a prompting pro
 ## Try it
 
 1. Demo video: YOUTUBE_LINK
-2. Code: https://github.com/mazzyy/Flatline
-3. Hosted demo: RENDER_LINK (dashboard passcode in the testing instructions)
-4. Run locally with no keys: `cp .env.example .env && make up`, open http://localhost:8000 (passcode `demo-judge`) and use the Chaos panel.
+2. Code: https://github.com/mazzyy/Flatline (MIT)
+3. Run it yourself: the README has complete setup and run instructions. With Docker installed it is `git clone https://github.com/mazzyy/Flatline && cd Flatline && cp .env.example .env && make up`, no keys needed.
 
 ## Testing instructions for judges
 
-Sign in to the hosted dashboard with passcode DASHBOARD_PASSCODE and inject token INJECT_TOKEN (the token unlocks the Chaos panel). In Chaos, click **Ship bad currency config** to start the checkout scenario; the detector opens an incident within about 30 seconds. Open it to see the root cause, the agent timeline (with the model behind each step and whether PayPal was read through MCP) and the proposals, then approve the rollback. **Inject refund wave** shows the refused bulk refund, and **Inject subscription renewal failures** shows an automatic reminder next to a capture that waits for approval. **Reset all chaos** puts everything back. The hosted demo runs on free Render instances, so the first page load can take about a minute. Everything runs against the PayPal sandbox; no real money moves.
+1. Clone the repo and run `cp .env.example .env && make up` (Docker required). This starts the API, dashboard, detector, agent loop, Postgres and the demo shop in mock mode, so no PayPal or model keys are needed.
+2. Open http://localhost:8000 and log in with passcode `demo-judge` and inject token `change-me` (the token unlocks the Chaos panel). The demo shop is at http://localhost:3000.
+3. In Chaos, click **Ship bad currency config**. The detector opens an incident within about 30 seconds. Open it to see the root cause, the agent timeline and the proposals, then approve the rollback.
+4. **Inject refund wave** shows the refused bulk refund. **Inject subscription renewal failures** shows an automatic reminder next to a capture that waits for approval. **Reset all chaos** puts everything back.
+5. To run it against the PayPal sandbox with live models, follow "Connect the PayPal sandbox" in the README (a sandbox REST app and a free Gemini API key, or a local Qwen through Ollama), then run `python scripts/live_check.py`. It plays all three scenarios and prints each agent step with its model, latency and whether PayPal was read through the MCP server. This is how the demo video was recorded. No real money moves anywhere.
 
 ## Built with
 
