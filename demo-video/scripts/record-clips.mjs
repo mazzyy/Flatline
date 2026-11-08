@@ -71,29 +71,43 @@ const api = async (path, body) => {
   return res.json();
 };
 
-const agentsDone = async (playbook, timeoutMs = 300000) => {
+// Proposal ids already on this playbook's recent incidents, so a fresh run can be told apart.
+const proposalIds = async (playbook) => {
+  const { items } = await api(`/api/incidents?playbook=${playbook}`);
+  const ids = new Set();
+  for (const item of (items ?? []).slice(0, 3)) {
+    const detail = await api(`/api/incidents/${item.id}`);
+    for (const p of detail.proposals ?? []) ids.add(p.id);
+  }
+  return ids;
+};
+
+const agentsDone = async (playbook, before = new Set(), timeoutMs = 300000) => {
   const until = Date.now() + timeoutMs;
   while (Date.now() < until) {
     const { items } = await api(`/api/incidents?playbook=${playbook}`);
     if (items?.length) {
       const detail = await api(`/api/incidents/${items[0].id}`);
-      if (detail.proposals?.length) {
+      if ((detail.proposals ?? []).some((p) => !before.has(p.id))) {
         console.log(`agents done for ${playbook}:`, detail.steps.map((s) => s.model).join(", "));
         return detail;
       }
     }
     await sleep(3000);
   }
-  throw new Error(`agents did not finish ${playbook}`);
+  throw new Error(
+    `agents did not finish ${playbook}. A ${playbook} incident from the last 30 minutes absorbs new events: wait, then run again.`,
+  );
 };
 
 const injectAndWait = async (chaosBody, playbook) => {
+  const before = await proposalIds(playbook);
   // Each scenario starts from a clean shop (no banner, USD), like a merchant who
   // closed the last incident, and after a pause so free tier models have recovered.
   await api("/api/chaos", { reset: true, note: "clips: reset between scenarios" });
   await sleep(20000);
   await api("/api/chaos", { chaos: chaosBody, note: `clips: ${playbook}` });
-  return agentsDone(playbook);
+  return agentsDone(playbook, before);
 };
 
 // Scroll so a section heading (h2/h3) sits near the top of the viewport.
@@ -109,12 +123,14 @@ const scrollToHeading = async (page, text, smooth = true) => {
 const scrollToBottom = (page, smooth = true) =>
   page.evaluate((sm) => window.scrollTo({ top: document.body.scrollHeight, behavior: sm ? "smooth" : "auto" }), smooth);
 
-const firstIncident = async (page) => {
-  const res = await page.request.get(`${DASH}/api/incidents`);
-  const data = await res.json();
-  if (!data.items?.length) throw new Error("no incidents");
-  return data.items[0].id;
+// The newest incident of a playbook (the checkout clips must not pick up a later scenario).
+let checkoutId = null;
+const latestIncident = async (playbook) => {
+  const { items } = await api(`/api/incidents?playbook=${playbook}`);
+  if (!items?.length) throw new Error(`no ${playbook} incident`);
+  return items[0].id;
 };
+const checkoutIncident = async () => checkoutId ?? latestIncident("checkout_failure_spike");
 
 const record = async (browser, name, fn) => {
   const dir = join(TMP, name);
@@ -166,6 +182,7 @@ try {
     await record(browser, name, fn);
   };
 
+  const checkoutBefore = await proposalIds("checkout_failure_spike");
   await maybe("01-chaos-bad-currency.mp4", async (page) => {
     await login(page);
     await page.goto(`${DASH}/#/chaos`, { waitUntil: "networkidle" });
@@ -180,11 +197,10 @@ try {
   // The banner is set by the agents (shop.banner.set, auto), so film the shop after they finish.
   const have = (name) => skipExisting && existsSync(join(OUT, name));
   if (!(have("02-shop-failing.mp4") && have("04-incident-detail.mp4") && have("05-approve.mp4"))) {
-    if (have("01-chaos-bad-currency.mp4")) {
-      await injectAndWait({ bad_currency: true }, "checkout_failure_spike"); // resumed run
-    } else {
-      await agentsDone("checkout_failure_spike");
-    }
+    const done = have("01-chaos-bad-currency.mp4")
+      ? await injectAndWait({ bad_currency: true }, "checkout_failure_spike") // resumed run
+      : await agentsDone("checkout_failure_spike", checkoutBefore);
+    checkoutId = done.id;
   }
 
   await maybe("02-shop-failing.mp4", async (page) => {
@@ -214,7 +230,7 @@ try {
     // Three holds the video zooms into: the agent timeline (models, latencies, PayPal
     // reads through MCP), the root cause with its evidence, then the proposals.
     await login(page);
-    const id = await firstIncident(page);
+    const id = await checkoutIncident();
     await page.goto(`${DASH}/#/incident/${id}`, { waitUntil: "networkidle" });
     await page.getByRole("heading", { name: "Agent timeline" }).waitFor();
     await scrollToBottom(page, false);
@@ -230,7 +246,7 @@ try {
 
   await maybe("05-approve.mp4", async (page) => {
     await login(page);
-    const id = await firstIncident(page);
+    const id = await checkoutIncident();
     await page.goto(`${DASH}/#/incident/${id}`, { waitUntil: "networkidle" });
     await page.getByRole("button", { name: "Approve" }).first().waitFor();
     await scrollToHeading(page, "Proposals", false);
