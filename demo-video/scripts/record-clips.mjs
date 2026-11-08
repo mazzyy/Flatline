@@ -256,12 +256,7 @@ try {
     const readyAt = Date.now();
     await sleep(2500); // root cause at the top
     await scrollToHeading(page, "Proposals");
-    await sleep(4500); // pause sales waits for approval
-    await page.evaluate(() => {
-      const card = [...document.querySelectorAll(".card")].find((c) => c.textContent.includes("refund.bulk"));
-      if (card) window.scrollTo({ top: card.getBoundingClientRect().top + window.scrollY - 260, behavior: "smooth" });
-    });
-    await sleep(5500); // the red-team probe, refused
+    await sleep(10000); // pause sales waits for approval; the red-team probe is refused
     return { readyAt };
   });
 
