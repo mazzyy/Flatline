@@ -174,7 +174,10 @@ try {
     await sleep(2500);
   });
 
-  await agentsDone("checkout_failure_spike");
+  const have = (name) => skipExisting && existsSync(join(OUT, name));
+  if (!(have("04-incident-detail.mp4") && have("05-approve.mp4"))) {
+    await agentsDone("checkout_failure_spike");
+  }
 
   await maybe("04-incident-detail.mp4", async (page) => {
     await login(page);

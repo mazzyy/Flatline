@@ -127,3 +127,31 @@ def test_a_429_moves_on_to_the_next_model(live: None, monkeypatch: pytest.Monkey
     assert tried == ["gemini/test-fast", "gemini/backup"]  # the primary is not tried twice
     assert out.severity == "critical"
     assert label == "gemini/backup"  # credited to the model that answered
+
+
+def test_remediator_sees_the_allowed_actions(live: None, monkeypatch: pytest.MonkeyPatch) -> None:
+    from flatline.agents.schemas import DiagnosisOutput
+    from flatline.llm.mock_llm import remediate
+
+    monkeypatch.setenv("MODEL_REASONING", "gemini/test-reasoning")
+    reset_settings()
+    seen: dict[str, str] = {}
+    body = {"id": "inc-1", "playbook": "subscription_renewal_failures", "scope_value": "P-1"}
+    diagnosis = DiagnosisOutput.model_validate(
+        {
+            "root_cause": "renewals fail",
+            "confidence": 0.8,
+            "evidence": [{"claim": "4 failed renewals", "source": "events", "ref": "e1"}],
+        }
+    )
+
+    def fake(model: str, prompt: str, **_k: object) -> str:
+        seen["prompt"] = prompt
+        return remediate(body, diagnosis).model_dump_json()
+
+    monkeypatch.setattr(models, "live_complete", fake)
+    incident = Incident(id=uuid.uuid4(), playbook="subscription_renewal_failures", status="open")
+    incident.scope_value = "P-1"
+    nodes.run_remediator(MagicMock(), incident, diagnosis)
+    assert "invoice.send_reminder" in seen["prompt"]
+    assert "allowed_actions" in seen["prompt"]

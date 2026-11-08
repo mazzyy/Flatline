@@ -172,15 +172,19 @@ def run_diagnostician(
 
 def run_remediator(db: Session, incident: Incident, diagnosis: DiagnosisOutput) -> RemediatorOutput:
     started = time.perf_counter()
+    from flatline.playbooks.loader import load_playbooks
+
+    playbook = load_playbooks().get(incident.playbook)
     body = {
         "id": str(incident.id),
         "playbook": incident.playbook,
         "scope_value": incident.scope_value,
     }
+    allowed = {"allowed_actions": playbook.allowed_actions if playbook else []}
     out, model = _ask_model(
         "remediator",
         "reasoning",
-        {**body, "diagnosis": diagnosis.model_dump()},
+        {**body, **allowed, "diagnosis": diagnosis.model_dump()},
         mock_llm.remediate(body, diagnosis),
     )
     incident.status = "awaiting_approval"
