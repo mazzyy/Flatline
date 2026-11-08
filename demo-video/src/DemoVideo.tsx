@@ -5,7 +5,7 @@ import { fade } from "@remotion/transitions/fade";
 import { getTimeline, SCENES, TRANSITION_FRAMES } from "./timeline";
 import { getCaptionSegments } from "./captions";
 import { CaptionTrack } from "./components/CaptionTrack";
-import { ClipAvailability, SceneProvider } from "./SceneContext";
+import { ClipAvailability, SceneProvider, SceneSpeedContext } from "./SceneContext";
 import { colors } from "./theme";
 import { S1Hook } from "./scenes/S1Hook";
 import { S2Problem } from "./scenes/S2Problem";
@@ -19,14 +19,15 @@ import { S9BuiltWith } from "./scenes/S9BuiltWith";
 import { S10Close } from "./scenes/S10Close";
 
 export type DemoVideoProps = {
-  /** 1 = 170 s. >1 when the voiceover is longer; every scene stretches proportionally. */
+  /** 1 = 155 s. >1 when the voiceover is longer; every scene stretches proportionally. */
   scale: number;
-  /** Lay the final mix (voice + music + SFX, public/audio/soundtrack-v4.m4a) under the picture. */
+  /** Lay the final mix (voice + music + SFX, public/audio/soundtrack-v5.m4a) under the picture. */
   hasSoundtrack: boolean;
   clips: ClipAvailability;
 };
 
-const SCENE_COMPONENTS: React.FC[] = [S1Hook, S2Problem, S3Intro, S4Architecture, S5Checkout, S6Refunds, S7Renewals, S8Trust, S9BuiltWith, S10Close];
+// Same order as SCENES in timeline.ts: the checkout demo comes before "how it works".
+const SCENE_COMPONENTS: React.FC[] = [S1Hook, S2Problem, S3Intro, S5Checkout, S4Architecture, S6Refunds, S7Renewals, S8Trust, S9BuiltWith, S10Close];
 
 export const DemoVideo: React.FC<DemoVideoProps> = ({ scale, hasSoundtrack, clips }) => {
   const { fps } = useVideoConfig();
@@ -42,7 +43,9 @@ export const DemoVideo: React.FC<DemoVideoProps> = ({ scale, hasSoundtrack, clip
             return (
               <React.Fragment key={scene.id}>
                 <TransitionSeries.Sequence name={`${scene.id.toUpperCase()} ${scene.name}`} durationInFrames={tl.sequenceFrames[i]}>
-                  <Scene />
+                  <SceneSpeedContext.Provider value={scene.speed}>
+                    <Scene />
+                  </SceneSpeedContext.Provider>
                 </TransitionSeries.Sequence>
                 {i < SCENES.length - 1 ? (
                   <TransitionSeries.Transition presentation={fade()} timing={linearTiming({ durationInFrames: TRANSITION_FRAMES })} />

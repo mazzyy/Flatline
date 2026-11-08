@@ -10,11 +10,15 @@ export type SceneContextValue = {
 
 export const SceneContext = createContext<SceneContextValue>({ scale: 1, clips: {} });
 
-/** `t(seconds)` → frames within the current scene, honouring the voiceover scale. */
+/** Per-scene playback speed of the scene's own animation (see timeline.ts). */
+export const SceneSpeedContext = createContext(1);
+
+/** `t(seconds)` → frames within the current scene, honouring the voiceover scale and scene speed. */
 export const useT = () => {
   const { fps } = useVideoConfig();
   const { scale } = useContext(SceneContext);
-  return useCallback((seconds: number) => Math.round(seconds * scale * fps), [fps, scale]);
+  const speed = useContext(SceneSpeedContext);
+  return useCallback((seconds: number) => Math.round((seconds * scale * fps) / speed), [fps, scale, speed]);
 };
 
 export const useClips = () => useContext(SceneContext).clips;

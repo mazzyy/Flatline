@@ -42,7 +42,7 @@ export const S2Problem: React.FC = () => {
       </div>
 
       <div style={{ position: "absolute", right: x0, top: layout.marginY - 8 }}>
-        <StatCounter value={12480} prefix="$" label="revenue lost" note="illustrative" delay={growFrom} duration={growFor} size={type.h1Large} color={colors.critical} align="right" />
+        <StatCounter value={129} prefix="$" suffix="B" label="failed payments could cost subscription companies in 2025" note="Recurly estimate" delay={growFrom} duration={growFor} size={type.h1Large} color={colors.critical} align="right" />
       </div>
 
       {/* Red area between break and discovery */}

@@ -4,22 +4,24 @@
  * so each scene is visible for its target length.
  */
 export const SCENES = [
-  { id: "s1", name: "Hook", seconds: 12 },
-  { id: "s2", name: "The problem", seconds: 16 },
-  { id: "s3", name: "Introducing", seconds: 12 },
-  { id: "s4", name: "How it works", seconds: 25 },
-  { id: "s5", name: "Demo 1 · checkout spike", seconds: 35 },
-  { id: "s6", name: "Demo 2 · refund wave", seconds: 25 },
-  { id: "s7", name: "Demo 3 · renewals", seconds: 15 },
-  { id: "s8", name: "Trust and audit", seconds: 15 },
-  { id: "s9", name: "Built with", seconds: 10 },
-  { id: "s10", name: "Close", seconds: 5 },
+  // `speed` plays a scene's own animation faster than it was designed (S1-S4 were
+  // built for a longer cut); 1 = as designed.
+  { id: "s1", name: "Hook", seconds: 8, speed: 1.5 },
+  { id: "s2", name: "The problem", seconds: 10, speed: 1.6 },
+  { id: "s3", name: "Introducing", seconds: 8, speed: 1.5 },
+  { id: "s5", name: "Demo 1 · checkout spike", seconds: 45, speed: 1 },
+  { id: "s4", name: "How it works", seconds: 14, speed: 25 / 14 },
+  { id: "s6", name: "Demo 2 · refund wave", seconds: 22, speed: 1 },
+  { id: "s7", name: "Demo 3 · renewals", seconds: 18, speed: 1 },
+  { id: "s8", name: "Trust and audit", seconds: 15, speed: 1 },
+  { id: "s9", name: "Built with", seconds: 10, speed: 1 },
+  { id: "s10", name: "Close", seconds: 5, speed: 1 },
 ] as const;
 
 export type SceneIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 
 export const TRANSITION_FRAMES = 12;
-export const BASE_SECONDS = SCENES.reduce((a, s) => a + s.seconds, 0); // 170
+export const BASE_SECONDS = SCENES.reduce((a, s) => a + s.seconds, 0); // 155
 
 export type Timeline = {
   /** Frames each TransitionSeries.Sequence gets (includes transition overlap). */

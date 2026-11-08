@@ -3,7 +3,7 @@ Excited, gap-free voiceover for the Flatline demo video (v2).
 
 - Kokoro-82M via kokoro-onnx, voice am_fenrir with its prosody half pushed
   away from the average male voice (livelier, higher, wider intonation).
-- Script rewritten to fill the 170 s timeline and react to on-screen beats.
+- Script fits the 155 s timeline and reacts to on-screen beats.
 - Long internal pauses tightened; extreme pitch peaks soft-limited.
 - Writes per-line wavs, a 170 s raw mix and narration.json (timings for captions).
 
@@ -24,72 +24,62 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 MODEL_DIR = os.environ.get("KOKORO_DIR", HERE)
 OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, "vo2-out")
 SR = 24000
-TOTAL = 170.0
+TOTAL = 155.0
 BASE_SPEED = 1.1
 MAX_SPEED = 1.3
 PROSODY_PUSH = 1.0  # 0 = stock voice; >0 = livelier intonation
 
-SCENE_STARTS = [0, 12, 28, 40, 65, 100, 125, 140, 155, 165]
+SCENE_STARTS = [0, 8, 18, 26, 71, 85, 107, 125, 140, 150]
 
 # (absolute start s, text). Starts are anchored to on-screen beats.
+# Scene order: hook, problem, introducing, checkout demo, how it works,
+# refund wave, renewals, trust, built with, close.
 LINES = [
-    # S1 Hook: typing + cascade of 500s, then "Nobody is on call for revenue."
-    (0.35, "Friday night. Checkout starts failing... one error, then ten, then a hundred!"),
-    (5.3, "And nobody notices. Because nobody is on call for revenue!"),
-    (8.8, "Shops monitor their servers... not their money."),
-    # S2 Problem: counter climbs, "Noticed days later."
-    (12.3, "A broken checkout. A refund wave. A failing renewal."),
-    (15.6, "Every hour nobody notices, money quietly leaks away. Look at that number climb!"),
-    (21.3, "And most merchants? They only find out days later, from a payout report, or an angry customer!"),
+    # S1 Hook
+    (0.35, "Friday night. Checkout starts failing... and nobody notices."),
+    (4.1, "Shops monitor their servers. Not their money."),
+    # S2 Problem (figure: Recurly press release, failed payments 2025)
+    (8.3, "Broken checkouts. Refund waves. Failed renewals."),
+    (11.5, "One estimate: failed payments could cost subscription companies over a hundred and twenty-nine billion dollars in twenty twenty-five."),
     # S3 Introducing
-    (28.3, "That's why I built Flatline!"),
-    (29.6, "An on-call SRE agent, for your PayPal revenue."),
-    (32.6, "It detects, diagnoses, and fixes... safely."),
-    (35.6, "Like a teammate who never sleeps, and never moves money without asking."),
-    # S4 How it works
-    (40.4, "Here's how it works. Flatline listens to PayPal webhooks and checkout telemetry."),
-    (44.7, "The moment a metric breaks its baseline... boom! Incident open."),
-    (48.2, "Four agents jump in. Triage scopes the damage."),
-    (51.0, "The Diagnostician finds the root cause, reading PayPal data through MCP."),
-    (56.0, "The Remediator proposes a fix."),
-    (57.7, "Every proposal hits a policy proxy. Plain code, not a prompt!"),
-    (61.6, "Agents read. Code decides. Only the executor writes!"),
-    # S5 Demo 1: checkout
-    (65.3, "Okay, let's break something! I'm shipping a bad currency config."),
-    (69.0, "Euros, on a US-dollar shop. What could possibly go wrong?"),
-    (72.3, "Checkouts start failing, and within seconds, the incident is open!"),
-    (75.8, "And look! The shop already shows a warning banner."),
-    (79.0, "Triage scopes it, and the Diagnostician goes hunting..."),
-    (82.2, "Found it! Config version three set the wrong currency."),
-    (85.3, "The banner? Already handled, automatically."),
-    (88.2, "But rolling back the config? That needs me."),
-    (90.9, "One click... approved!"),
-    (94.2, "Failures drop right back to baseline, and the Verifier confirms it."),
-    (97.8, "Resolved!"),
-    # S6 Demo 2: refund wave
-    (100.2, "Next up: a refund wave!"),
-    (101.8, "One product, the Ethiopia Yirgacheffe, is behind most of the refunds."),
-    (106.7, "So it proposes pausing sales of that product, and that waits for my approval."),
-    (111.6, "Then it gets bold... and tries a bulk refund!"),
-    (114.4, "Refused! Bulk refunds are forbidden, full stop."),
-    (119.3, "The agent asked. The policy said no."),
-    (121.8, "Agents can ask... but code decides!"),
-    # S7 Renewals
-    (125.3, "Now, four subscription renewals fail within an hour."),
-    (128.4, "A payment reminder goes out automatically."),
-    (131.0, "But capturing the outstanding balance? That waits for a human."),
-    (134.5, "Small fixes run on their own. Money only moves with a human!"),
+    (18.35, "So I built Flatline: an on-call AI agent for PayPal revenue."),
+    (22.6, "It diagnoses and fixes... but never moves money without asking."),
+    # S4 Demo 1: checkout, recorded live on the PayPal sandbox
+    (26.35, "Let's break something. I ship a config that switches this US shop to euros."),
+    (31.2, "Here's the real PayPal checkout, now in euros. Captures fail, and a warning banner is already up."),
+    (37.8, "Within seconds, the incident is open, with the money at risk per hour."),
+    (42.2, "Gemini agents take over. The Diagnostician reads PayPal through MCP..."),
+    (47.6, "...compares the config versions with the errors, and finds it: version three changed the currency."),
+    (53.2, "The banner went up on its own. The rollback waits for me."),
+    (57.4, "One click... approved!"),
+    (59.6, "Failures drop back to baseline, and the Verifier confirms it."),
+    (63.4, "Resolved!"),
+    (65.0, "From the first failed checkout to a root cause, in under a minute."),
+    # S5 How it works
+    (71.35, "Under the hood: agents only read. A policy proxy, in plain code, decides. Only the executor writes."),
+    (77.8, "Safe fixes run on their own, money waits for a human, and anything else is refused."),
+    # S6 Demo 2: refund wave, red-teamed
+    (85.35, "Next, a refund wave."),
+    (87.3, "The agents trace it to one product, Ethiopia Yirgacheffe, and propose pausing its sales. That needs my approval."),
+    (94.3, "Now I red-team it, and slip a forbidden bulk refund in next to their proposals."),
+    (99.2, "Refused! Bulk refunds aren't in the catalog. Full stop."),
+    (102.8, "Whoever asks, the code decides."),
+    # S7 Demo 3: renewals
+    (107.35, "Then four Coffee Club renewals fail within an hour."),
+    (110.8, "The Diagnostician reads the real plan from PayPal, through MCP."),
+    (115.2, "A payment reminder goes out automatically. Capturing the balance waits for a human."),
+    (120.2, "The agent does the legwork. I keep the final say on money."),
     # S8 Trust
-    (140.3, "And it's built to be trusted. It only runs in the PayPal sandbox."),
-    (145.0, "Agents never hold write credentials."),
-    (147.2, "Unknown actions are forbidden."),
-    (149.0, "And every single step lands in the audit log: who did what, and why."),
-    (153.0, "Nothing happens in the dark."),
+    (125.3, "And it's built to be trusted. It only runs in the PayPal sandbox."),
+    (130.0, "Agents never hold write credentials."),
+    (132.2, "Unknown actions are forbidden."),
+    (134.0, "And every single step lands in the audit log: who did what, and why."),
+    (138.0, "Nothing happens in the dark."),
     # S9 Built with
-    (155.3, "Built on PayPal's REST APIs, MCP server, and JavaScript SDK..."),
-    (160.4, "with Google Gemini, Python, FastAPI and React."),
+    (140.3, "Built on PayPal's REST APIs, MCP server, and JavaScript SDK..."),
+    (145.4, "with Google Gemini, Python, FastAPI and React."),
     # S10 Close
-    (165.3, "Flatline. On call for your revenue!"),
+    (150.3, "Flatline. On call for your revenue!"),
 ]
 
 PH_FIX = {"kənfˈɪɡ": "kˈɑːnfɪɡ", "jˈɜːɡɐʃˌɛf": "jˌɪɹɡətʃˈɛfeɪ"}

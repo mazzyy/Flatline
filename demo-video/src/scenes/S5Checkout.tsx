@@ -1,71 +1,85 @@
 import React from "react";
-import { AbsoluteFill, Easing, useCurrentFrame, useVideoConfig } from "remotion";
+import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
 import { evolvePath } from "@remotion/paths";
 import { Background } from "../components/Background";
-import { BrowserFrame } from "../components/BrowserFrame";
-import { Clip } from "../components/Clip";
-import { Callout } from "../components/Callout";
-import { LowerThird } from "../components/LowerThird";
-import { IncidentCard } from "../components/IncidentCard";
-import { TierBadge } from "../components/TierBadge";
 import { AgentNode } from "../components/AgentNode";
+import { Callout } from "../components/Callout";
 import { Chip } from "../components/Chip";
+import { LowerThird } from "../components/LowerThird";
+import { CamKey, ClipBeat, StageFrame, WIDE, cameraAt, cameraStyle, onStage } from "../components/Stage";
 import { colors, fonts, layout, type } from "../theme";
 import { ease, uiSpring } from "../anim";
 import { useClips, useT } from "../SceneContext";
 
-/** Clips are recorded at this viewport; callout targets below are in clip pixels. */
-export const CLIP_W = 1600;
-export const CLIP_H = 900;
-
-/** Target points inside each clip (clip pixel space). Adjust per recording. */
-export const S5_TARGETS = {
-  chaosButton: { x: 1069, y: 347, w: 96, h: 48 },
-  overviewTile: { x: 280, y: 500, w: 440, h: 160 },
-  /** Centre and size of the checkout-failure tile itself (ring while zoomed). */
-  overviewTileBox: { x: 400, y: 486, w: 390, h: 136 },
-  banner: { x: 800, y: 28, w: 900, h: 40 },
-  approve: { x: 300, y: 603 },
-  triageRow: { x: 236, y: 709 },
-  diagRow: { x: 236, y: 758 },
-};
-
-const toScene = (frame: { x: number; y: number; w: number }, pt: { x: number; y: number }) => {
-  const s = frame.w / CLIP_W;
-  return { x: frame.x + pt.x * s, y: frame.y + 44 + pt.y * s };
-};
+export { CLIP_H, CLIP_W } from "../components/Stage";
 
 /**
- * Beat B camera: push in on the overview's checkout-failure tile while the
- * narration says the incident is open, glide to the shop's warning banner for
- * "And look!", then pull back out before beat C. Keyframes in scene seconds.
+ * Points inside the clips (clip pixels, 1600x900), measured on the live recording.
+ * Re-measure after re-recording: `node scripts/record-clips.mjs` changes them.
  */
-type CamKey = { at: number; s: number; x: number; y: number };
-const CAM_B: CamKey[] = [
-  { at: 8.4, s: 1, x: 960, y: 540 },
-  { at: 9.25, s: 2.3, x: 1300, y: 580 }, // checkout failure tile + incident row
-  { at: 10.7, s: 2.3, x: 1300, y: 580 },
-  { at: 11.6, s: 2.8, x: 520, y: 330 }, // shop warning banner
-  { at: 13.0, s: 2.8, x: 520, y: 330 },
-  { at: 13.8, s: 1, x: 960, y: 540 },
-];
-const camEase = Easing.bezier(0.65, 0, 0.35, 1);
-
-const cameraAt = (sec: number): { s: number; x: number; y: number } => {
-  if (sec <= CAM_B[0].at) return CAM_B[0];
-  for (let i = 0; i < CAM_B.length - 1; i++) {
-    const a = CAM_B[i];
-    const b = CAM_B[i + 1];
-    if (sec <= b.at) {
-      const e = camEase((sec - a.at) / (b.at - a.at));
-      // zoom in log space; dip out a little when travelling between two close-ups
-      const travelling = a.s > 1.01 && b.s > 1.01 && (a.x !== b.x || a.y !== b.y);
-      const logS = Math.log(a.s) + (Math.log(b.s) - Math.log(a.s)) * e - (travelling ? 0.45 * Math.sin(Math.PI * e) : 0);
-      return { s: Math.exp(logS), x: a.x + (b.x - a.x) * e, y: a.y + (b.y - a.y) * e };
-    }
-  }
-  return CAM_B[CAM_B.length - 1];
+export const S5_TARGETS = {
+  chaosInject: { x: 1069, y: 347, w: 96, h: 48 },
+  shopBanner: { x: 800, y: 22 },
+  shopPay: { x: 560, y: 330 },
+  overviewTile: { x: 400, y: 486, w: 390, h: 136 },
+  overviewIncident: { x: 800, y: 720 },
+  timelineRows: { x: 520, y: 640 },
+  paypalRead: { x: 520, y: 700 },
+  rootCause: { x: 700, y: 230 },
+  proposals: { x: 600, y: 420 },
+  approve: { x: 300, y: 603 },
 };
+
+/** Clip lengths in seconds (after the recorder trims page loading). */
+export const CLIP_SECONDS: Record<string, number> = {
+  "01-chaos-bad-currency.mp4": 2.6,
+  "02-shop-failing.mp4": 3.4,
+  "03-incident-opens.mp4": 4.5,
+  "04-incident-detail.mp4": 16.3,
+  "05-approve.mp4": 3.5,
+};
+
+// Beats in scene seconds (scene starts at 26 s in the film).
+const A = { from: 0, to: 5.0 }; // chaos panel
+const B = { from: 5.0, to: 11.6 }; // shop checkout with the real PayPal button
+const C = { from: 11.6, to: 16.0 }; // overview: incident open
+const D = { from: 16.0, to: 31.4 }; // incident: timeline, root cause, proposals
+const E = { from: 31.4, to: 33.8 }; // approve
+const F = { from: 33.8, to: 45.0 }; // recovery
+
+const z = (pt: { x: number; y: number }, s: number, at: number): CamKey => ({ at, s, ...onStage(pt) });
+
+const T = S5_TARGETS;
+const CAM: CamKey[] = [
+  WIDE(0),
+  WIDE(1.0),
+  z(T.chaosInject, 1.6, 2.2),
+  z(T.chaosInject, 1.6, 4.0),
+  WIDE(4.9),
+  WIDE(5.6),
+  z(T.shopPay, 1.7, 6.6),
+  z(T.shopPay, 1.7, 8.2),
+  z(T.shopBanner, 1.9, 9.1),
+  z(T.shopBanner, 1.9, 10.8),
+  WIDE(11.5),
+  WIDE(12.2),
+  z(T.overviewTile, 1.8, 13.0),
+  z(T.overviewIncident, 1.6, 14.6),
+  WIDE(15.9),
+  WIDE(16.6),
+  z(T.timelineRows, 1.7, 17.6),
+  z(T.paypalRead, 1.9, 19.2),
+  z(T.paypalRead, 1.9, 20.6),
+  WIDE(21.6),
+  z(T.rootCause, 1.6, 22.6),
+  z(T.rootCause, 1.6, 26.4),
+  WIDE(27.2),
+  z(T.proposals, 1.45, 28.0),
+  z(T.proposals, 1.45, 31.0),
+  z(T.approve, 1.9, 31.8),
+  z(T.approve, 1.9, 33.3),
+  WIDE(33.8),
+];
 
 export const S5Checkout: React.FC = () => {
   const frame = useCurrentFrame();
@@ -73,128 +87,89 @@ export const S5Checkout: React.FC = () => {
   const t = useT();
   const clips = useClips();
 
-  // Beats (seconds)
-  const A = { from: 0, to: 7 };
-  const B = { from: 7, to: 14 };
-  const C = { from: 14, to: 24 };
-  const D = { from: 24, to: 29 };
-  const E = { from: 29, to: 35 };
-  const inBeat = (b: { from: number; to: number }) => frame >= t(b.from) && frame < t(b.to) + 8;
-  const beatFade = (b: { from: number; to: number }) =>
-    Math.min(ease(frame, t(b.from), 10), 1 - ease(frame, t(b.to) - 6, 8));
+  const sec = frame / t(1);
+  const cam = cameraAt(CAM, sec);
+  const zoomed = cam.s > 1.05;
+  const inBeat = (b: { from: number; to: number }) => frame >= t(b.from) - 8 && frame < t(b.to) + 8;
+  const beatFade = (b: { from: number; to: number }) => Math.min(ease(frame, t(b.from) - 4, 8), 1 - ease(frame, t(b.to) - 4, 8));
+  const label = (b: { from: number; to: number }) => Math.max(0, Math.min(1, 1 - (cam.s - 1.05) / 0.3)) * beatFade(b);
 
-  const frameA = { x: 280, y: 100, w: 1360 };
-  const frameL = { x: layout.marginX, y: 250, w: 800 };
-  const frameR = { x: 1000, y: 250, w: 800 };
-  const frameC = { x: layout.marginX, y: 120, w: 1000 };
-  const colX = 1180;
-  const colW = 620;
+  const stage = (b: { from: number; to: number }, name: string, url: string) => (
+    <div style={{ position: "absolute", inset: 0, opacity: beatFade(b) }}>
+      <StageFrame url={url} delay={t(b.from) - 4}>
+        <ClipBeat name={name} available={Boolean(clips[name])} from={t(b.from)} clipSeconds={CLIP_SECONDS[name]} />
+      </StageFrame>
+    </div>
+  );
 
-  const chaosT = toScene(frameA, S5_TARGETS.chaosButton);
-  const tileT = toScene(frameR, S5_TARGETS.overviewTile);
-  const triageT = toScene(frameC, S5_TARGETS.triageRow);
-  const diagT = toScene(frameC, S5_TARGETS.diagRow);
-
-  // Recovery chart (beat E), in local SVG coordinates
+  // Recovery chart (beat F), in local SVG coordinates
   const chart = { x: layout.marginX, y: 300, w: 1000, h: 300 };
   const base = chart.h - 50;
   const chartD = `M 0 ${base} L 240 ${base - 4} L 330 40 L 520 48 L 640 56 L 760 ${base - 6} L ${chart.w} ${base - 2}`;
-  const chartP = ease(frame, t(29.4), t(2.6));
+  const chartP = ease(frame, t(F.from + 0.4), t(2.6));
   const chartEvolved = evolvePath(chartP, chartD);
-  const approveX = 760; // where the rollback was approved
-
-  const cam = cameraAt(frame / t(1));
-  const camStyle: React.CSSProperties = {
-    transformOrigin: "0 0",
-    transform: `translate(${960 - cam.s * cam.x}px, ${540 - cam.s * cam.y}px) scale(${cam.s})`,
-  };
-  // Callout pills sit below the frames; hide them while the camera is close in.
-  const camLabel = Math.max(0, Math.min(1, 1 - (cam.s - 1.05) / 0.35));
+  const approveX = 760;
+  const colX = 1180;
+  const colW = 620;
 
   return (
     <AbsoluteFill>
-      <Background glow={frame < t(E.from) ? "critical" : "ok"} glowStrength={0.14} />
+      <Background glow={frame < t(F.from) ? "critical" : "ok"} glowStrength={0.12} />
 
-      {/* Beat A: chaos panel */}
-      {inBeat(A) ? (
-        <div style={{ position: "absolute", inset: 0, opacity: beatFade(A) }}>
-          <LowerThird title="Chaos panel" sub="judge controls · synthetic events are labelled" delay={t(0.2)} top={30} />
-          <BrowserFrame x={frameA.x} y={frameA.y} width={frameA.w} height={44 + (frameA.w * CLIP_H) / CLIP_W} url="localhost:8000/#/chaos" delay={t(0.1)} pushInFrames={t(7)}>
-            <Clip name="01-chaos-bad-currency.mp4" available={Boolean(clips["01-chaos-bad-currency.mp4"])} />
-          </BrowserFrame>
-          <Callout label="Ship bad currency config" target={chaosT} at={{ x: chaosT.x + 240, y: chaosT.y - 160 }} delay={t(1.6)} ring={{ w: S5_TARGETS.chaosButton.w * (frameA.w / CLIP_W) + 16, h: S5_TARGETS.chaosButton.h * (frameA.w / CLIP_W) + 16 }} color={colors.warn} />
-        </div>
-      ) : null}
+      {frame < t(F.from) + 8 ? (
+        <div style={{ position: "absolute", inset: 0, ...cameraStyle(cam) }}>
+          {inBeat(A) ? stage(A, "01-chaos-bad-currency.mp4", "localhost:8000/#/chaos") : null}
+          {inBeat(B) ? stage(B, "02-shop-failing.mp4", "localhost:3000/checkout · PayPal sandbox") : null}
+          {inBeat(C) ? stage(C, "03-incident-opens.mp4", "localhost:8000/#/overview") : null}
+          {inBeat(D) ? stage(D, "04-incident-detail.mp4", "localhost:8000/#/incident") : null}
+          {inBeat(E) ? stage(E, "05-approve.mp4", "localhost:8000/#/incident") : null}
 
-      {/* Beat B: split shop / overview */}
-      {inBeat(B) ? (
-        <div style={{ position: "absolute", inset: 0, opacity: beatFade(B), ...camStyle }}>
-          <LowerThird title="Lumen Coffee Co." sub="checkout fails · CURRENCY_MISMATCH" delay={t(B.from) + 4} top={150} color={colors.critical} />
-          <LowerThird title="Overview" sub="incident opens within seconds" delay={t(B.from) + 10} top={150} left={frameR.x} />
-          <BrowserFrame x={frameL.x} y={frameL.y} width={frameL.w} height={44 + (frameL.w * CLIP_H) / CLIP_W} url="localhost:3000" delay={t(B.from)} pushInFrames={t(7)}>
-            <Clip name="02-shop-failing.mp4" available={Boolean(clips["02-shop-failing.mp4"])} />
-          </BrowserFrame>
-          <BrowserFrame x={frameR.x} y={frameR.y} width={frameR.w} height={44 + (frameR.w * CLIP_H) / CLIP_W} url="localhost:8000/#/overview" delay={t(B.from) + 6} pushInFrames={t(7)}>
-            <Clip name="03-incident-opens.mp4" available={Boolean(clips["03-incident-opens.mp4"])} />
-          </BrowserFrame>
-          <Callout label="Banner is already up" target={toScene(frameL, S5_TARGETS.banner)} at={{ x: frameL.x + 40, y: frameL.y + 44 + (frameL.w * CLIP_H) / CLIP_W + 50 }} delay={t(10.9)} color={colors.warn} labelOpacity={camLabel} />
-          <Callout label="Checkout tile · breach" target={tileT} at={{ x: frameR.x + 40, y: frameR.y + 44 + (frameR.w * CLIP_H) / CLIP_W + 50 }} delay={t(9.0)} color={colors.critical} labelOpacity={camLabel} ringAt={toScene(frameR, S5_TARGETS.overviewTileBox)} ring={{ w: S5_TARGETS.overviewTileBox.w * (frameR.w / CLIP_W) + 16, h: S5_TARGETS.overviewTileBox.h * (frameR.w / CLIP_W) + 16 }} />
-        </div>
-      ) : null}
-
-      {/* Beat C + D: incident detail, root cause, proposals, approve */}
-      {inBeat(C) || inBeat(D) ? (
-        <div style={{ position: "absolute", inset: 0, opacity: Math.min(ease(frame, t(C.from), 10), 1 - ease(frame, t(D.to) - 6, 8)) }}>
-          <BrowserFrame x={frameC.x} y={frameC.y} width={frameC.w} height={44 + (frameC.w * CLIP_H) / CLIP_W} url="localhost:8000/#/incident" delay={t(C.from)} pushInFrames={t(15)}>
-            <div style={{ position: "absolute", inset: 0, opacity: 1 - ease(frame, t(D.from), 8) }}>
-              <Clip name="04-incident-detail.mp4" available={Boolean(clips["04-incident-detail.mp4"])} />
-            </div>
-            {frame >= t(D.from) - 8 ? (
-              <div style={{ position: "absolute", inset: 0, opacity: ease(frame, t(D.from), 8) }}>
-                <Clip name="05-approve.mp4" available={Boolean(clips["05-approve.mp4"])} />
-              </div>
-            ) : null}
-          </BrowserFrame>
-
-          {/* Agent timeline callouts */}
-          <Callout label="Triage · scope and severity" target={triageT} at={{ x: colX, y: 760 }} delay={t(14.8)} hideAfter={t(17.6)} />
-          <Callout label="Diagnostician · root cause" target={diagT} at={{ x: colX, y: 840 }} delay={t(16.0)} hideAfter={t(17.6)} />
-
-          {/* Root cause pull-out */}
-          {frame >= t(17.4) ? (
-            <IncidentCard x={colX} y={frameC.y} width={colW} sub="root cause · from evidence" title="Config version 3 introduced the wrong currency." delay={t(17.4)} big>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 20 }}>
-                {["config v3 · EUR on a USD shop", "6 failed captures", "CURRENCY_MISMATCH"].map((c, i) => (
-                  <Chip key={c} text={c} delay={t(18.2) + i * 5} size={type.min} mono color={colors.critical} />
-                ))}
-              </div>
-            </IncidentCard>
+          {inBeat(A) ? (
+            <Callout
+              label="Ship bad currency config"
+              target={onStage(T.chaosInject)}
+              at={{ x: onStage(T.chaosInject).x + 200, y: onStage(T.chaosInject).y - 200 }}
+              delay={t(1.2)}
+              hideAfter={t(4.6)}
+              ring={{ w: T.chaosInject.w + 18, h: T.chaosInject.h + 18 }}
+              color={colors.warn}
+            />
           ) : null}
-
-          {/* Proposals */}
-          {frame >= t(20.4) ? (
-            <div style={{ position: "absolute", left: colX, top: 610, display: "flex", flexDirection: "column", gap: 18 }}>
-              <div style={{ fontFamily: fonts.mono, fontSize: type.min, color: colors.textMuted, opacity: uiSpring(frame, fps, t(20.4)) }}>proposals</div>
-              <TierBadge tier="auto" label="Set banner" state="executed" delay={t(20.6)} size={type.label} />
-              <TierBadge tier="approval" label="Roll back config" state={frame >= t(27.2) ? "executed" : "pending"} delay={t(23.6)} size={type.label} />
-            </div>
-          ) : null}
-          {frame >= t(26.0) ? <Callout label="Approve" target={toScene(frameC, S5_TARGETS.approve)} at={{ x: colX, y: 870 }} delay={t(26.0)} color={colors.ok} /> : null}
         </div>
       ) : null}
 
-      {/* Beat E: recovery */}
-      {inBeat(E) ? (
-        <div style={{ position: "absolute", inset: 0, opacity: ease(frame, t(E.from), 10) }}>
-          <LowerThird title="Checkout failures · last 15 min" sub="injected incident · PayPal sandbox" delay={t(E.from)} top={200} />
+      {/* Beat labels sit on top of the stage and fade while the camera is close in. */}
+      {inBeat(A) && !zoomed ? <LowerThird title="Chaos panel" sub="judge controls · injected events are labelled" delay={t(A.from) + 4} top={110} left={150} /> : null}
+      <div style={{ opacity: label(B) }}>
+        {inBeat(B) ? <LowerThird title="Lumen Coffee Co. · real PayPal checkout" sub="EUR on a USD shop · captures fail" delay={t(B.from) + 4} top={110} left={150} color={colors.critical} /> : null}
+      </div>
+      <div style={{ opacity: label(C) }}>
+        {inBeat(C) ? <LowerThird title="Incident open" sub="detector · 5-min window vs baseline" delay={t(C.from) + 4} top={110} left={150} color={colors.critical} /> : null}
+      </div>
+      {inBeat(D) && frame < t(21.4) ? (
+        <div style={{ position: "absolute", left: 150, bottom: 70, display: "flex", gap: 12, opacity: ease(frame, t(17.4), 8) * (1 - ease(frame, t(21.0), 8)) }}>
+          <Chip text="Gemini · live" delay={t(17.4)} size={type.min} mono color={colors.accent} />
+          <Chip text="PayPal reads · MCP" delay={t(17.8)} size={type.min} mono color={colors.accent} />
+        </div>
+      ) : null}
+      {inBeat(D) && frame >= t(22.2) && frame < t(27.0) ? (
+        <div style={{ position: "absolute", left: 150, bottom: 70, display: "flex", gap: 12, opacity: ease(frame, t(22.6), 8) * (1 - ease(frame, t(26.6), 8)) }}>
+          <Chip text="root cause · from evidence" delay={t(22.6)} size={type.min} mono color={colors.critical} />
+        </div>
+      ) : null}
+
+      {/* Beat F: recovery */}
+      {inBeat(F) ? (
+        <div style={{ position: "absolute", inset: 0, opacity: ease(frame, t(F.from), 10) }}>
+          <LowerThird title="Checkout failures · last 15 min" sub="injected incident · PayPal sandbox" delay={t(F.from)} top={200} />
           <div style={{ position: "absolute", left: chart.x, top: chart.y, width: chart.w, height: chart.h }}>
             <svg width={chart.w} height={chart.h} style={{ overflow: "visible" }}>
               <line x1={0} y1={base} x2={chart.w} y2={base} stroke={colors.line} strokeDasharray="6 8" />
               <text x={0} y={base + 36} fill={colors.textMuted} fontFamily={fonts.mono} fontSize={type.min}>
                 baseline · 1 failure / 5 min
               </text>
-              <line x1={approveX} y1={20} x2={approveX} y2={base} stroke={colors.ok} strokeDasharray="4 8" opacity={ease(frame, t(31.0), 10)} />
-              <text x={approveX + 12} y={40} fill={colors.ok} fontFamily={fonts.mono} fontSize={type.min} opacity={ease(frame, t(31.0), 10)}>
+              <line x1={approveX} y1={20} x2={approveX} y2={base} stroke={colors.ok} strokeDasharray="4 8" opacity={ease(frame, t(F.from + 2.0), 10)} />
+              <text x={approveX + 12} y={40} fill={colors.ok} fontFamily={fonts.mono} fontSize={type.min} opacity={ease(frame, t(F.from + 2.0), 10)}>
                 rollback approved
               </text>
               <path
@@ -209,8 +184,8 @@ export const S5Checkout: React.FC = () => {
               />
             </svg>
           </div>
-          <div style={{ position: "absolute", left: colX, top: 380 }}>
-            <AgentNode x={0} y={0} width={colW} name="Verifier" role="quiet window · metric back at baseline" icon="verify" delay={t(31.6)} active={frame >= t(32.4)} activeColor={colors.ok} activeDelay={t(32.4)} />
+          <div style={{ position: "absolute", left: colX, top: 300 }}>
+            <AgentNode x={0} y={0} width={colW} name="Verifier" role="quiet window · metric back at baseline" icon="verify" delay={t(F.from + 1.4)} active={frame >= t(F.from + 2.4)} activeColor={colors.ok} activeDelay={t(F.from + 2.4)} />
             <div
               style={{
                 position: "absolute",
@@ -221,11 +196,16 @@ export const S5Checkout: React.FC = () => {
                 fontSize: type.h1Small,
                 letterSpacing: "-0.02em",
                 color: colors.ok,
-                opacity: uiSpring(frame, fps, t(32.8)),
-                translate: `0px ${(1 - uiSpring(frame, fps, t(32.8))) * 24}px`,
+                opacity: uiSpring(frame, fps, t(F.from + 3.6)),
+                translate: `0px ${(1 - uiSpring(frame, fps, t(F.from + 3.6))) * 24}px`,
               }}
             >
               Resolved.
+            </div>
+            <div style={{ position: "absolute", left: 0, top: 300, display: "flex", flexDirection: "column", gap: 14 }}>
+              <Chip text="detected · within seconds" delay={t(F.from + 5.2)} size={type.label} mono color={colors.ok} />
+              <Chip text="root cause · under a minute" delay={t(F.from + 5.6)} size={type.label} mono color={colors.ok} />
+              <Chip text="fix · one human approval" delay={t(F.from + 6.0)} size={type.label} mono color={colors.ok} />
             </div>
           </div>
         </div>

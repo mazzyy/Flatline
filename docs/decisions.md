@@ -2,6 +2,16 @@
 
 Unspecified choices and any difference from the spec (`docs/spec.md`). Newest first.
 
+## D-021 — Each incident's agents see only that incident's evidence
+
+Once the models stopped seeing the prepared answer, the live check showed the
+real gap: the agents got the 50 most recent events of any kind, so a refund
+wave and failed renewals were blamed on the previous checkout incident's
+currency change. `tools.incident_events()` returns only the events matching
+the incident's metric and scope inside its detection window (other traffic is
+counted by type), and each playbook carries a short runbook of typical causes
+and usual fixes. `live_check.py` now fails on a wrong cause or a missing fix.
+
 ## D-020 — The models reason from evidence, not from a prepared answer
 
 Each live call used to include the playbook's deterministic answer with

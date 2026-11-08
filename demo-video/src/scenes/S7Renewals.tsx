@@ -1,43 +1,75 @@
 import React from "react";
-import { AbsoluteFill, useCurrentFrame } from "remotion";
+import { AbsoluteFill, interpolate, useCurrentFrame } from "remotion";
 import { Background } from "../components/Background";
-import { BrowserFrame } from "../components/BrowserFrame";
-import { Clip } from "../components/Clip";
+import { KineticHeadline } from "../components/KineticHeadline";
 import { LowerThird } from "../components/LowerThird";
 import { TierBadge } from "../components/TierBadge";
-import { KineticHeadline } from "../components/KineticHeadline";
-import { colors, fonts, layout, type } from "../theme";
+import { CamKey, ClipBeat, StageFrame, WIDE, cameraAt, cameraStyle, onStage } from "../components/Stage";
+import { colors, fonts, type } from "../theme";
+import { ease, uiSpring } from "../anim";
 import { useClips, useT } from "../SceneContext";
-import { CLIP_H, CLIP_W } from "./S5Checkout";
-import { uiSpring } from "../anim";
 import { useVideoConfig } from "remotion";
+
+/** Points inside 07-renewals.mp4 (clip pixels), measured on the live recording. */
+export const S7_TARGETS = {
+  planRead: { x: 520, y: 700 },
+  proposals: { x: 600, y: 470 },
+};
+const CLIP = "07-renewals.mp4";
+const CLIP_SECONDS = 12.3;
+const T = S7_TARGETS;
+const z = (pt: { x: number; y: number }, s: number, at: number): CamKey => ({ at, s, ...onStage(pt) });
+
+// Clip phases: agent timeline 0-5.0 (the PayPal plan read), proposals 5.8-12.3.
+const CAM: CamKey[] = [
+  WIDE(0),
+  WIDE(1.2),
+  z(T.planRead, 1.9, 2.4),
+  z(T.planRead, 1.9, 4.8),
+  WIDE(5.6),
+  z(T.proposals, 1.5, 6.6),
+  z(T.proposals, 1.5, 11.6),
+  WIDE(12.4),
+];
 
 export const S7Renewals: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const t = useT();
   const clips = useClips();
-  const frameC = { x: layout.marginX, y: 180, w: 1000 };
-  const colX = 1180;
+  const cam = cameraAt(CAM, frame / t(1));
+  const outroAt = t(12.6);
+  const dim = interpolate(frame, [outroAt, outroAt + 14], [1, 0.14], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const labelOpacity = Math.max(0, Math.min(1, 1 - (cam.s - 1.05) / 0.3));
 
   return (
     <AbsoluteFill>
       <Background glow="warn" glowStrength={0.12} />
-      <LowerThird title="Subscription renewal failures" sub="Coffee Club · 4 failed renewals in 60 min" delay={t(0.2)} top={90} color={colors.warn} />
-      <BrowserFrame x={frameC.x} y={frameC.y} width={frameC.w} height={44 + (frameC.w * CLIP_H) / CLIP_W} url="localhost:8000/#/incident" delay={t(0.1)}>
-        <Clip name="07-renewals.mp4" available={Boolean(clips["07-renewals.mp4"])} trimBefore={90} />
-      </BrowserFrame>
-
-      <div style={{ position: "absolute", left: colX, top: 260, display: "flex", flexDirection: "column", gap: 20 }}>
-        <div style={{ fontFamily: fonts.mono, fontSize: type.min, color: colors.textMuted, opacity: uiSpring(frame, fps, t(1.2)) }}>proposals</div>
-        <TierBadge tier="auto" label="Reminder" state="executed" delay={t(1.6)} size={type.label} />
-        <TierBadge tier="approval" label="Capture outstanding" state="pending" delay={t(6.8)} size={type.label} />
+      <div style={{ position: "absolute", inset: 0, opacity: dim }}>
+        <div style={{ position: "absolute", inset: 0, ...cameraStyle(cam) }}>
+          <StageFrame url="localhost:8000/#/incident · renewals" delay={0}>
+            <ClipBeat name={CLIP} available={Boolean(clips[CLIP])} from={0} clipSeconds={CLIP_SECONDS} />
+          </StageFrame>
+        </div>
+        <div style={{ opacity: labelOpacity }}>
+          <LowerThird title="Subscription renewal failures" sub="Coffee Club · 4 failed renewals in 60 min" delay={t(0.2)} top={110} left={150} color={colors.warn} />
+        </div>
       </div>
 
-      <div style={{ position: "absolute", left: colX, top: 520, width: 620 }}>
-        <KineticHeadline text="Small fixes run on their own." size={type.h2Small} delay={t(8.6)} />
-        <KineticHeadline text="Money moves only with a human." size={type.h2Small} delay={t(10.2)} color={colors.warn} style={{ marginTop: 10 }} />
-      </div>
+      {frame >= outroAt ? (
+        <AbsoluteFill style={{ alignItems: "center", justifyContent: "center" }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 22 }}>
+            <div style={{ fontFamily: fonts.mono, fontSize: type.min, color: colors.textMuted, opacity: uiSpring(frame, fps, outroAt) }}>proposals</div>
+            <div style={{ display: "flex", gap: 24 }}>
+              <TierBadge tier="auto" label="Payment reminder" state="executed" delay={outroAt + 4} size={type.label} />
+              <TierBadge tier="approval" label="Capture outstanding" state="pending" delay={outroAt + 10} size={type.label} />
+            </div>
+            <div style={{ width: 1500, marginTop: 30, opacity: ease(frame, t(13.2), 8) }}>
+              <KineticHeadline text="The agent does the legwork. I keep the final say on money." size={type.h2} delay={t(13.2)} align="center" />
+            </div>
+          </div>
+        </AbsoluteFill>
+      ) : null}
     </AbsoluteFill>
   );
 };

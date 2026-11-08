@@ -1,5 +1,5 @@
 """
-Original music bed + sound effects for the Flatline demo (170 s), synthesized
+Original music bed + sound effects for the Flatline demo (155 s), synthesized
 from scratch with numpy/scipy, so there is nothing to license.
 
 Outputs (48 kHz stereo float WAV): music.wav, sfx.wav
@@ -12,7 +12,7 @@ import soundfile as sf
 from scipy.signal import butter, fftconvolve, sosfilt
 
 SR = 48000
-T = 170.0
+T = 155.0
 N = int(T * SR)
 OUT = sys.argv[1] if len(sys.argv) > 1 else "mix-out"
 rng = np.random.default_rng(7)
@@ -108,11 +108,17 @@ def norm_peak(x, peak_db):
 
 
 # ---------------------------------------------------------------- timeline
-GROOVE_T0 = 28.4  # groove grid starts on the logo hit
+GROOVE_T0 = 18.4  # groove grid starts on the logo hit
 BEAT = 0.5  # 120 BPM
 BAR = 2.0
-DROP = (114.4, 119.4)  # drums out for the REFUSED beat
-FINAL_HIT = 165.2
+DROP = (99.2, 103.8)  # drums out for the REFUSED beat
+FINAL_HIT = 150.2
+
+# Checkout demo beats, measured on the recorded clips.
+SFX_CLICKS = [27.6, 58.0]  # chaos Inject click, Approve click
+SFX_BREACH = 38.0  # overview: checkout tile in breach
+SFX_FOUND = 51.0  # "finds it"
+SFX_BANNER = 53.6  # banner auto
 
 TENSION = [[45, 57, 60, 64], [41, 57, 60, 65], [38, 57, 62, 65], [40, 56, 59, 64]]  # Am F Dm E
 UPLIFT = [[41, 57, 60, 65], [36, 55, 60, 64], [43, 55, 59, 62], [45, 57, 60, 64]]  # F C G Am
@@ -128,12 +134,12 @@ def uplift_chord(t):
 
 def section_brightness(t):
     """Pad filter cutoff over time (Hz)."""
-    if t < 5.4:
+    if t < 3.6:
         return 450
-    if t < 12:
+    if t < 8:
         return 600
-    if t < 28.4:
-        return 600 + (t - 12) / 16.4 * 700
+    if t < GROOVE_T0:
+        return 600 + (t - 8) / (GROOVE_T0 - 8) * 700
     if t < FINAL_HIT:
         return 1800
     return 2400
@@ -359,67 +365,67 @@ def bell(f, dur=1.4, decay=0.5):
 
 def make_sfx():
     s = np.zeros((2, N))
-    # S1: typing (0.4-2.0) and accelerating error ticks (cascade of 500s)
-    t = 0.42
-    while t < 2.0:
+    # S1 (8 s): typing (0.3-1.3) and accelerating error ticks (cascade of 500s)
+    t = 0.28
+    while t < 1.33:
         n = int(0.012 * SR)
         x = bp(rng.standard_normal(n), 2000, 6000) * np.exp(-np.arange(n) / SR / 0.003)
         place(s, stereo(x, rng.uniform(-0.3, 0.3)), t, db(-30))
-        t += rng.uniform(0.055, 0.1)
-    f = 69  # frames
+        t += rng.uniform(0.045, 0.08)
+    f = 46  # frames
     k = 0
-    while f < 150:
+    while f < 100:
         tt = f / 30
         place(s, stereo(blip(1320 - 25 * min(k, 16), 0.07, 0.02, "square"), 0.2 if k % 2 else -0.2), tt, db(-27 + min(k, 12) * 0.45))
-        f += max(3, round(22 * 0.78**k))
+        f += max(2, round(15 * 0.78**k))
         k += 1
-    riser(2.0, 5.4, s, db(-20), top=4000)
-    impact(s, 5.4, db(-14), bright=False)
+    riser(1.6, 3.6, s, db(-20), top=4000)
+    impact(s, 3.6, db(-14), bright=False)
     # scene whooshes
-    for tc in [12.0, 40.0, 65.0, 100.0, 125.0, 140.0, 155.0]:
+    for tc in [8.0, 26.0, 71.0, 85.0, 107.0, 125.0, 140.0]:
         whoosh(s, tc, db(-24), pan_dir=1 if int(tc) % 2 else -1)
-    impact(s, 23.6, db(-20), bright=False)  # "Noticed days later."
-    riser(2.4, 28.4, s, db(-16))
-    impact(s, 28.4, db(-12))  # Flatline logo
-    for i, tt in enumerate([32.2, 32.4, 32.6]):  # chips
+    impact(s, 15.25, db(-20), bright=False)  # "Noticed days later."
+    riser(2.2, GROOVE_T0, s, db(-16))
+    impact(s, GROOVE_T0, db(-12))  # Flatline logo
+    for i, tt in enumerate([20.8, 21.0, 21.2]):  # chips
         n = int(0.05 * SR)
         tm = np.arange(n) / SR
         x = np.sin(2 * np.pi * np.cumsum(500 + 9000 * tm) / SR) * np.exp(-tm / 0.015)
         place(s, stereo(x, -0.4 + 0.4 * i), tt, db(-26))
-    # S4
-    place(s, stereo(blip(1318, 0.18, 0.06) * 0.8), 44.8, db(-24))  # alert two-tone
-    place(s, stereo(blip(1109, 0.25, 0.08) * 0.8), 44.95, db(-24))
-    place(s, verb(stereo(lp(blip(90, 0.25, 0.08), 400))), 45.4, db(-16))  # incident card thud
-    place(s, verb(stereo(lp(blip(70, 0.3, 0.09), 300))), 58.3, db(-16))  # policy gate thunk
-    place(s, verb(stereo(blip(1568, 0.25, 0.06)), IR_SHORT, 0.3), 61.4, db(-28))  # executor active
-    # S5
-    for tt in [66.6, 92.0]:  # clicks
+    # Checkout demo (26-71)
+    for tt in SFX_CLICKS:  # chaos Inject, Approve
         n = int(0.03 * SR)
         x = bp(rng.standard_normal(n), 2500, 7000) * np.exp(-np.arange(n) / SR / 0.002) + blip(1800, 0.03, 0.006)
         place(s, stereo(x, 0.15), tt, db(-22))
-    place(s, stereo(blip(988, 0.16, 0.05, "square")), 75.4, db(-26))  # breach alert
-    place(s, stereo(blip(784, 0.2, 0.07, "square")), 75.55, db(-26))
-    for i, m in enumerate([84, 88]):  # "Found it" sparkle
-        place(s, verb(stereo(bell(mtof(m), 1.0, 0.35), -0.3 + 0.6 * i)), 82.35 + i * 0.08, db(-28))
-    place(s, verb(stereo(blip(1760, 0.2, 0.05))), 85.6, db(-30))  # banner auto
+    place(s, stereo(blip(988, 0.16, 0.05, "square")), SFX_BREACH, db(-26))  # breach alert
+    place(s, stereo(blip(784, 0.2, 0.07, "square")), SFX_BREACH + 0.15, db(-26))
+    for i, m in enumerate([84, 88]):  # "finds it" sparkle
+        place(s, verb(stereo(bell(mtof(m), 1.0, 0.35), -0.3 + 0.6 * i)), SFX_FOUND + i * 0.08, db(-28))
+    place(s, verb(stereo(blip(1760, 0.2, 0.05))), SFX_BANNER, db(-30))  # banner auto
     for i, m in enumerate([72, 76, 79]):  # approve chime
-        place(s, verb(stereo(bell(mtof(m + 12), 1.4, 0.45), -0.3 + 0.3 * i)), 92.2 + i * 0.07, db(-24))
+        place(s, verb(stereo(bell(mtof(m + 12), 1.4, 0.45), -0.3 + 0.3 * i)), SFX_CLICKS[1] + 0.2 + i * 0.07, db(-24))
     for i, m in enumerate([72, 76, 79, 84]):  # Resolved! chime
-        place(s, verb(stereo(bell(mtof(m + 12), 2.0, 0.7), -0.45 + 0.3 * i), wet=0.45), 97.8 + i * 0.075, db(-21))
-    # S6: REFUSED
+        place(s, verb(stereo(bell(mtof(m + 12), 2.0, 0.7), -0.45 + 0.3 * i), wet=0.45), 63.4 + i * 0.075, db(-21))
+    # How it works (71-85, the old 25 s animation at 1.79x)
+    place(s, stereo(blip(1318, 0.18, 0.06) * 0.8), 73.69, db(-24))  # alert two-tone
+    place(s, stereo(blip(1109, 0.25, 0.08) * 0.8), 73.77, db(-24))
+    place(s, verb(stereo(lp(blip(90, 0.25, 0.08), 400))), 74.02, db(-16))  # incident card thud
+    place(s, verb(stereo(lp(blip(70, 0.3, 0.09), 300))), 81.25, db(-16))  # policy gate thunk
+    place(s, verb(stereo(blip(1568, 0.25, 0.06)), IR_SHORT, 0.3), 82.98, db(-28))  # executor active
+    # Refund wave: REFUSED
     for k2 in range(2):
         n = int(0.16 * SR)
         tm = np.arange(n) / SR
         x = (np.sign(np.sin(2 * np.pi * 110 * tm)) + np.sign(np.sin(2 * np.pi * 116.5 * tm))) * 0.4
         x = lp(x, 1400) * np.minimum(1, tm / 0.004) * np.exp(-tm / 0.12)
-        place(s, stereo(x), 114.4 + k2 * 0.2, db(-17))
-    place(s, verb(stereo(lp(blip(85, 0.3, 0.07), 500))), 114.42, db(-14))  # stamp thud
-    impact(s, 119.4, db(-22), bright=False)
-    # S7
-    place(s, verb(stereo(blip(1760, 0.2, 0.05))), 126.6, db(-30))
-    place(s, stereo(blip(660, 0.12, 0.04)), 131.8, db(-30))
-    # S8 checklist ticks
-    for tt in [140.8, 145.0, 147.2, 149.0]:
+        place(s, stereo(x), DROP[0] + k2 * 0.2, db(-17))
+    place(s, verb(stereo(lp(blip(85, 0.3, 0.07), 500))), DROP[0] + 0.02, db(-14))  # stamp thud
+    impact(s, 104.0, db(-22), bright=False)
+    # Renewals: reminder auto, capture waits
+    place(s, verb(stereo(blip(1760, 0.2, 0.05))), 115.4, db(-30))
+    place(s, stereo(blip(660, 0.12, 0.04)), 117.6, db(-30))
+    # Trust checklist ticks
+    for tt in [125.8, 130.0, 132.2, 134.0]:
         place(s, verb(stereo(blip(1568, 0.08, 0.025) + 0.5 * blip(2350, 0.08, 0.02)), IR_SHORT, 0.25), tt + 0.2, db(-27))
     # Close
     riser(1.9, FINAL_HIT, s, db(-17))
