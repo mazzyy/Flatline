@@ -279,7 +279,7 @@ Free services sleep after 15 minutes without traffic, so the first request takes
 
 Python 3.12, FastAPI, SQLAlchemy 2, Alembic, PostgreSQL 16, LiteLLM (Gemini, a local Qwen through Ollama, or Azure OpenAI), the official `@paypal/mcp` server, PayPal REST APIs and webhooks, the PayPal JS SDK v6, React, Vite, TypeScript, AG Grid Community, Docker and Render.
 
-The demo video is made in code with Remotion. The voice is Kokoro, and the music and sound effects are synthesized in code, so there is nothing licensed in it.
+The demo video is made with Remotion. the music and sound effects are synthesized in code, so there is nothing licensed in it.
 
 ## License
 
