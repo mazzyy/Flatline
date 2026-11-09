@@ -26,7 +26,7 @@ Order and lengths live in `src/timeline.ts`. The demo starts at 0:26.
 | S9 | Built with | 10 | 2:20 |
 | S10 | Close | 5 | 2:30 |
 
-The clips play full width on a stage (`components/Stage.tsx`) and a camera zooms to points measured on the recording (`S5_TARGETS`, `S6_TARGETS`, `S7_TARGETS`, in clip pixels). Re-measure them after re-recording.
+The clips play full width on a stage (`components/Stage.tsx`) at one resting view, lifted so the captions sit below the page instead of over it. The page scrolls on its own, and highlights (`components/Highlight.tsx`: a ring, a short label, the rest of the page dimmed) point at whatever the narration talks about. The only camera move is a slow push onto the Approve button. Highlight boxes are in clip pixels (`S5_BOXES`, `S6_BOXES`, `S7_BOXES`); re-measure them after re-recording.
 
 ## Clips
 

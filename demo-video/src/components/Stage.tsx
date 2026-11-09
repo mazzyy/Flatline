@@ -68,20 +68,23 @@ export const cameraAt = (keys: CamKey[], sec: number): { s: number; x: number; y
     const b = keys[i + 1];
     if (sec <= b.at) {
       const e = camEase((sec - a.at) / (b.at - a.at));
-      // zoom in log space; dip out a little when travelling between two close-ups
-      const travelling = a.s > 1.01 && b.s > 1.01 && (a.x !== b.x || a.y !== b.y);
-      const logS = Math.log(a.s) + (Math.log(b.s) - Math.log(a.s)) * e - (travelling ? 0.3 * Math.sin(Math.PI * e) : 0);
+      // zoom in log space, straight from one framing to the next
+      const logS = Math.log(a.s) + (Math.log(b.s) - Math.log(a.s)) * e;
       return { s: Math.exp(logS), x: a.x + (b.x - a.x) * e, y: a.y + (b.y - a.y) * e };
     }
   }
   return keys[keys.length - 1];
 };
 
-/** Transform for a stage zoomed by the camera; keeps the zoomed point inside the frame. */
-export const cameraStyle = (cam: { s: number; x: number; y: number }): React.CSSProperties => {
+/**
+ * Transform for a stage zoomed by the camera; keeps the zoomed point inside the frame.
+ * `lift` lets the view sit that many pixels lower than the frame edge allows, which moves
+ * the stage up and leaves the bottom of the frame to the captions.
+ */
+export const cameraStyle = (cam: { s: number; x: number; y: number }, lift = 0): React.CSSProperties => {
   const half = { w: 960 / cam.s, h: 540 / cam.s };
   const x = Math.min(1920 - half.w, Math.max(half.w, cam.x));
-  const y = Math.min(1080 - half.h, Math.max(half.h, cam.y));
+  const y = Math.min(1080 - half.h + lift, Math.max(half.h, cam.y));
   return {
     transformOrigin: "0 0",
     transform: `translate(${960 - cam.s * x}px, ${540 - cam.s * y}px) scale(${cam.s})`,
@@ -90,3 +93,10 @@ export const cameraStyle = (cam: { s: number; x: number; y: number }): React.CSS
 
 /** A wide-view camera key centred on the frame. */
 export const WIDE = (at: number): CamKey => ({ at, s: 1, x: 960, y: 540 });
+
+/**
+ * The resting view for a clip: the whole page, lifted so the captions below never cover
+ * it. Points of interest get a Highlight, not a zoom. Use with cameraStyle(cam, VIEW_LIFT).
+ */
+export const VIEW_LIFT = 40;
+export const VIEW = (at: number): CamKey => ({ at, s: 1, x: 960, y: 540 + VIEW_LIFT });

@@ -5,53 +5,53 @@ import { KineticHeadline } from "../components/KineticHeadline";
 import { Chip } from "../components/Chip";
 import { LowerThird } from "../components/LowerThird";
 import { TierBadge } from "../components/TierBadge";
-import { CamKey, ClipBeat, StageFrame, WIDE, cameraAt, cameraStyle, onStage } from "../components/Stage";
+import { ClipBeat, StageFrame, VIEW, VIEW_LIFT, cameraStyle } from "../components/Stage";
+import { Highlight } from "../components/Highlight";
 import { colors, fonts, type } from "../theme";
 import { ease, uiSpring } from "../anim";
 import { useClips, useT } from "../SceneContext";
 import { useVideoConfig } from "remotion";
 
-/** Points inside 07-renewals.mp4 (clip pixels), measured on the live recording. */
-export const S7_TARGETS = {
-  planRead: { x: 600, y: 700 },
-  reminder: { x: 760, y: 420 },
+/** Boxes inside 07-renewals.mp4 (clip pixels: left, top, right, bottom), measured on the live recording. */
+export const S7_BOXES = {
+  planRead: { x0: 255, y0: 668, x1: 925, y1: 720 },
+  reminder: { x0: 224, y0: 317, x1: 1376, y1: 509 },
 };
 const CLIP = "07-renewals.mp4";
 const CLIP_SECONDS = 11.64;
-const T = S7_TARGETS;
-const z = (pt: { x: number; y: number }, s: number, at: number): CamKey => ({ at, s, ...onStage(pt) });
-
-// Clip phases: agent timeline with the PayPal plan read 0-5, then the proposals view
-// (the page scrolls only ~40 px, so the plan read stays in frame), reminder card.
-const CAM: CamKey[] = [
-  WIDE(0),
-  WIDE(1.8),
-  z(T.planRead, 1.9, 3.2),
-  z(T.planRead, 1.9, 7.9),
-  z(T.reminder, 1.6, 8.8),
-  z(T.reminder, 1.6, 12.0),
-  WIDE(12.6),
-];
+/** The page scrolls 40 px down at 5.12 s into the clip. */
+const SCROLL = { at: 5.12, dy: 40 };
+const B = S7_BOXES;
+const CAM = VIEW(0);
 
 export const S7Renewals: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const t = useT();
   const clips = useClips();
-  const cam = cameraAt(CAM, frame / t(1));
+  const cam = CAM;
   const outroAt = t(12.6);
   const dim = interpolate(frame, [outroAt, outroAt + 14], [1, 0.14], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   // The label belongs to the opening wide shot only.
-  const labelOpacity = frame < t(6.0) ? Math.max(0, Math.min(1, 1 - (cam.s - 1.05) / 0.3)) : 0;
+  const labelOpacity = 1 - ease(frame, t(2.6), 10);
 
   return (
     <AbsoluteFill>
       <Background glow="warn" glowStrength={0.12} />
       <div style={{ position: "absolute", inset: 0, opacity: dim }}>
-        <div style={{ position: "absolute", inset: 0, ...cameraStyle(cam) }}>
+        <div style={{ position: "absolute", inset: 0, ...cameraStyle(cam, VIEW_LIFT) }}>
           <StageFrame url="localhost:8000/#/incident · renewals" delay={0}>
             <ClipBeat name={CLIP} available={Boolean(clips[CLIP])} from={0} clipSeconds={CLIP_SECONDS} />
           </StageFrame>
+          <Highlight
+            box={B.planRead}
+            from={t(3.4)}
+            to={t(8.1)}
+            label="plan read from PayPal through MCP"
+            labelSide="right"
+            move={{ at: t(SCROLL.at), dur: 5, dy: SCROLL.dy }}
+          />
+          <Highlight box={B.reminder} from={t(8.4)} to={t(12.3)} label="reminder · sent automatically" color={colors.ok} labelSide="inside" />
         </div>
         <div style={{ opacity: labelOpacity }}>
           <LowerThird title="Subscription renewal failures" sub="Coffee Club · 4 failed renewals in 60 min" delay={t(0.2)} top={110} left={150} color={colors.warn} backdrop />

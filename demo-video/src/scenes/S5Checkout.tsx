@@ -3,10 +3,10 @@ import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
 import { evolvePath } from "@remotion/paths";
 import { Background } from "../components/Background";
 import { AgentNode } from "../components/AgentNode";
-import { Callout } from "../components/Callout";
 import { Chip } from "../components/Chip";
+import { Highlight } from "../components/Highlight";
 import { LowerThird } from "../components/LowerThird";
-import { CamKey, ClipBeat, StageFrame, WIDE, cameraAt, cameraStyle, onStage } from "../components/Stage";
+import { CamKey, ClipBeat, StageFrame, VIEW, VIEW_LIFT, cameraAt, cameraStyle, onStage } from "../components/Stage";
 import { colors, fonts, layout, type } from "../theme";
 import { ease, uiSpring } from "../anim";
 import { useClips, useT } from "../SceneContext";
@@ -14,21 +14,23 @@ import { useClips, useT } from "../SceneContext";
 export { CLIP_H, CLIP_W } from "../components/Stage";
 
 /**
- * Points inside the clips (clip pixels, 1600x900), measured on the live recording.
- * Re-measure after re-recording: `node scripts/record-clips.mjs` changes them.
+ * Boxes inside the clips (clip pixels, 1600x900: left, top, right, bottom), measured on the live
+ * recording. Re-measure after re-recording: `node scripts/record-clips.mjs` changes them.
  */
-export const S5_TARGETS = {
-  chaosInject: { x: 1069, y: 347, w: 96, h: 48 },
-  chaosResult: { x: 700, y: 830 },
-  shopPrice: { x: 560, y: 230 },
-  shopBanner: { x: 800, y: 120 },
-  overviewTile: { x: 410, y: 485, w: 372, h: 128 },
-  overviewIncident: { x: 800, y: 668 },
-  timelineRows: { x: 520, y: 730 },
-  rootCause: { x: 700, y: 330 },
-  proposals: { x: 800, y: 215 },
-  approve: { x: 300, y: 256 },
-  executed: { x: 760, y: 560 },
+export const S5_BOXES = {
+  chaosInject: { x0: 1021, y0: 323, x1: 1117, y1: 371 },
+  chaosResult: { x0: 224, y0: 812, x1: 1376, y1: 850 },
+  shopPrice: { x0: 350, y0: 236, x1: 470, y1: 272 },
+  shopBanner: { x0: 180, y0: 4, x1: 1420, y1: 40 },
+  overviewTile: { x0: 224, y0: 421, x1: 596, y1: 549 },
+  overviewIncident: { x0: 224, y0: 645, x1: 1376, y1: 695 },
+  agentRows: { x0: 224, y0: 664, x1: 1376, y1: 826 },
+  paypalRead: { x0: 255, y0: 745, x1: 720, y1: 773 },
+  rootCause: { x0: 224, y0: 233, x1: 1376, y1: 434 },
+  bannerCard: { x0: 224, y0: 316, x1: 1376, y1: 500 },
+  rollbackCard: { x0: 224, y0: 116, x1: 1376, y1: 299 },
+  approve: { x0: 244, y0: 234, x1: 356, y1: 278 },
+  executedCard: { x0: 224, y0: 492, x1: 1376, y1: 682 },
 };
 
 /** Clip lengths in seconds (after the recorder trims page loading). */
@@ -51,52 +53,15 @@ const E1 = { from: 31.4, to: 33.1 }; // the Approve click
 const E2 = { from: 33.1, to: 34.6 }; // a few seconds later: the rollback executed
 const F = { from: 34.6, to: 45.0 }; // recovery
 
-const z = (pt: { x: number; y: number }, s: number, at: number): CamKey => ({ at, s, ...onStage(pt) });
-
-/** Chips laid over a zoomed clip: top left (free while zoomed), on a dark backing. */
-const ON_CLIP: React.CSSProperties = {
-  position: "absolute",
-  left: 130,
-  top: 110,
-  padding: 10,
-  borderRadius: 18,
-  background: "rgba(9, 11, 16, 0.9)",
-  boxShadow: "0 10px 30px rgba(0,0,0,0.35)",
-};
-
-const T = S5_TARGETS;
+// One resting view for every clip; the page scrolls on its own and highlights point at things.
+// The only camera move is a slow push onto the Approve button, the one click that matters.
+const APPROVE = onStage({ x: 300, y: 256 });
 const CAM: CamKey[] = [
-  WIDE(0),
-  WIDE(0.4),
-  z(T.chaosInject, 1.6, 1.05), // the click lands at 1.15 s
-  z(T.chaosInject, 1.6, 2.3),
-  z(T.chaosResult, 1.5, 3.0), // "6 synthetic events · 1 incident touched"
-  z(T.chaosResult, 1.5, 4.3),
-  WIDE(4.9),
-  WIDE(5.6),
-  z(T.shopPrice, 1.7, 6.6),
-  z(T.shopPrice, 1.7, 8.2),
-  z(T.shopBanner, 1.35, 9.1),
-  z(T.shopBanner, 1.35, 10.8),
-  WIDE(11.5),
-  WIDE(12.2),
-  z(T.overviewTile, 1.8, 13.0),
-  z(T.overviewIncident, 1.6, 14.6),
-  WIDE(15.9),
-  WIDE(16.4),
-  z(T.timelineRows, 1.7, 17.4), // models, latencies, the PayPal MCP read
-  z(T.timelineRows, 1.7, 20.6),
-  WIDE(21.3),
-  z(T.rootCause, 1.6, 22.4),
-  z(T.rootCause, 1.6, 26.2),
-  WIDE(26.9),
-  z(T.proposals, 1.5, 27.8),
-  z(T.proposals, 1.5, 30.6),
-  z(T.approve, 1.9, 31.3),
-  z(T.approve, 1.9, 33.0),
-  z(T.executed, 1.6, 33.2),
-  z(T.executed, 1.6, 34.4),
-  WIDE(34.9),
+  VIEW(0),
+  VIEW(31.3),
+  { at: 32.5, s: 1.4, ...APPROVE },
+  { at: 33.05, s: 1.4, ...APPROVE },
+  VIEW(33.15), // cut back under the crossfade to the executed rollback
 ];
 
 export const S5Checkout: React.FC = () => {
@@ -107,10 +72,13 @@ export const S5Checkout: React.FC = () => {
 
   const sec = frame / t(1);
   const cam = cameraAt(CAM, sec);
-  const zoomed = cam.s > 1.05;
   const inBeat = (b: { from: number; to: number }) => frame >= t(b.from) - 8 && frame < t(b.to) + 8;
   const beatFade = (b: { from: number; to: number }) => Math.min(ease(frame, t(b.from) - 4, 8), 1 - ease(frame, t(b.to) - 4, 8));
-  const label = (b: { from: number; to: number }) => Math.max(0, Math.min(1, 1 - (cam.s - 1.05) / 0.3)) * beatFade(b);
+  // A beat's title shows for its first seconds, then gets out of the way of the page.
+  const label = (b: { from: number; to: number }) => beatFade(b) * (1 - ease(frame, t(b.from + 2.3), 10));
+  const H = (box: keyof typeof S5_BOXES, from: number, to: number, text: string, color: string = colors.accent, side: "above" | "below" | "right" | "inside" = "above") => (
+    <Highlight box={S5_BOXES[box]} from={t(from)} to={t(to)} label={text} color={color} labelSide={side} />
+  );
 
   const stage = (b: { from: number; to: number }, name: string, url: string, startAt = 0, playAt = b.from) => (
     <div style={{ position: "absolute", inset: 0, opacity: beatFade(b) }}>
@@ -135,7 +103,7 @@ export const S5Checkout: React.FC = () => {
       <Background glow={frame < t(F.from) ? "critical" : "ok"} glowStrength={0.12} />
 
       {frame < t(F.from) + 8 ? (
-        <div style={{ position: "absolute", inset: 0, ...cameraStyle(cam) }}>
+        <div style={{ position: "absolute", inset: 0, ...cameraStyle(cam, VIEW_LIFT) }}>
           {inBeat(A) ? stage(A, "01-chaos-bad-currency.mp4", "localhost:8000/#/chaos", 0.75, 0.7) : null}
           {inBeat(B) ? stage(B, "02-shop-failing.mp4", "localhost:3000/checkout · PayPal sandbox") : null}
           {inBeat(C) ? stage(C, "03-incident-opens.mp4", "localhost:8000/#/overview") : null}
@@ -143,45 +111,36 @@ export const S5Checkout: React.FC = () => {
           {inBeat(E1) ? stage(E1, "05-approve.mp4", "localhost:8000/#/incident") : null}
           {inBeat(E2) ? stage(E2, "05-approve.mp4", "localhost:8000/#/incident", EXECUTED_AT) : null}
 
-          {inBeat(A) ? (
-            <Callout
-              label="Ship bad currency config"
-              target={onStage(T.chaosInject)}
-              at={{ x: onStage(T.chaosInject).x + 200, y: onStage(T.chaosInject).y - 200 }}
-              delay={t(0.9)}
-              hideAfter={t(2.3)}
-              ring={{ w: T.chaosInject.w + 18, h: T.chaosInject.h + 18 }}
-              color={colors.warn}
-            />
-          ) : null}
+          {/* What to look at, in step with the narration (scene seconds). */}
+          {inBeat(A) ? H("chaosInject", 0.6, 2.3, "Inject: EUR on a USD shop", colors.warn, "right") : null}
+          {inBeat(A) ? H("chaosResult", 2.6, 4.7, "6 synthetic events, labelled as injected") : null}
+          {inBeat(B) ? H("shopPrice", 6.3, 8.9, "EUR on a USD shop", colors.critical, "right") : null}
+          {inBeat(B) ? H("shopBanner", 9.0, 11.3, "banner written by the agents", colors.ok, "below") : null}
+          {inBeat(C) ? H("overviewTile", 12.6, 14.2, "checkout failures · breach", colors.critical, "right") : null}
+          {inBeat(C) ? H("overviewIncident", 14.2, 15.8, "money at risk per hour", colors.critical) : null}
+          {inBeat(D) ? H("agentRows", 17.0, 18.8, "each step names its model and latency") : null}
+          {inBeat(D) ? H("paypalRead", 18.8, 20.9, "PayPal read through MCP", colors.accent, "right") : null}
+          {inBeat(D) ? H("rootCause", 22.0, 26.8, "root cause, with cited evidence", colors.critical, "below") : null}
+          {inBeat(D) ? H("bannerCard", 27.6, 29.0, "banner · ran on its own", colors.ok, "inside") : null}
+          {inBeat(D) ? H("rollbackCard", 29.0, 31.3, "rollback · waits for my approval", colors.warn, "inside") : null}
+          {inBeat(E1) ? H("approve", 31.5, 33.0, "one click", colors.warn, "right") : null}
+          {inBeat(E2) ? H("executedCard", 33.2, 34.5, "executed · seconds later", colors.ok, "inside") : null}
         </div>
       ) : null}
 
-      {/* Beat labels sit on top of the stage and fade while the camera is close in. */}
-      {inBeat(A) && !zoomed ? <LowerThird title="Chaos panel" sub="judge controls · injected events are labelled" delay={t(A.from) + 4} top={110} left={150} backdrop /> : null}
+      {/* Beat titles: on screen for each beat's first seconds. */}
+      <div style={{ opacity: label(A) }}>
+        {inBeat(A) ? <LowerThird title="Chaos panel" sub="judge controls · injected events are labelled" delay={t(A.from) + 4} top={110} left={150} backdrop /> : null}
+      </div>
       <div style={{ opacity: label(B) }}>
         {inBeat(B) ? <LowerThird title="Lumen Coffee Co. · checkout on the PayPal sandbox" sub="EUR on a USD shop · captures fail" delay={t(B.from) + 4} top={110} left={150} color={colors.critical} backdrop /> : null}
       </div>
       <div style={{ opacity: label(C) }}>
         {inBeat(C) ? <LowerThird title="Incident open" sub="detector · 5-min window vs baseline" delay={t(C.from) + 4} top={110} left={150} color={colors.critical} backdrop /> : null}
       </div>
-      {inBeat(D) && frame < t(21.4) ? (
-        <div style={{ ...ON_CLIP, display: "flex", gap: 12, opacity: ease(frame, t(17.4), 8) * (1 - ease(frame, t(21.0), 8)) }}>
-          <Chip text="live models · named per step" delay={t(17.4)} size={type.min} mono color={colors.accent} />
-          <Chip text="PayPal reads · MCP" delay={t(17.8)} size={type.min} mono color={colors.accent} />
-        </div>
-      ) : null}
-      {inBeat(D) && frame >= t(22.2) && frame < t(27.0) ? (
-        <div style={{ ...ON_CLIP, display: "flex", gap: 12, opacity: ease(frame, t(22.6), 8) * (1 - ease(frame, t(26.6), 8)) }}>
-          <Chip text="root cause · from evidence" delay={t(22.6)} size={type.min} mono color={colors.critical} />
-        </div>
-      ) : null}
-
-      {inBeat(E2) ? (
-        <div style={{ ...ON_CLIP, opacity: ease(frame, t(E2.from), 6) * (1 - ease(frame, t(E2.to) - 6, 6)) }}>
-          <Chip text="seconds later · rollback executed" delay={t(E2.from)} size={type.min} mono color={colors.ok} />
-        </div>
-      ) : null}
+      <div style={{ opacity: label(D) }}>
+        {inBeat(D) ? <LowerThird title="Incident · the agents at work" sub="every step persisted with its input and output" delay={t(D.from) + 4} top={110} left={150} color={colors.accent} backdrop /> : null}
+      </div>
 
       {/* Beat F: recovery */}
       {inBeat(F) ? (

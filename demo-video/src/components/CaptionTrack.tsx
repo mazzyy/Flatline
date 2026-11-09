@@ -8,7 +8,7 @@ export type CaptionSegment = { from: number; to: number; text: string };
  * Burned-in captions: bottom centre, max two lines, 34px, on a 70% bg pill.
  * `segments` are absolute frames in the composition.
  */
-export const CaptionTrack: React.FC<{ segments: CaptionSegment[]; bottom?: number }> = ({ segments, bottom = 72 }) => {
+export const CaptionTrack: React.FC<{ segments: CaptionSegment[]; bottom?: number }> = ({ segments, bottom = 36 }) => {
   const frame = useCurrentFrame();
   const { width } = useVideoConfig();
   const active = segments.find((s) => frame >= s.from && frame < s.to);
