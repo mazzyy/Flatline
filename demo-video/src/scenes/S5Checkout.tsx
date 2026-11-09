@@ -44,7 +44,7 @@ export const CLIP_SECONDS: Record<string, number> = {
   "03-incident-opens.mp4": 4.68,
   "04-incident-detail.mp4": 16.12,
   "05-approve.mp4": 2.88,
-  "10-shop-fixed.mp4": 3.8,
+  "10-shop-fixed.mp4": 4.64,
 };
 
 // Beats in scene seconds (scene starts at 26 s in the film).
@@ -143,7 +143,7 @@ export const S5Checkout: React.FC = () => {
         {inBeat(C) ? <LowerThird title="Incident open" sub="detector · 5-min window vs baseline" delay={t(C.from) + 4} top={110} left={150} color={colors.critical} backdrop /> : null}
       </div>
       <div style={{ opacity: fixed ? label(FIX) : 0 }}>
-        {fixed && inBeat(FIX) ? <LowerThird title="Lumen Coffee Co. · after the rollback" sub="the same checkout, seconds later" delay={t(FIX.from) + 4} top={110} left={150} color={colors.ok} backdrop /> : null}
+        {fixed && inBeat(FIX) ? <LowerThird title="Lumen Coffee Co. · after the rollback" sub="the same checkout, seconds later" delay={t(FIX.from) + 4} top={700} left={480} color={colors.ok} backdrop /> : null}
       </div>
       <div style={{ opacity: label(D) }}>
         {inBeat(D) ? <LowerThird title="Incident · the agents at work" sub="every step persisted with its input and output" delay={t(D.from) + 4} top={110} left={150} color={colors.accent} backdrop /> : null}
