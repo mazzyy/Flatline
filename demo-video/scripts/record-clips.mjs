@@ -82,7 +82,7 @@ const proposalIds = async (playbook) => {
   return ids;
 };
 
-const agentsDone = async (playbook, before = new Set(), timeoutMs = 300000) => {
+const agentsDone = async (playbook, before = new Set(), timeoutMs = 600000) => {
   const until = Date.now() + timeoutMs;
   while (Date.now() < until) {
     const { items } = await api(`/api/incidents?playbook=${playbook}`);

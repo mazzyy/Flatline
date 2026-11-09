@@ -34,7 +34,7 @@ SCENARIOS = [
         {"inject": "renewal_failures"},
     ),
 ]
-WAIT_S = 300
+WAIT_S = 600  # a local model on a laptop can take several minutes per incident
 
 
 class Report:
