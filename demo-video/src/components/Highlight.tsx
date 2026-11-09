@@ -2,7 +2,7 @@ import React from "react";
 import { useCurrentFrame, useVideoConfig } from "remotion";
 import { colors, fonts, radius, type } from "../theme";
 import { ease, uiSpring } from "../anim";
-import { STAGE, STAGE_H, onStage } from "./Stage";
+import { CLIP_H, CLIP_W, STAGE, STAGE_H, onStage } from "./Stage";
 
 /** A box in clip pixels (1600x900): left, top, right, bottom. */
 export type ClipBox = { x0: number; y0: number; x1: number; y1: number };
@@ -25,14 +25,18 @@ export const Highlight: React.FC<{
   dim?: number;
   /** Follow a scroll in the clip: shift by dy clip pixels between scene frames at and at + dur. */
   move?: { at: number; dur: number; dy: number };
-}> = ({ box, from, to, label, color = colors.accent, labelSide = "above", dim = 0.28, move }) => {
+  /** The browser frame the clip plays in (scene pixels); the full width stage by default. */
+  frame?: { x: number; y: number; w: number };
+}> = ({ box, from, to, label, color = colors.accent, labelSide = "above", dim = 0.28, move, frame: F = STAGE }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   if (frame < from - 2 || frame > to + 12) return null;
   const pad = 8;
   const dy = move ? move.dy * Math.min(1, Math.max(0, (frame - move.at) / Math.max(1, move.dur))) : 0;
-  const a = onStage({ x: box.x0, y: box.y0 + dy });
-  const b = onStage({ x: box.x1, y: box.y1 + dy });
+  const k = F.w / CLIP_W;
+  const map = (p: { x: number; y: number }) => (F === STAGE ? onStage(p) : { x: F.x + p.x * k, y: F.y + 44 + p.y * k });
+  const a = map({ x: box.x0, y: box.y0 + dy });
+  const b = map({ x: box.x1, y: box.y1 + dy });
   const r = { x: a.x - pad, y: a.y - pad, w: b.x - a.x + pad * 2, h: b.y - a.y + pad * 2 };
   const enter = uiSpring(frame, fps, from);
   const leave = 1 - ease(frame, to, 10);
@@ -50,12 +54,12 @@ export const Highlight: React.FC<{
   return (
     <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
       {/* Dim the stage outside the box (clipped to the stage, so the frame around it is untouched). */}
-      <div style={{ position: "absolute", left: STAGE.x, top: STAGE.y, width: STAGE.w, height: STAGE_H, overflow: "hidden", borderRadius: 14 }}>
+      <div style={{ position: "absolute", left: F.x, top: F.y, width: F.w, height: F === STAGE ? STAGE_H : 44 + CLIP_H * k, overflow: "hidden", borderRadius: 14 }}>
         <div
           style={{
             position: "absolute",
-            left: r.x - STAGE.x,
-            top: r.y - STAGE.y,
+            left: r.x - F.x,
+            top: r.y - F.y,
             width: r.w,
             height: r.h,
             borderRadius: 12,

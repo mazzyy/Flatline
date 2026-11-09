@@ -1,5 +1,5 @@
 /**
- * Record the eight demo clips against the running stack.
+ * Record the demo clips against the running stack.
  * Viewport 1600×900 matches CLIP_W/CLIP_H used for callout coordinates.
  */
 import { chromium } from "playwright";
@@ -304,6 +304,22 @@ try {
     await login(page);
     await page.goto(`${DASH}/#/audit`, { waitUntil: "networkidle" });
     await sleep(2800);
+  });
+
+  await maybe("09-transactions.mp4", async (page) => {
+    // The AG Grid transactions view: newest events first, injected ones badged
+    // "simulated", then a server side search for the failing captures.
+    await login(page);
+    await page.goto(`${DASH}/#/transactions`, { waitUntil: "networkidle" });
+    await page.locator(".ag-row").first().waitFor({ timeout: 15000 });
+    await sleep(800);
+    const readyAt = Date.now();
+    await sleep(2600);
+    await page.locator("#qf").click();
+    await page.keyboard.type("CURRENCY_MISMATCH", { delay: 45 });
+    await page.keyboard.press("Enter");
+    await sleep(3200);
+    return { readyAt };
   });
 } finally {
   await browser.close();
