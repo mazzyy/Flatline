@@ -321,6 +321,19 @@ try {
     await sleep(3200);
     return { readyAt };
   });
+
+  await maybe("10-shop-fixed.mp4", async (page) => {
+    // The same checkout page after the approved rollback: USD again, banner gone,
+    // the PayPal button ready. Film it right after the checkout take, before any reset.
+    await page.goto(`${SHOP}/checkout/house-blend`, { waitUntil: "networkidle" });
+    await page.locator("#paypal-btn:not([hidden])").waitFor({ timeout: 20000 }).catch(() => {
+      console.log("PayPal button did not show; recording the page anyway");
+    });
+    await sleep(600);
+    const readyAt = Date.now();
+    await sleep(3200);
+    return { readyAt };
+  });
 } finally {
   await browser.close();
 }

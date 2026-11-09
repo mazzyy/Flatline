@@ -32,6 +32,9 @@ export const S5_BOXES = {
   rollbackCard: { x0: 224, y0: 316, x1: 1376, y1: 523 },
   approve: { x0: 244, y0: 462, x1: 356, y1: 506 },
   executedCard: { x0: 224, y0: 516, x1: 1376, y1: 729 },
+  // 10-shop-fixed.mp4: no banner, so the page sits 44 px higher than in 02
+  fixedPrice: { x0: 350, y0: 192, x1: 470, y1: 228 },
+  fixedPayPal: { x0: 352, y0: 232, x1: 728, y1: 286 },
 };
 
 /** Clip lengths in seconds (after the recorder trims page loading). */
@@ -41,6 +44,7 @@ export const CLIP_SECONDS: Record<string, number> = {
   "03-incident-opens.mp4": 4.68,
   "04-incident-detail.mp4": 16.12,
   "05-approve.mp4": 2.88,
+  "10-shop-fixed.mp4": 3.8,
 };
 
 // Beats in scene seconds (scene starts at 26 s in the film).
@@ -50,6 +54,7 @@ const C = { from: 11.6, to: 16.0 }; // overview: incident open
 const D = { from: 16.0, to: 31.4 }; // incident: timeline, root cause, proposals
 const E = { from: 31.4, to: 34.6 }; // the Approve click; the rollback shows as executed a moment later
 const F = { from: 34.6, to: 45.0 }; // recovery
+const FIX = { from: 34.6, to: 38.0 }; // the same checkout after the rollback (when 10-shop-fixed.mp4 exists)
 
 // One resting view for every clip: no zooming. The page scrolls on its own and
 // highlights point at whatever the narration names.
@@ -86,20 +91,26 @@ export const S5Checkout: React.FC = () => {
   const chartP = ease(frame, t(F.from + 0.4), t(2.6));
   const chartEvolved = evolvePath(chartP, chartD);
   const approveX = 760;
-  const colX = 1180;
+  // With the real after shot the drawn chart goes, and the Verifier card follows it, centred.
+  const fixed = Boolean(clips["10-shop-fixed.mp4"]);
+  const R = fixed ? { from: FIX.to, to: F.to } : F;
+  const rt = (off: number, fixedOff: number) => t(R.from + (fixed ? fixedOff : off));
   const colW = 620;
+  const colX = fixed ? (1920 - colW) / 2 : 1180;
+  const stageEnd = fixed ? FIX.to : F.from;
 
   return (
     <AbsoluteFill>
       <Background glow={frame < t(F.from) ? "critical" : "ok"} glowStrength={0.12} />
 
-      {frame < t(F.from) + 8 ? (
+      {frame < t(stageEnd) + 8 ? (
         <div style={{ position: "absolute", inset: 0, ...cameraStyle(cam, VIEW_LIFT) }}>
           {inBeat(A) ? stage(A, "01-chaos-bad-currency.mp4", "localhost:8000/#/chaos", 0.75, 0.7) : null}
           {inBeat(B) ? stage(B, "02-shop-failing.mp4", "localhost:3000/checkout · PayPal sandbox") : null}
           {inBeat(C) ? stage(C, "03-incident-opens.mp4", "localhost:8000/#/overview") : null}
           {inBeat(D) ? stage(D, "04-incident-detail.mp4", "localhost:8000/#/incident") : null}
           {inBeat(E) ? stage(E, "05-approve.mp4", "localhost:8000/#/incident") : null}
+          {fixed && inBeat(FIX) ? stage(FIX, "10-shop-fixed.mp4", "localhost:3000/checkout · PayPal sandbox") : null}
 
           {/* What to look at, in step with the narration (scene seconds). */}
           {inBeat(A) ? H("chaosInject", 0.6, 2.3, "Inject: EUR on a USD shop", colors.warn, "right") : null}
@@ -116,6 +127,8 @@ export const S5Checkout: React.FC = () => {
           {inBeat(D) ? H("rollbackCard", 29.0, 31.3, "rollback · waits for my approval", colors.warn, "inside") : null}
           {inBeat(E) ? H("approve", 31.5, 32.45, "one click", colors.warn, "right") : null}
           {inBeat(E) ? H("executedCard", 32.7, 34.5, "rollback executed", colors.ok, "inside") : null}
+          {fixed && inBeat(FIX) ? H("fixedPrice", 35.0, 36.5, "back to USD, banner gone", colors.ok, "right") : null}
+          {fixed && inBeat(FIX) ? H("fixedPayPal", 36.5, 37.9, "PayPal button ready to take payments", colors.ok, "right") : null}
         </div>
       ) : null}
 
@@ -129,15 +142,18 @@ export const S5Checkout: React.FC = () => {
       <div style={{ opacity: label(C) }}>
         {inBeat(C) ? <LowerThird title="Incident open" sub="detector · 5-min window vs baseline" delay={t(C.from) + 4} top={110} left={150} color={colors.critical} backdrop /> : null}
       </div>
+      <div style={{ opacity: fixed ? label(FIX) : 0 }}>
+        {fixed && inBeat(FIX) ? <LowerThird title="Lumen Coffee Co. · after the rollback" sub="the same checkout, seconds later" delay={t(FIX.from) + 4} top={110} left={150} color={colors.ok} backdrop /> : null}
+      </div>
       <div style={{ opacity: label(D) }}>
         {inBeat(D) ? <LowerThird title="Incident · the agents at work" sub="every step persisted with its input and output" delay={t(D.from) + 4} top={110} left={150} color={colors.accent} backdrop /> : null}
       </div>
 
       {/* Beat F: recovery */}
-      {inBeat(F) ? (
-        <div style={{ position: "absolute", inset: 0, opacity: ease(frame, t(F.from), 10) }}>
-          <LowerThird title="After the rollback" sub="the Verifier waits for a quiet window" delay={t(F.from)} top={200} />
-          <div style={{ position: "absolute", left: chart.x, top: chart.y, width: chart.w, height: chart.h }}>
+      {inBeat(R) ? (
+        <div style={{ position: "absolute", inset: 0, opacity: ease(frame, t(R.from), 10) }}>
+          {fixed ? null : <LowerThird title="After the rollback" sub="the Verifier waits for a quiet window" delay={t(F.from)} top={200} />}
+          {fixed ? null : <div style={{ position: "absolute", left: chart.x, top: chart.y, width: chart.w, height: chart.h }}>
             <svg width={chart.w} height={chart.h} style={{ overflow: "visible" }}>
               <line x1={0} y1={base} x2={chart.w} y2={base} stroke={colors.line} strokeDasharray="6 8" />
               <text x={0} y={base + 36} fill={colors.textMuted} fontFamily={fonts.mono} fontSize={type.min}>
@@ -158,9 +174,9 @@ export const S5Checkout: React.FC = () => {
                 strokeDashoffset={chartEvolved.strokeDashoffset}
               />
             </svg>
-          </div>
-          <div style={{ position: "absolute", left: colX, top: 300 }}>
-            <AgentNode x={0} y={0} width={colW} name="Verifier" role="quiet window · metric back at baseline" icon="verify" delay={t(F.from + 1.4)} active={frame >= t(F.from + 2.4)} activeColor={colors.ok} activeDelay={t(F.from + 2.4)} />
+          </div>}
+          <div style={{ position: "absolute", left: colX, top: fixed ? 260 : 300 }}>
+            <AgentNode x={0} y={0} width={colW} name="Verifier" role="quiet window · metric back at baseline" icon="verify" delay={rt(1.4, 0)} active={frame >= rt(2.4, 0.2)} activeColor={colors.ok} activeDelay={rt(2.4, 0.2)} />
             <div
               style={{
                 position: "absolute",
@@ -171,16 +187,16 @@ export const S5Checkout: React.FC = () => {
                 fontSize: type.h1Small,
                 letterSpacing: "-0.02em",
                 color: colors.ok,
-                opacity: uiSpring(frame, fps, t(F.from + 3.6)),
-                translate: `0px ${(1 - uiSpring(frame, fps, t(F.from + 3.6))) * 24}px`,
+                opacity: uiSpring(frame, fps, rt(3.6, 0.4)),
+                translate: `0px ${(1 - uiSpring(frame, fps, rt(3.6, 0.4))) * 24}px`,
               }}
             >
               Resolved.
             </div>
             <div style={{ position: "absolute", left: 0, top: 300, display: "flex", flexDirection: "column", gap: 14 }}>
-              <Chip text="detected · within seconds" delay={t(F.from + 5.2)} size={type.label} mono color={colors.ok} />
-              <Chip text="root cause · from evidence" delay={t(F.from + 5.6)} size={type.label} mono color={colors.ok} />
-              <Chip text="fix · one human approval" delay={t(F.from + 6.0)} size={type.label} mono color={colors.ok} />
+              <Chip text="detected · within seconds" delay={rt(5.2, 2.0)} size={type.label} mono color={colors.ok} />
+              <Chip text="root cause · from evidence" delay={rt(5.6, 2.4)} size={type.label} mono color={colors.ok} />
+              <Chip text="fix · one human approval" delay={rt(6.0, 2.8)} size={type.label} mono color={colors.ok} />
             </div>
           </div>
         </div>

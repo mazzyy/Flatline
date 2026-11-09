@@ -120,6 +120,12 @@ SFX_BREACH = 38.0  # overview: checkout tile in breach
 SFX_FOUND = 51.0  # "finds it"
 SFX_BANNER = 53.6  # banner auto
 SFX_RESOLVED = 64.25  # "Resolved." lands
+SFX_ERROR = 32.0  # shop: EUR on a USD shop, captures fail
+SFX_FIXED = 61.0  # the checkout is back to normal
+# A soft pop when a highlight lands on the page (film seconds). Moments that already
+# have their own sound (clicks, breach, banner, approve, reminder) are left out.
+SFX_HIGHLIGHTS = [28.6, 33.6, 35.1, 40.2, 43.0, 44.8, 48.0, 55.0, 57.5, 62.5,
+                  85.9, 88.6, 90.4, 94.2, 110.4, 126.2]
 
 TENSION = [[45, 57, 60, 64], [41, 57, 60, 65], [38, 57, 62, 65], [40, 56, 59, 64]]  # Am F Dm E
 UPLIFT = [[41, 57, 60, 65], [36, 55, 60, 64], [43, 55, 59, 62], [45, 57, 60, 64]]  # F C G Am
@@ -407,6 +413,16 @@ def make_sfx():
         place(s, verb(stereo(bell(mtof(m + 12), 1.4, 0.45), -0.3 + 0.3 * i)), SFX_CLICKS[1] + 0.2 + i * 0.07, db(-24))
     for i, m in enumerate([72, 76, 79, 84]):  # Resolved! chime
         place(s, verb(stereo(bell(mtof(m + 12), 2.0, 0.7), -0.45 + 0.3 * i), wet=0.45), SFX_RESOLVED + i * 0.075, db(-21))
+    for tt in SFX_HIGHLIGHTS:  # highlight pop: a short downward glide
+        n = int(0.07 * SR)
+        tm = np.arange(n) / SR
+        x = np.sin(2 * np.pi * np.cumsum(1500 - 600 * tm / tm[-1]) / SR) * np.exp(-tm / 0.018)
+        place(s, verb(stereo(x, 0.1), IR_SHORT, 0.25), tt, db(-31))
+    for i, f in enumerate([233, 196]):  # error: two low, dull tones
+        x = lp(blip(f, 0.11, 0.05, "square"), 900)
+        place(s, stereo(x, -0.1), SFX_ERROR + i * 0.13, db(-27))
+    for i, m in enumerate([79, 86]):  # fixed: a small rising two-note
+        place(s, verb(stereo(bell(mtof(m), 0.9, 0.3), -0.2 + 0.4 * i)), SFX_FIXED + i * 0.1, db(-27))
     # How it works (71-85, the old 25 s animation at 1.79x)
     place(s, stereo(blip(1318, 0.18, 0.06) * 0.8), 73.69, db(-24))  # alert two-tone
     place(s, stereo(blip(1109, 0.25, 0.08) * 0.8), 73.77, db(-24))
