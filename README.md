@@ -2,114 +2,250 @@
 
 **On call for your revenue.**
 
-[![Flatline demo](docs/media/demo.gif)](docs/media/flatline_demo.mp4)
+[![Flatline demo, click to watch the full video](docs/media/demo.gif)](docs/media/flatline_demo.mp4)
 
 Every online shop monitors its servers. Almost nobody monitors their money. When checkout breaks on a Friday evening, or refunds suddenly pile up on one product, most merchants find out days later from a payout report or an annoyed customer.
 
-I built Flatline to close that gap. It is an SRE agent that sits on call for a merchant's PayPal revenue. It watches the integration, notices checkout failures, refund waves and broken subscription renewals within minutes, works out the root cause from real evidence, and fixes things. The important part is how it fixes them: every action goes through a policy proxy written in plain code, not a prompt, and the agents themselves never hold write credentials.
+I built Flatline to close that gap. It is an SRE agent that sits on call for a merchant's PayPal integration. It notices checkout failures, refund waves and failing subscription renewals within seconds, works out the root cause from real evidence, and fixes what it is allowed to fix. The part I care about most is how it fixes things: every action goes through a policy proxy written in plain code, not a prompt, and the agents never hold write credentials. Anything that moves money waits for a person.
 
 Built for the PayPal AI Hackathon. MIT licensed. Copyright 2026 Abdul Musawar Soomro.
 
-## Watch the demo
+**Jump to:** [the demo](#the-demo) · [the approach](#the-approach) · [how it works](#how-it-works) · [one incident, start to finish](#one-incident-start-to-finish) · [run it](#run-it) · [why you can trust it](#why-you-can-trust-it)
 
-The GIF above is a short cut of the main moments. The full walkthrough with narration runs two and a half minutes: [docs/media/flatline_demo.mp4](docs/media/flatline_demo.mp4). Click the GIF or that link to play it.
+## The demo
+
+The GIF above is a short cut. The full walkthrough with narration runs two and a half minutes: [docs/media/flatline_demo.mp4](docs/media/flatline_demo.mp4). Everything in it was recorded against the running stack on the PayPal sandbox with live models, and every root cause, proposal and rationale you see on screen was written by the model named in that agent step.
+
+It shows three incidents:
+
+1. **A broken checkout.** A config change switches a US shop to euros and captures start failing. Flatline puts up a warning banner on its own, finds the config change, and waits for me to approve the rollback.
+2. **A refund wave.** Five refunds in an hour on one coffee, from five different buyers. Flatline traces it to the product and proposes pausing its sales. A forbidden bulk refund, slipped in as a red team probe, is refused by the proxy.
+3. **Failing renewals.** Four Coffee Club renewals fail. Flatline reads the plan from PayPal, sees the plan is healthy and the subscribers' payments are the problem, and sends reminders on its own.
+
+## The approach
+
+A few decisions shaped everything else.
+
+**Detect from what PayPal pushes, not from reports.** PayPal Transaction Search can lag by up to three hours, which is useless as a clock for alerts. Flatline detects from webhooks and the shop's own checkout telemetry, and uses Transaction Search only as evidence once an incident is open.
+
+**Let the models reason, but only over evidence.** The agents see the events of their own incident, the config history, the runbook for that playbook and what they read from PayPal through MCP. Every claim in a diagnosis has to cite where it came from. They never see a prepared answer, and they are not told which events the Chaos panel injected. They have to work it out from the data, like in any fault injection test.
+
+**Agents can ask. Code decides.** The agents only propose. A policy proxy looks each proposal up in a catalog and gives it one of three tiers. Nothing an agent writes can change the tier, and anything not in the catalog is refused.
+
+| Tier | Examples | What happens |
+| --- | --- | --- |
+| auto | shop banner, alert, report, payment reminder | Runs straight away and is logged |
+| approval | config rollback, pause product sales, capture an outstanding balance, a single refund up to the limit | Waits in the dashboard for a person |
+| forbidden | bulk refunds, cancelling a subscription, accepting a dispute, payouts, anything unknown | Refused, and the incident is escalated |
+
+**The metric decides when it is over.** After a fix, the Verifier waits for a quiet window. Whether the incident is resolved comes from the numbers. The model only writes the explanation.
+
+**Be honest about the test harness.** Injected events carry a simulated badge in the transactions grid. Injected incidents use made up PayPal ids, so their PayPal writes are recorded as simulated rather than sent. The red team probe is labelled as a probe.
+
+**Run on free or local models.** Each agent calls a model through LiteLLM with a fallback chain, so a rate limit on the Gemini free tier moves on to the next model, and finally to a Qwen running locally through Ollama. Every step in the timeline names the model that answered it. If every model fails, the step keeps the playbook's deterministic answer and says so.
 
 ## How it works
 
 ![Flatline workflow](docs/media/workflow.png)
 
-The demo shop and the PayPal sandbox send webhooks and checkout telemetry to a detector. Every 30 seconds it compares a five minute window against a rolling baseline. When a metric breaks that baseline, an incident opens and four agents pick it up in order.
+```mermaid
+flowchart TD
+    shop["Demo shop<br/>checkout telemetry"] --> detector["Detector<br/>5 min window vs baseline, every 30 s"]
+    paypal["PayPal sandbox<br/>webhooks"] --> detector
+    detector -->|"incident opens"| triage
 
-1. **Triage** works out the scope, the severity and how much money is at risk.
-2. **Diagnostician** reads PayPal data through a read only MCP server and finds the root cause, with the evidence attached.
-3. **Remediator** proposes fixes, but only from a fixed catalog of actions.
-4. **Verifier** waits for a quiet window and confirms the metric is back at baseline.
+    subgraph agents["Agents, read only"]
+        direction LR
+        triage["Triage<br/>scope, severity, money at risk"] --> diag["Diagnostician<br/>root cause with evidence"]
+        diag --> remed["Remediator<br/>proposes catalog actions"]
+    end
 
-Every proposal then hits the policy proxy. Small, safe fixes like putting up a shop banner or sending a payment reminder run on their own. Anything that moves money or changes config waits for a human to approve it in the dashboard. Anything that is not in the catalog is refused outright. Only the executor behind the proxy can write to PayPal or the shop config.
+    mcp["PayPal MCP server<br/>read scope"] -.->|"transactions, plan details"| diag
+    remed -->|"proposals"| proxy{"Policy proxy<br/>plain code, no LLM"}
+    proxy -->|"auto"| executor["Executor<br/>the only writer"]
+    proxy -->|"approval"| human(["Merchant approves<br/>in the dashboard"])
+    human --> executor
+    proxy -->|"forbidden"| refused["Refused and escalated"]
+    executor --> writes["PayPal sandbox and shop config"]
+    writes --> verifier["Verifier<br/>quiet window, the metric decides"]
+```
 
-![Checkout incident with root cause and proposals](docs/media/incident.png)
+The detector runs every 30 seconds and compares a five minute window with a rolling baseline. Three playbooks ship enabled:
 
-Here is the checkout scenario from the demo. A config change set the currency to EUR on a USD shop. The Diagnostician compared the config versions, matched them against the CURRENCY_MISMATCH errors and named the version that did it, the warning banner went up by itself, and the rollback sat waiting for my approval.
+* **Checkout failure spike** fires when capture failures in a five minute window reach three times the baseline.
+* **Refund wave** fires when refunds jump far above baseline or more than half of them share one product.
+* **Subscription renewal failures** fire when failed renewals cluster on one plan within an hour.
 
-![The policy proxy refusing a bulk refund](docs/media/refused.png)
-
-In the refund scenario the agent spotted one product behind most of the refunds and proposed pausing its sales, which needs approval. Then I red-team it: the playbook slips a forbidden bulk refund in next to the agent's proposals, clearly labelled as a probe. Bulk refunds are forbidden in the catalog, so the proxy refuses it and escalates the incident. Agents can ask. Code decides.
+Thresholds live in `flatline/playbooks/*.yaml`, along with each playbook's runbook (typical causes and usual fixes) and the actions it may propose. The expected outcome for each one is in [docs/playbooks.md](docs/playbooks.md).
 
 ### Where the AI is, and where it is not
 
 | Part | What decides | How |
 | --- | --- | --- |
 | Detector | Code | Playbook thresholds against a rolling baseline, every 30 seconds |
-| Triage | LLM (`MODEL_FAST`) | Severity, scope and money at risk, from the incident and recent events |
-| Diagnostician | LLM (`MODEL_REASONING`) | Root cause from events, config history and PayPal reads through MCP; every claim must cite evidence |
+| Triage | LLM (`MODEL_FAST`) | Severity, scope and money at risk, from the incident and its events |
+| Diagnostician | LLM (`MODEL_REASONING`) | Root cause from events, config history and PayPal reads through MCP; every claim cites evidence |
 | Remediator | LLM (`MODEL_REASONING`) | Proposes fixes, limited to the playbook's allowed actions and their parameters |
 | Policy proxy | Code | Catalog lookup: auto, approval or forbidden. No LLM involved |
 | Executor | Code | The only writer to PayPal and the shop |
 | Verifier | Code, then LLM | The metric decides whether it recovered; the LLM only writes the explanation |
 
-The models see the evidence and the shape of the answer they must return, never a prepared answer. Each playbook also has a deterministic answer that is used only when a model call fails, for example on a free tier rate limit, and the timeline then labels that step as a fallback. The agents are not told which events the Chaos panel injected; they have to work the cause out from the data, as in any fault injection test.
+There is more detail in [docs/architecture.md](docs/architecture.md), and the reasoning behind the bigger choices is in [docs/decisions.md](docs/decisions.md).
 
-A quick note on detection. PayPal Transaction Search can lag by up to three hours, so it is useless as a clock for minute level alerts. Flatline detects from webhooks and shop telemetry only, and uses Transaction Search purely as evidence. There is more detail in [docs/architecture.md](docs/architecture.md).
+## One incident, start to finish
 
-## Run it locally
+This is the checkout scenario from the video, frame by frame.
 
-You do not need any PayPal or model keys for this. Everything runs in mock mode by default, with deterministic stand ins for the models.
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Shop as Demo shop
+    participant Det as Detector
+    participant Ag as Agents
+    participant Px as Policy proxy
+    participant Me as Merchant
+    participant Ex as Executor
+    Shop->>Det: 6 captures fail with CURRENCY_MISMATCH
+    Det->>Ag: incident opens, $108 an hour at risk
+    Ag->>Ag: Diagnostician reads PayPal through MCP and the config history
+    Ag->>Px: put up a banner, roll the config back
+    Px->>Ex: banner is auto, runs now
+    Px->>Me: rollback needs approval
+    Me->>Px: approve
+    Px->>Ex: run the rollback
+    Ex->>Shop: currency back to USD
+    Det->>Ag: Verifier sees a quiet window and closes the incident
+```
+
+**1. Break something.** The Chaos panel is there for judges. *Ship bad currency config* writes a new config version that sets EUR on a USD shop and injects the failing captures, all labelled as synthetic.
+
+![The Chaos panel with the bad currency button highlighted](docs/media/chaos.png)
+
+**2. The shop is broken.** The checkout now charges euros on a US shop, so captures fail. By the time you look, the agents have already put up a warning banner, because a banner is an auto action.
+
+![The demo shop charging EUR, with the agents' banner at the top](docs/media/shop.png)
+
+**3. The incident opens within seconds,** with the money at risk per hour.
+
+![The overview with the checkout playbook in breach and the incident row](docs/media/overview.png)
+
+**4. The agents work it.** Each step in the timeline names the model that answered and how long it took. The Diagnostician reads recent transactions from PayPal through the MCP server. This run was answered by the local Qwen, because the free Gemini quota was used up for the day.
+
+![The agent timeline with the PayPal MCP read highlighted](docs/media/agents.png)
+
+**5. The root cause, with evidence.** It matched the CURRENCY_MISMATCH errors to the config version that set EUR, and cites both.
+
+![The root cause card with cited evidence](docs/media/incident.png)
+
+**6. One click.** The rollback waited for me. After I approve it, the executor runs it and the card shows it as executed.
+
+![The rollback proposal shown as executed](docs/media/approved.png)
+
+### The other two incidents
+
+In the refund wave the agents trace five refunds from five different buyers to one product and propose pausing its sales, which needs approval. Next to it sits the red team probe: a bulk refund the playbook adds on purpose to prove the proxy refuses it.
+
+![Refund wave proposals: pause sales waiting for approval, the bulk refund refused](docs/media/refunds.png)
+
+![The policy proxy refusing the bulk refund](docs/media/refused.png)
+
+For the failing renewals the Diagnostician reads the Coffee Club plan from PayPal, finds it active and healthy, and concludes it is the subscribers' payments that fail. Payment reminders are an auto action, so they go out on their own.
+
+![Renewal incident with the PayPal plan read highlighted](docs/media/renewals.png)
+
+## Run it
+
+You need Python 3.12 and Docker. Node 20 is only needed for the PayPal MCP server when you use the sandbox (the Docker image already has it).
+
+### 1. Without any keys
+
+Everything runs in mock mode by default, with deterministic stand ins for PayPal and the models. This is the quickest way to see that it works.
 
 ```bash
+git clone https://github.com/mazzyy/Flatline.git
+cd Flatline
 cp .env.example .env
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements-dev.txt
-make test
-make demo-test
+make test        # unit and integration tests, no network, no keys
+make demo-test   # all three scenarios end to end, in process
 ```
 
-To bring up the whole stack with Docker:
+### 2. The whole stack with Docker
 
 ```bash
-cp .env.example .env
+cp .env.example .env   # if you have not already
 make up
 ```
 
-The API and dashboard come up on http://localhost:8000 (the passcode is `demo-judge`) and the demo shop on http://localhost:3000. Run `make down` when you are done.
+| What | Where |
+| --- | --- |
+| Dashboard and API | http://localhost:8000 (passcode `demo-judge`) |
+| Demo shop | http://localhost:3000 |
 
-`PAYPAL_ENVIRONMENT` has to be `MOCK` or `SANDBOX`. With any other value the services refuse to start. There is no live PayPal path at all, on purpose.
+`make up` seeds ten minutes of normal traffic. Run `make down` when you are done.
 
-## Try the scenarios
+### 3. Break something
 
-`make up` already seeds ten minutes of normal traffic. Then break something, either from the Chaos panel in the dashboard or from the command line:
+Use the Chaos panel in the dashboard, or the command line:
 
 ```bash
 python scripts/inject.py checkout_failure_spike
+python scripts/inject.py refund_wave
+python scripts/inject.py subscription_renewal_failures
 ```
 
-The API writes the injected events and runs the detector straight away, so the incident opens within seconds and the agents start on it. Injected events get a simulated badge in the Transactions grid, so it is always clear what is real. The agents are not told which events were injected; they have to work out the cause from the data, like in any fault injection test.
+The API writes the injected events and runs the detector straight away, so the incident opens within seconds and the agents start on it. **Reset all chaos** in the panel puts the shop back to normal. A new incident for the same playbook within 30 minutes is merged into the open one, so wait a little before repeating a scenario.
 
-Three playbooks ship enabled. A checkout failure spike fires when capture failures in a five minute window reach three times the baseline. A refund wave fires when refunds jump far above baseline or more than half of them share one product. Subscription renewal failures fire when failed renewals cluster on one plan within an hour. Thresholds live in `flatline/playbooks/*.yaml`, and the expected outcome for each one is in [docs/playbooks.md](docs/playbooks.md). The demo video is made in code: `demo-video/scripts/record-clips.mjs` records the dashboard against the running stack and Remotion builds the film around those clips (see [demo-video/NOTES.md](demo-video/NOTES.md)).
+### 4. Connect the PayPal sandbox and live models
 
-## Connect the PayPal sandbox
+Only needed if you want real sandbox traffic and real models instead of the mock.
 
-This part is only needed if you want real sandbox traffic instead of the mock.
+1. Create a REST app on [PayPal Developer](https://developer.paypal.com/) in sandbox mode. Copy the Client ID and Secret into `.env` and set `PAYPAL_ENVIRONMENT=SANDBOX`.
+2. Turn on Transaction Search for the app. Flatline only uses it as evidence.
+3. Register a webhook pointing at `https://<your-api>/webhooks/paypal` for the event types listed in section 9.2 of the [spec](docs/spec.md), and put its ID in `PAYPAL_WEBHOOK_ID`.
+4. Run `python scripts/sandbox_setup.py`. It creates the Coffee Club product and its monthly plan and prints `PAYPAL_SANDBOX_PRODUCT_ID` and `PAYPAL_SANDBOX_PLAN_ID` for `.env`.
+5. Pick your models and set `LLM_MODE=live`:
 
-1. Create a REST app on [PayPal Developer](https://developer.paypal.com/) in sandbox mode.
-2. Copy the Client ID and Secret into `.env` and keep `PAYPAL_ENVIRONMENT=SANDBOX`.
-3. Turn on Transaction Search for the app. Flatline only uses it as evidence, never for detection.
-4. Register a webhook pointing at `https://<your-api>/webhooks/paypal` for the event types listed in section 9.2 of the [spec](docs/spec.md), and put its ID in `PAYPAL_WEBHOOK_ID`.
-5. Run `python scripts/sandbox_setup.py`. It creates the Coffee Club product and its monthly plan and prints `PAYPAL_SANDBOX_PRODUCT_ID` and `PAYPAL_SANDBOX_PLAN_ID` for `.env`.
-6. For live models, pick any provider LiteLLM supports and set `MODEL_FAST` and `MODEL_REASONING` in `.env`. Gemini works on the free tier (`gemini/<model>` plus `GEMINI_API_KEY`), a local model such as Qwen runs through Ollama (`ollama_chat/<model>`), and Azure OpenAI uses `azure/<deployment>` with the `AZURE_*` values. Install the extras with `pip install -r requirements-live.txt`, check both models with `python scripts/llm_check.py`, then set `LLM_MODE=live`. If a live call ever fails, the agent keeps the playbook answer and its timeline entry says so.
-7. Run `python scripts/mcp_check.py` to start both PayPal MCP sessions (read and write scope) and do one Transaction Search through the read one. It needs Node for `npx`.
-8. With the stack up (`make up`), `python scripts/live_check.py` runs all three scenarios against the sandbox and the live models and prints every agent step with its model and PayPal reads. Injected scenarios use made up PayPal ids, so their PayPal writes are recorded as simulated instead of being sent.
-9. Point the demo shop at the same client ID so the JS SDK v6 buttons render.
+    ```bash
+    # Gemini on the free tier
+    MODEL_FAST=gemini/gemini-2.5-flash-lite
+    MODEL_REASONING=gemini/gemini-2.5-flash
+    GEMINI_API_KEY=...
+    # optional: try these when a model is rate limited, ending with a local one
+    MODEL_FALLBACKS=gemini/gemini-3.1-flash-lite,ollama_chat/qwen2.5:7b
+    OLLAMA_API_BASE=http://localhost:11434
+    ```
 
-The tests never need any of these keys.
+    Any provider LiteLLM supports works the same way. For everything on premises, point both models at `ollama_chat/<model>`. Azure OpenAI uses `azure/<deployment>` with the `AZURE_*` values.
+6. Install the extras and check the connections:
 
-## Deploy to Render
+    ```bash
+    pip install -r requirements-live.txt
+    python scripts/llm_check.py   # each model answers
+    python scripts/mcp_check.py   # PayPal MCP read and write sessions, one Transaction Search
+    ```
+
+7. Run `make up` again. The demo shop reads the same client ID from `.env`, so its checkout shows the PayPal JS SDK v6 button.
+
+`PAYPAL_ENVIRONMENT` has to be `MOCK` or `SANDBOX`. With any other value the services refuse to start. There is no live PayPal path, on purpose.
+
+### 5. Check everything end to end
+
+```bash
+python scripts/live_check.py
+```
+
+It presses the same Chaos buttons as the dashboard, waits for the agents, and prints every step with its model, latency and PayPal reads. It checks that each diagnosis names the right cause, that the rollback and the pause wait for approval, that the bulk refund is refused and that the reminder runs on its own. A run that ends in `PASS` is how the demo video was recorded.
+
+### Deploy to Render (optional)
 
 The repo includes a [Blueprint](render.yaml) that fits Render's free instances: one web service runs the API, the detector and the agent loop together (`RUN_WORKERS=true`), a second one runs the demo shop, and a free Postgres holds the data.
 
 1. In Render, create a new Blueprint and pick this repo.
-2. Fill in the environment variables marked `sync: false`: the PayPal sandbox credentials, the webhook ID, the plan and product IDs, `GEMINI_API_KEY`, `MODEL_FAST`, `MODEL_REASONING`, `DASHBOARD_PASSCODE`, `INJECT_TOKEN`, `APP_BASE_URL`, and `FLATLINE_API_URL` for the shop.
-3. The Blueprint sets `PAYPAL_ENVIRONMENT` to `SANDBOX`. Leave it that way.
-4. Check the deploy with `python scripts/live_check.py --url https://<your-api>.onrender.com`.
+2. Fill in the variables marked `sync: false`: the PayPal sandbox credentials, the webhook ID, the plan and product IDs, `GEMINI_API_KEY`, `MODEL_FAST`, `MODEL_REASONING`, `DASHBOARD_PASSCODE`, `INJECT_TOKEN`, `APP_BASE_URL`, and `FLATLINE_API_URL` for the shop.
+3. Leave `PAYPAL_ENVIRONMENT` at `SANDBOX`.
+4. Check it with `python scripts/live_check.py --url https://<your-api>.onrender.com`.
 
 Free services sleep after 15 minutes without traffic, so the first request takes about a minute. Render deletes a free database 30 days after it is created.
 
@@ -117,17 +253,33 @@ Free services sleep after 15 minutes without traffic, so the first request takes
 
 ![Audit log and safety checklist](docs/media/audit.png)
 
-1. **No live PayPal.** A startup guard checks the environment, and there is no live host string anywhere in the code.
+1. **No live PayPal.** A startup guard checks the environment, and there is no live host anywhere in the code.
 2. **Agents are read only.** They get a `ReadOnlyGateway` whose write methods raise, and an import boundary test keeps agent code away from the writer.
 3. **Unknown actions are forbidden.** The allowlist lives in `flatline/policy/catalog.py`.
 4. **Writes happen only after the policy says yes.** `flatline/policy/executor.py` is the only module that writes to PayPal or the shop.
-5. **Everything is audited.** Every detection, agent step, decision, approval and execution lands in `audit_log` and streams to the dashboard live.
+5. **Everything is audited.** Every detection, agent step, decision, approval and execution lands in the audit log and streams to the dashboard live.
+
+## What is in the repo
+
+| Folder | What lives there |
+| --- | --- |
+| `flatline/ingest` | FastAPI app: webhooks, telemetry, dashboard API, live updates, Chaos endpoints |
+| `flatline/detector` | Windows, baselines and incident creation |
+| `flatline/agents` | The four agents, their prompts and the read only tools they get |
+| `flatline/policy` | Action catalog, policy proxy and the executor |
+| `flatline/paypal` | Sandbox and mock gateways, the MCP client |
+| `flatline/playbooks` | Thresholds, runbooks and allowed actions per playbook |
+| `dashboard` | React dashboard: overview, incidents, transactions grid, policy, audit, Chaos panel |
+| `demo-shop` | Lumen Coffee Co., a small Node shop with the PayPal JS SDK v6 |
+| `scripts` | Seeding, injection, sandbox setup and the live checks |
+| `demo-video` | The demo video, made in code with Remotion, with its narration and soundtrack scripts |
+| `docs` | Architecture, decisions, playbooks, spec and the Devpost write up |
 
 ## Built with
 
-Python 3.12, FastAPI, SQLAlchemy 2, Alembic, LiteLLM for the live models (Gemini, a local Qwen through Ollama, or Azure OpenAI), the official `@paypal/mcp` server, PayPal REST and JS SDK v6, React, Vite, TypeScript, AG Grid Community, Docker and PostgreSQL 16.
+Python 3.12, FastAPI, SQLAlchemy 2, Alembic, PostgreSQL 16, LiteLLM (Gemini, a local Qwen through Ollama, or Azure OpenAI), the official `@paypal/mcp` server, PayPal REST APIs and webhooks, the PayPal JS SDK v6, React, Vite, TypeScript, AG Grid Community, Docker and Render.
 
-The demo video is made in code with Remotion. Its source, the narration script and the soundtrack scripts are in `demo-video/`.
+The demo video is made in code with Remotion. The voice is Kokoro, and the music and sound effects are synthesized in code, so there is nothing licensed in it.
 
 ## License
 
