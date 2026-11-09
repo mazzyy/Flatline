@@ -40,7 +40,9 @@ A few decisions shaped everything else.
 
 **The metric decides when it is over.** After a fix, the Verifier waits for a quiet window. Whether the incident is resolved comes from the numbers. The model only writes the explanation.
 
-**Be honest about the test harness.** Injected events carry a simulated badge in the transactions grid. Injected incidents use made up PayPal ids, so their PayPal writes are recorded as simulated rather than sent. The red team probe is labelled as a probe.
+**Be honest about the test harness.** Injected events carry a simulated badge in the transactions grid, which is built on AG Grid with server side rows and search. Injected incidents use made up PayPal ids, so their PayPal writes are recorded as simulated rather than sent. The red team probe is labelled as a probe.
+
+![The AG Grid transactions view, filtered to CURRENCY_MISMATCH, with injected rows marked simulated](docs/media/transactions.png)
 
 **Run on free or local models.** Each agent calls a model through LiteLLM with a fallback chain, so a rate limit on the Gemini free tier moves on to the next model, and finally to a Qwen running locally through Ollama. Every step in the timeline names the model that answered it. If every model fails, the step keeps the playbook's deterministic answer and says so.
 
@@ -121,7 +123,7 @@ sequenceDiagram
 
 ![The Chaos panel with the bad currency button highlighted](docs/media/chaos.png)
 
-**2. The shop is broken.** The checkout now charges euros on a US shop, so captures fail. By the time you look, the agents have already put up a warning banner, because a banner is an auto action.
+**2. The shop is broken.** The checkout, with the real PayPal button from the JS SDK v6, now charges euros on a US shop, so captures fail. By the time you look, the agents have already put up a warning banner, because a banner is an auto action.
 
 ![The demo shop charging EUR, with the agents' banner at the top](docs/media/shop.png)
 
@@ -129,7 +131,7 @@ sequenceDiagram
 
 ![The overview with the checkout playbook in breach and the incident row](docs/media/overview.png)
 
-**4. The agents work it.** Each step in the timeline names the model that answered and how long it took. The Diagnostician reads recent transactions from PayPal through the MCP server. This run was answered by the local Qwen, because the free Gemini quota was used up for the day.
+**4. The agents work it.** Each step in the timeline names the model that answered and how long it took. The Diagnostician reads recent transactions from PayPal through the MCP server. In this run Gemini answered every step: triage in about 3 seconds, the diagnosis in 14.
 
 ![The agent timeline with the PayPal MCP read highlighted](docs/media/agents.png)
 

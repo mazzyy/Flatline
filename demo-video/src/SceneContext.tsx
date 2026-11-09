@@ -32,6 +32,7 @@ export const CLIP_FILES = [
   "06-refund-wave.mp4",
   "07-renewals.mp4",
   "08-audit-log.mp4",
+  "09-transactions.mp4",
 ] as const;
 
 export type ClipName = (typeof CLIP_FILES)[number];

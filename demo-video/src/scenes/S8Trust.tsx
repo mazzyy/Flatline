@@ -19,7 +19,7 @@ const CHECKS = [
 
 const GRID = "09-transactions.mp4";
 /** The Simulated column in 09-transactions.mp4 (clip pixels); re-measure after recording. */
-const GRID_SIMULATED = { x0: 760, y0: 230, x1: 880, y1: 620 };
+const GRID_SIMULATED = { x0: 996, y0: 300, x1: 1090, y1: 856 };
 
 export const S8Trust: React.FC = () => {
   const frame = useCurrentFrame();
@@ -46,7 +46,7 @@ export const S8Trust: React.FC = () => {
             <BrowserFrame x={frameC.x} y={frameC.y} width={frameC.w} height={frameH} url="localhost:8000/#/transactions" delay={t(0.1)}>
               <Clip name={GRID} available />
             </BrowserFrame>
-            <Highlight box={GRID_SIMULATED} from={t(1.2)} to={gridEnd - 8} label="simulated" color={colors.warn} frame={frameC} labelSide="above" />
+            <Highlight box={GRID_SIMULATED} from={t(1.2)} to={gridEnd - 8} label="injected events marked simulated" color={colors.warn} frame={frameC} labelSide="above" />
           </div>
         </>
       ) : null}

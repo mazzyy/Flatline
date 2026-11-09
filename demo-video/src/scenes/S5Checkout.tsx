@@ -6,7 +6,7 @@ import { AgentNode } from "../components/AgentNode";
 import { Chip } from "../components/Chip";
 import { Highlight } from "../components/Highlight";
 import { LowerThird } from "../components/LowerThird";
-import { CamKey, ClipBeat, StageFrame, VIEW, VIEW_LIFT, cameraAt, cameraStyle, onStage } from "../components/Stage";
+import { CamKey, ClipBeat, StageFrame, VIEW, VIEW_LIFT, cameraAt, cameraStyle } from "../components/Stage";
 import { colors, fonts, layout, type } from "../theme";
 import { ease, uiSpring } from "../anim";
 import { useClips, useT } from "../SceneContext";
@@ -21,48 +21,39 @@ export const S5_BOXES = {
   chaosInject: { x0: 1021, y0: 323, x1: 1117, y1: 371 },
   chaosResult: { x0: 224, y0: 812, x1: 1376, y1: 850 },
   shopPrice: { x0: 350, y0: 236, x1: 470, y1: 272 },
-  shopBanner: { x0: 180, y0: 4, x1: 1420, y1: 40 },
+  shopPayPal: { x0: 352, y0: 276, x1: 728, y1: 330 },
+  shopBanner: { x0: 360, y0: 4, x1: 1240, y1: 40 },
   overviewTile: { x0: 224, y0: 421, x1: 596, y1: 549 },
-  overviewIncident: { x0: 224, y0: 645, x1: 1376, y1: 695 },
+  overviewIncident: { x0: 224, y0: 648, x1: 1376, y1: 700 },
   agentRows: { x0: 224, y0: 664, x1: 1376, y1: 826 },
   paypalRead: { x0: 255, y0: 745, x1: 720, y1: 773 },
-  rootCause: { x0: 224, y0: 233, x1: 1376, y1: 434 },
-  bannerCard: { x0: 224, y0: 316, x1: 1376, y1: 500 },
-  rollbackCard: { x0: 224, y0: 116, x1: 1376, y1: 299 },
-  approve: { x0: 244, y0: 234, x1: 356, y1: 278 },
-  executedCard: { x0: 224, y0: 492, x1: 1376, y1: 682 },
+  rootCause: { x0: 224, y0: 233, x1: 1376, y1: 592 },
+  bannerCard: { x0: 224, y0: 116, x1: 1376, y1: 300 },
+  rollbackCard: { x0: 224, y0: 316, x1: 1376, y1: 523 },
+  approve: { x0: 244, y0: 462, x1: 356, y1: 506 },
+  executedCard: { x0: 224, y0: 516, x1: 1376, y1: 729 },
 };
 
 /** Clip lengths in seconds (after the recorder trims page loading). */
 export const CLIP_SECONDS: Record<string, number> = {
   "01-chaos-bad-currency.mp4": 2.56,
-  "02-shop-failing.mp4": 3.28,
-  "03-incident-opens.mp4": 4.64,
-  "04-incident-detail.mp4": 16.08,
-  "05-approve.mp4": 11.12,
+  "02-shop-failing.mp4": 4.36,
+  "03-incident-opens.mp4": 4.68,
+  "04-incident-detail.mp4": 16.12,
+  "05-approve.mp4": 2.88,
 };
-/** In 05-approve the rollback shows as executed (and moves down the list) at 7.9 s. */
-const EXECUTED_AT = 8.2;
 
 // Beats in scene seconds (scene starts at 26 s in the film).
 const A = { from: 0, to: 5.0 }; // chaos panel
 const B = { from: 5.0, to: 11.6 }; // shop checkout in EUR, with the agents' banner
 const C = { from: 11.6, to: 16.0 }; // overview: incident open
 const D = { from: 16.0, to: 31.4 }; // incident: timeline, root cause, proposals
-const E1 = { from: 31.4, to: 33.1 }; // the Approve click
-const E2 = { from: 33.1, to: 34.6 }; // a few seconds later: the rollback executed
+const E = { from: 31.4, to: 34.6 }; // the Approve click; the rollback shows as executed a moment later
 const F = { from: 34.6, to: 45.0 }; // recovery
 
-// One resting view for every clip; the page scrolls on its own and highlights point at things.
-// The only camera move is a slow push onto the Approve button, the one click that matters.
-const APPROVE = onStage({ x: 300, y: 256 });
-const CAM: CamKey[] = [
-  VIEW(0),
-  VIEW(31.3),
-  { at: 32.5, s: 1.4, ...APPROVE },
-  { at: 33.05, s: 1.4, ...APPROVE },
-  VIEW(33.15), // cut back under the crossfade to the executed rollback
-];
+// One resting view for every clip: no zooming. The page scrolls on its own and
+// highlights point at whatever the narration names.
+const CAM: CamKey[] = [VIEW(0)];
 
 export const S5Checkout: React.FC = () => {
   const frame = useCurrentFrame();
@@ -108,23 +99,23 @@ export const S5Checkout: React.FC = () => {
           {inBeat(B) ? stage(B, "02-shop-failing.mp4", "localhost:3000/checkout · PayPal sandbox") : null}
           {inBeat(C) ? stage(C, "03-incident-opens.mp4", "localhost:8000/#/overview") : null}
           {inBeat(D) ? stage(D, "04-incident-detail.mp4", "localhost:8000/#/incident") : null}
-          {inBeat(E1) ? stage(E1, "05-approve.mp4", "localhost:8000/#/incident") : null}
-          {inBeat(E2) ? stage(E2, "05-approve.mp4", "localhost:8000/#/incident", EXECUTED_AT) : null}
+          {inBeat(E) ? stage(E, "05-approve.mp4", "localhost:8000/#/incident") : null}
 
           {/* What to look at, in step with the narration (scene seconds). */}
           {inBeat(A) ? H("chaosInject", 0.6, 2.3, "Inject: EUR on a USD shop", colors.warn, "right") : null}
           {inBeat(A) ? H("chaosResult", 2.6, 4.7, "6 synthetic events, labelled as injected") : null}
-          {inBeat(B) ? H("shopPrice", 6.3, 8.9, "EUR on a USD shop", colors.critical, "right") : null}
-          {inBeat(B) ? H("shopBanner", 9.0, 11.3, "banner written by the agents", colors.ok, "below") : null}
+          {inBeat(B) ? H("shopPrice", 6.0, 7.6, "EUR on a USD shop", colors.critical, "right") : null}
+          {inBeat(B) ? H("shopPayPal", 7.6, 9.1, "the real PayPal button, sandbox", colors.accent, "right") : null}
+          {inBeat(B) ? H("shopBanner", 9.1, 11.3, "banner written by the agents", colors.ok, "below") : null}
           {inBeat(C) ? H("overviewTile", 12.6, 14.2, "checkout failures · breach", colors.critical, "right") : null}
           {inBeat(C) ? H("overviewIncident", 14.2, 15.8, "money at risk per hour", colors.critical) : null}
           {inBeat(D) ? H("agentRows", 17.0, 18.8, "each step names its model and latency") : null}
           {inBeat(D) ? H("paypalRead", 18.8, 20.9, "PayPal read through MCP", colors.accent, "right") : null}
-          {inBeat(D) ? H("rootCause", 22.0, 26.8, "root cause, with cited evidence", colors.critical, "below") : null}
+          {inBeat(D) ? H("rootCause", 22.0, 26.8, "root cause, with cited evidence", colors.critical, "inside") : null}
           {inBeat(D) ? H("bannerCard", 27.6, 29.0, "banner · ran on its own", colors.ok, "inside") : null}
           {inBeat(D) ? H("rollbackCard", 29.0, 31.3, "rollback · waits for my approval", colors.warn, "inside") : null}
-          {inBeat(E1) ? H("approve", 31.5, 33.0, "one click", colors.warn, "right") : null}
-          {inBeat(E2) ? H("executedCard", 33.2, 34.5, "executed · seconds later", colors.ok, "inside") : null}
+          {inBeat(E) ? H("approve", 31.5, 32.45, "one click", colors.warn, "right") : null}
+          {inBeat(E) ? H("executedCard", 32.7, 34.5, "rollback executed", colors.ok, "inside") : null}
         </div>
       ) : null}
 
@@ -133,7 +124,7 @@ export const S5Checkout: React.FC = () => {
         {inBeat(A) ? <LowerThird title="Chaos panel" sub="judge controls · injected events are labelled" delay={t(A.from) + 4} top={110} left={150} backdrop /> : null}
       </div>
       <div style={{ opacity: label(B) }}>
-        {inBeat(B) ? <LowerThird title="Lumen Coffee Co. · checkout on the PayPal sandbox" sub="EUR on a USD shop · captures fail" delay={t(B.from) + 4} top={110} left={150} color={colors.critical} backdrop /> : null}
+        {inBeat(B) ? <LowerThird title="Lumen Coffee Co. · PayPal checkout, sandbox" sub="EUR on a USD shop · captures fail" delay={t(B.from) + 4} top={110} left={150} color={colors.critical} backdrop /> : null}
       </div>
       <div style={{ opacity: label(C) }}>
         {inBeat(C) ? <LowerThird title="Incident open" sub="detector · 5-min window vs baseline" delay={t(C.from) + 4} top={110} left={150} color={colors.critical} backdrop /> : null}
