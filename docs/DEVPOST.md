@@ -19,11 +19,15 @@ Flatline is on call for a merchant's PayPal integration. It watches checkout, re
 
 Every proposal then goes through a policy proxy written in plain Python, not a prompt. Small reversible fixes, like a warning banner on the shop or a payment reminder, run on their own. Anything that moves money or changes config waits for a human in the dashboard. Anything outside the catalog is refused, such as the bulk refund I slip in as a red-team probe in the demo. Only the executor behind the proxy can write to PayPal, and every detection, step, decision, approval and execution lands in an audit log.
 
-The demo runs three playbooks: a checkout failure spike caused by a bad currency config, a refund wave concentrated on one product, and failed subscription renewals on one plan.
+Then it finishes the job. Once the verifier has resolved an incident, a recovery planner reads the failed events and lists the customers who tried to pay and could not. One approval sends each of them a PayPal invoice for the order they tried to place, or retries each failed renewal. When PayPal reports a payment, a ledger moves that amount from asked back to recovered, and the dashboard shows lost, asked back and recovered side by side. The planner is plain code with no model in it, so no amount or customer can be invented.
+
+Money has limits in code as well as tiers: a cap per refund, a daily refund budget that is checked again at the moment of sending, and caps on how much one recovery may ask back. No refund runs on its own unless the merchant opts in.
+
+The demo runs three playbooks: a checkout failure spike caused by a bad currency config, a refund wave concentrated on one product, and failed subscription renewals on one plan. The video was cut before the recovery step was added; the README walks through it.
 
 ## What I built during the hackathon
 
-Flatline is a new codebase started in the submission period. From Warden it takes two design ideas: agents without write credentials, and a policy proxy in code. Everything payments specific is new: the PayPal sandbox gateway, webhook verification, the two scoped PayPal MCP sessions, the detector and playbooks, the agents and their prompts, the policy catalog and executor, the dashboard, the demo shop, the sandbox setup script, the tests and the demo video.
+Flatline is a new codebase started in the submission period. From Warden it takes two design ideas: agents without write credentials, and a policy proxy in code. Everything payments specific is new: the PayPal sandbox gateway, webhook verification, the two scoped PayPal MCP sessions, the detector and playbooks, the agents and their prompts, the policy catalog and executor, the recovery planner and money ledger, the benchmark, the dashboard, the demo shop, the sandbox setup script, the tests and the demo video.
 
 ## How I built it
 
@@ -31,12 +35,12 @@ The backend is Python 3.12 with FastAPI for ingest, webhooks, the dashboard API 
 
 ## How it uses PayPal
 
-1. **Sandbox REST APIs:** OAuth client credentials, Orders create and capture in the shop, captured payment refunds, Subscriptions (show, suspend, activate, capture outstanding balance), Invoicing reminders, Catalog Products and Billing Plans (the setup script creates the Coffee Club plan), and Transaction Search and plan details as evidence for the Diagnostician.
-2. **The official PayPal MCP server (`@paypal/mcp` 1.8.1), run as two separate sessions.** The read session only loads read tools and serves the agents. The write session only loads write tools and is used by the executor alone, so least privilege is enforced by the MCP server itself, not just by our code. Each agent step records whether a PayPal read went through MCP or fell back to REST.
-3. **Webhooks** with signature verification through `verify-webhook-signature`. Detection runs on webhooks and shop telemetry, because Transaction Search can lag by up to three hours.
+1. **Sandbox REST APIs:** OAuth client credentials, Orders create and capture in the shop, captured payment refunds, Subscriptions (show, suspend, activate, capture outstanding balance), Invoicing (reminders, and create and send for recovery), Catalog Products and Billing Plans (the setup script creates the Coffee Club plan), and Transaction Search and plan details as evidence for the Diagnostician.
+2. **The official PayPal MCP server (`@paypal/mcp` 1.8.1), run as two separate sessions.** The read session only loads read tools and serves the agents. The write session only loads write tools (refund, invoice create, invoice send, invoice reminder) and is used by the executor alone, so least privilege is enforced by the MCP server itself, not just by our code. Each agent step records whether a PayPal read went through MCP or fell back to REST.
+3. **Webhooks** with signature verification through `verify-webhook-signature`. Detection runs on webhooks and shop telemetry, because Transaction Search can lag by up to three hours. `INVOICING.INVOICE.PAID` and `PAYMENT.SALE.COMPLETED` confirm a recovery.
 4. **JS SDK v6** buttons on the demo shop.
 5. **Sandbox only.** `PAYPAL_ENVIRONMENT` must be `MOCK` or `SANDBOX`; any other value refuses to start, and there is no live host string in the code.
-6. **Honest about injected data.** The Chaos panel injects events with made up PayPal ids. For those incidents the executor records PayPal writes as simulated instead of sending a request that can only fail; shop config changes, reads, OAuth and Transaction Search are real sandbox calls.
+6. **Honest about injected data.** The Chaos panel injects events with made up PayPal ids. For those incidents the executor records PayPal writes as simulated instead of sending a request that can only fail; shop config changes, reads, OAuth and Transaction Search are real sandbox calls. Recovery follows the same rule per customer, and because sandbox buyers do not pay invoices on their own, a Chaos button plays the paying customers and the ledger marks those payments as simulated.
 
 ## How it uses AI
 
@@ -45,6 +49,7 @@ The backend is Python 3.12 with FastAPI for ingest, webhooks, the dashboard API 
 3. If a model call fails, for example on a rate limit, the next model in `MODEL_FALLBACKS` is tried; if all fail, the agent keeps the playbook's deterministic answer and the timeline labels that step as a fallback. A step is always credited to the model that actually answered.
 4. The model never acts alone. Its proposals pass the policy proxy, and the Verifier's resolved flag comes from the metric check; the model only writes the explanation.
 5. `LLM_MODE=mock` runs the identical flow with deterministic stand ins, so anyone can run the project with no keys.
+6. Where the AI is left out on purpose: recovery. Who is asked to pay, and how much, comes from code over the event store. The proxy refuses a recovery action that an agent proposes.
 
 ## Challenges I ran into
 
@@ -58,7 +63,9 @@ The backend is Python 3.12 with FastAPI for ingest, webhooks, the dashboard API 
 1. The whole loop runs end to end against the PayPal sandbox: detect, diagnose, gate, execute, verify.
 2. The write boundary is enforced three ways: agents get a read only gateway whose write methods raise, an import boundary test keeps agent code away from the writer, and the PayPal MCP read session does not even load write tools.
 3. The refund scenario shows the safety model on screen: a red-team probe slips a forbidden bulk refund in next to the agent's proposals, and the proxy refuses it.
-4. More than 80 automated tests run in CI with no keys.
+4. More than 120 automated tests run in CI with no keys.
+5. It does not stop at "resolved". In the checkout scenario six customers lost a $108 sale between them; one approval sends six invoices, and the ledger shows what came back.
+6. A benchmark (`make bench`) scores seven scripted scenarios on detection, diagnosis, gating, safety and recovery, with two quiet day controls and seven policy probes. 34 of 34 checks pass with the stand in models, and `make bench-live` scores real models on the same scenarios.
 
 ## What I learned
 
@@ -69,6 +76,7 @@ An agent that touches money is mostly a permissions problem, not a prompting pro
 1. Turn on the webhook gap playbook, which reconciles transactions against webhooks after the Transaction Search lag.
 2. Approval notifications to Slack or email.
 3. More playbooks, such as dispute spikes and payout holds.
+4. Duplicate charges: detect them and propose the refund, inside the per refund limit and the daily budget.
 
 ## Try it
 
@@ -82,7 +90,9 @@ An agent that touches money is mostly a permissions problem, not a prompting pro
 2. Open http://localhost:8000 and log in with passcode `demo-judge` and inject token `change-me` (the token unlocks the Chaos panel). The demo shop is at http://localhost:3000.
 3. In Chaos, click **Ship bad currency config**. The detector opens an incident within about 30 seconds. Open it to see the root cause, the agent timeline and the proposals, then approve the rollback.
 4. **Inject refund wave** shows the refused bulk refund. **Inject subscription renewal failures** shows the Diagnostician reading the plan from PayPal and an automatic payment reminder; if the model also proposes capturing the balance, that waits for approval. **Reset all chaos** puts everything back.
-5. To run it against the PayPal sandbox with live models, follow "Connect the PayPal sandbox" in the README (a sandbox REST app and a free Gemini API key, or a local Qwen through Ollama), then run `python scripts/live_check.py`. It plays all three scenarios and prints each agent step with its model, latency and whether PayPal was read through the MCP server. This is how the demo video was recorded. No real money moves anywhere.
+5. For the recovery: after approving the rollback in step 3, wait about a minute. A recovery proposal appears on the same incident with the six customers and $108. Approve it, press **Customers pay their recovery requests** in Chaos, and the Overview shows $72 recovered.
+6. `make bench` runs the scored benchmark in a few seconds, with no keys (needs the Python setup from the README).
+7. To run it against the PayPal sandbox with live models, follow "Connect the PayPal sandbox" in the README (a sandbox REST app and a free Gemini API key, or a local Qwen through Ollama), then run `python scripts/live_check.py`. It plays all three scenarios and prints each agent step with its model, latency and whether PayPal was read through the MCP server. This is how the demo video was recorded. No real money moves anywhere.
 
 ## Built with
 

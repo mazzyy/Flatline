@@ -4,16 +4,30 @@ import { get, post } from "../api";
 type Evidence = { claim: string; source: string; ref: string };
 type ToolCall = { tool: string; via?: string; result?: string; mcp_error?: string };
 type Step = { id: string; node: string; model: string; latency_ms: number; input: unknown; output: unknown; tool_calls: ToolCall[] | null };
-type Execution = { id: string; success: boolean; error?: string; response: unknown };
+type Execution = { id: string; success: boolean; error?: string; response: { simulated?: boolean } | null };
+type RecoveryItem = { event_id: string; order_id?: string; subscription_id?: string; buyer_ref?: string | null; amount: string; currency: string };
 type Proposal = {
   id: string;
   action: string;
   tier: string;
   status: string;
   rationale: string;
-  params: unknown;
+  params: { items?: RecoveryItem[]; total?: string; currency?: string } | null;
   executions?: Execution[];
 };
+type Money = {
+  impact: string;
+  requested: string;
+  recovered: string;
+  outstanding: string;
+  currency: string;
+  simulated: boolean;
+  counts: { impact: number; requested: number; recovered: number };
+};
+
+function cash(value: string | undefined, currency = "USD"): string {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(Number(value || 0));
+}
 type Detail = {
   id: string;
   title: string;
@@ -24,6 +38,7 @@ type Detail = {
   notes?: string;
   steps?: Step[];
   proposals?: Proposal[];
+  money?: Money;
 };
 
 export default function IncidentPage({ id }: { id: string }) {
@@ -75,6 +90,25 @@ export default function IncidentPage({ id }: { id: string }) {
         ))}
         {row.notes && <pre>{row.notes}</pre>}
       </div>
+      {row.money && row.money.counts.impact > 0 && (
+        <div className="card money-line">
+          <div>
+            <div className="label">Lost</div>
+            <strong>{cash(row.money.impact, row.money.currency)}</strong>
+            <span className="muted"> · {row.money.counts.impact} sales</span>
+          </div>
+          <div>
+            <div className="label">Asked back</div>
+            <strong>{cash(row.money.requested, row.money.currency)}</strong>
+            <span className="muted"> · {row.money.counts.requested} customers</span>
+          </div>
+          <div>
+            <div className="label">Recovered</div>
+            <strong className={Number(row.money.recovered) ? "ok-text" : ""}>{cash(row.money.recovered, row.money.currency)}</strong>
+            {row.money.simulated && <span className="badge simulated" style={{ marginLeft: "0.4rem" }}>simulated</span>}
+          </div>
+        </div>
+      )}
       <h2>Proposals</h2>
       {!(row.proposals || []).length && <p className="muted">No proposals yet. The agents are still working.</p>}
       {(row.proposals || []).map((p) => (
@@ -84,11 +118,32 @@ export default function IncidentPage({ id }: { id: string }) {
             <span className={`badge ${p.tier}`}>{p.tier}</span>
             <span className={`badge ${p.status}`}>{p.status}</span>
             {p.rationale.startsWith("Red-team probe") && <span className="badge info">red-team probe</span>}
+            {p.action.startsWith("recovery.") && <span className="badge info">planned by code, no model</span>}
           </div>
           <p style={{ color: "var(--pp-ink-2)" }}>{p.rationale}</p>
+          {p.action.startsWith("recovery.") && (p.params?.items || []).length > 0 && (
+            <table className="items">
+              <thead>
+                <tr><th>{p.action.includes("renewals") ? "Subscription" : "Order"}</th><th>Customer</th><th>Amount</th></tr>
+              </thead>
+              <tbody>
+                {(p.params?.items || []).map((i) => (
+                  <tr key={i.event_id}>
+                    <td className="mono">{i.order_id || i.subscription_id}</td>
+                    <td className="mono">{i.buyer_ref || "from the PayPal order"}</td>
+                    <td>{cash(i.amount, i.currency)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
           {p.status === "pending" && (
             <div className="proposal-actions">
-              <button onClick={() => void decide(p.id, "approve")}>Approve</button>
+              <button onClick={() => void decide(p.id, "approve")}>
+                {p.action.startsWith("recovery.")
+                  ? `Approve: ask ${(p.params?.items || []).length} customers for ${cash(p.params?.total, p.params?.currency)}`
+                  : "Approve"}
+              </button>
               <button className="danger" onClick={() => void decide(p.id, "reject")}>Reject</button>
             </div>
           )}
@@ -96,6 +151,7 @@ export default function IncidentPage({ id }: { id: string }) {
             <details key={e.id}>
               <summary>
                 Execution <span className={`badge ${e.success ? "executed" : "failed"}`}>{e.success ? "success" : "failed"}</span>
+                {e.response?.simulated && <span className="badge simulated" style={{ marginLeft: "0.4rem" }}>simulated, nothing sent to PayPal</span>}
                 {e.error && <span className="muted"> · {e.error}</span>}
               </summary>
               <pre>{JSON.stringify(e.response, null, 2)}</pre>

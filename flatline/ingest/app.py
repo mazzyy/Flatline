@@ -169,6 +169,29 @@ def create_app() -> FastAPI:
         incidents = _run_scan(db)
         return {"ids": stored, "incidents": incidents}
 
+    @app.post(
+        "/api/synthetic/recovery-payments",
+        dependencies=[Depends(require_passcode), Depends(require_inject_token)],
+    )
+    def synthetic_recovery_payments(db: Session = Depends(session_dep)) -> dict[str, Any]:
+        """Customers pay their recovery requests: inject the events PayPal would send.
+
+        Sandbox buyers do not pay invoices on their own, so the demo plays their
+        part. The events are stored as synthetic and the ledger lines they
+        confirm are marked simulated.
+        """
+        from flatline.ingest.faults import recovery_payments
+        from flatline.recovery import ledger
+
+        stored = _ingest_payloads(db, recovery_payments(ledger.open_requests(db)))
+        audit(
+            db,
+            actor="human",
+            action="chaos.inject",
+            details={"inject": "recovery_payments", "synthetic_events": len(stored)},
+        )
+        return {"injected": stored, "money": ledger.summary(db)}
+
     @app.get("/api/shop/config")
     def shop_config(db: Session = Depends(session_dep)) -> dict[str, Any]:
         row = _active_config(db)
@@ -196,7 +219,18 @@ def create_app() -> FastAPI:
         db.refresh(row, attribute_names=["steps", "proposals"])
         for proposal in row.proposals:
             db.refresh(proposal, attribute_names=["executions"])
-        return incident_out(row, extra=True)
+        from flatline.recovery import ledger
+
+        body = incident_out(row, extra=True)
+        body["money"] = ledger.summary(db, row.id)
+        return body
+
+    @app.get("/api/money")
+    def money_summary(db: Session = Depends(session_dep)) -> dict[str, Any]:
+        """What incidents cost, what was asked back and what came back, over everything."""
+        from flatline.recovery import ledger
+
+        return ledger.summary(db)
 
     @app.post("/api/proposals/{proposal_id}/approve", dependencies=[Depends(require_passcode)])
     def approve_proposal(proposal_id: UUID, db: Session = Depends(session_dep)) -> dict[str, Any]:
@@ -317,8 +351,9 @@ def create_app() -> FastAPI:
     @app.get("/api/policy/catalog")
     def policy_catalog() -> dict[str, Any]:
         from flatline.policy.catalog import catalog_public
+        from flatline.policy.proxy import limits_public
 
-        return {"items": catalog_public()}
+        return {"items": catalog_public(), "limits": limits_public()}
 
     dashboard_dist = Path(__file__).resolve().parents[2] / "dashboard" / "dist"
     if dashboard_dist.is_dir():
@@ -400,6 +435,10 @@ def _store_normalized(db: Session, norm: dict[str, Any], *, emit: bool) -> Event
     if emit:
         HUB.publish("event.ingested", event_out(row))
     row._duplicate = False  # type: ignore[attr-defined]
+    # A paid invoice or a completed subscription payment may settle a recovery request.
+    from flatline.recovery import ledger
+
+    ledger.confirm_from_event(db, row)
     return row
 
 
@@ -438,7 +477,9 @@ def _decide_proposal(db: Session, proposal_id: UUID, *, approved: bool) -> dict[
             from flatline.loop import verify_incident
 
             incident = db.get(Incident, row.incident_id)
-            if incident is not None:
+            # A recovery proposal is approved after the incident is resolved; the fix
+            # has been verified already, so there is nothing to check again.
+            if incident is not None and incident.status != "resolved":
                 pending = list(
                     db.scalars(
                         select(Proposal).where(

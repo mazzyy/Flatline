@@ -15,6 +15,8 @@ class ActionSpec:
     description: str
     notes: str = ""
     params: str = ""  # what the executor reads, shown to the Remediator
+    # Planned by code from the event store. The proxy refuses it from an agent.
+    planner_only: bool = False
 
 
 ACTIONS: dict[str, ActionSpec] = {
@@ -89,7 +91,27 @@ ACTIONS: dict[str, ActionSpec] = {
         "refund.single",
         "approval",
         "Refund one capture if amount ≤ REFUND_APPROVAL_MAX",
+        notes="Runs on its own only at or under AUTO_REFUND_MAX (off by default). "
+        "Counts against DAILY_REFUND_BUDGET.",
         params='{"capture_id": str, "amount": str, "currency": str}',
+    ),
+    "recovery.payment_links.send": ActionSpec(
+        "recovery.payment_links.send",
+        "approval",
+        "Send a PayPal invoice to each customer whose checkout failed during the incident",
+        notes="Planned by code after the incident is resolved, never by a model. "
+        "Capped by RECOVERY_MAX_LINKS and RECOVERY_MAX_TOTAL.",
+        params='{"items": [{"event_id": str, "order_id": str, "amount": str}]}',
+        planner_only=True,
+    ),
+    "recovery.renewals.retry": ActionSpec(
+        "recovery.renewals.retry",
+        "approval",
+        "Retry the outstanding balance of each subscriber whose renewal failed",
+        notes="Planned by code after the incident is resolved, never by a model. "
+        "Capped by RECOVERY_MAX_LINKS and RECOVERY_MAX_TOTAL.",
+        params='{"items": [{"event_id": str, "subscription_id": str, "amount": str}]}',
+        planner_only=True,
     ),
     "events.replay": ActionSpec(
         "events.replay", "approval", "Replay missing webhook events", params='{"event_ids": [str]}'
@@ -117,6 +139,12 @@ def get(key: str) -> ActionSpec | None:
 
 def catalog_public() -> list[dict[str, Any]]:
     return [
-        {"key": a.key, "tier": a.tier, "description": a.description, "notes": a.notes}
+        {
+            "key": a.key,
+            "tier": a.tier,
+            "description": a.description,
+            "notes": a.notes,
+            "planner_only": a.planner_only,
+        }
         for a in ACTIONS.values()
     ]

@@ -19,7 +19,21 @@ type Incident = {
   revenue_at_risk_per_hour: number;
 };
 
+type Money = {
+  impact: string;
+  requested: string;
+  recovered: string;
+  outstanding: string;
+  currency: string;
+  simulated: boolean;
+  counts: { impact: number; requested: number; recovered: number };
+};
+
 const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+
+function cash(value: string | undefined, currency = "USD"): string {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(Number(value || 0));
+}
 
 function pretty(name: string): string {
   return name.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
@@ -33,10 +47,12 @@ function when(iso: string): string {
 export default function Overview() {
   const [health, setHealth] = useState<Health | null>(null);
   const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [money, setMoney] = useState<Money | null>(null);
 
   const refresh = useCallback(async () => {
     try {
       setHealth(await get<Health>("/api/metrics/health"));
+      setMoney(await get<Money>("/api/money"));
       const body = await get<{ items: Incident[] }>("/api/incidents");
       setIncidents(body.items);
     } catch {
@@ -84,6 +100,30 @@ export default function Overview() {
           <div className="label">Captures</div>
           <div className="score">{health?.captures ?? 0}</div>
           <div className="sub">{health?.failures ?? 0} failed · {failRate}% failure rate</div>
+        </div>
+      </div>
+
+      <h2>Recovery</h2>
+      <div className="row">
+        <div className="card tile">
+          <div className="label">Lost to incidents</div>
+          <div className={`score ${Number(money?.impact) ? "bad" : ""}`}>{cash(money?.impact, money?.currency)}</div>
+          <div className="sub">{money?.counts.impact ?? 0} sales failed or were refunded</div>
+        </div>
+        <div className="card tile">
+          <div className="label">Asked back</div>
+          <div className="score">{cash(money?.requested, money?.currency)}</div>
+          <div className="sub">
+            {money?.counts.requested ?? 0} customers, each batch approved by a person
+          </div>
+        </div>
+        <div className="card tile">
+          <div className="label">Recovered</div>
+          <div className={`score ${Number(money?.recovered) ? "good" : ""}`}>{cash(money?.recovered, money?.currency)}</div>
+          <div className="sub">
+            {cash(money?.outstanding, money?.currency)} still open
+            {money?.simulated && <span className="badge simulated" style={{ marginLeft: "0.4rem" }}>simulated</span>}
+          </div>
         </div>
       </div>
 

@@ -2,6 +2,53 @@
 
 Unspecified choices and any difference from the spec (`docs/spec.md`). Newest first.
 
+## D-024 — The benchmark always runs on the mock gateway
+
+`flatline/bench.py` scores seven scripted scenarios, two of them controls, plus
+seven policy probes. It sets `PAYPAL_ENVIRONMENT=MOCK` itself, so a run can
+never touch a PayPal account whatever `.env` says, and a live run costs model
+calls only. With the stand in models the diagnosis column proves the plumbing,
+not a model; the README and `docs/benchmark.md` say so next to the table. The
+stand in gained a branch for PayPal server errors, which it used to report as
+card declines.
+
+## D-023 — Money limits in the proxy; no refund is automatic by default
+
+Tiers say who decides; they did not say how much. The proxy now also enforces
+`DAILY_REFUND_BUDGET` (the sum of refunds in the last 24 hours, read from the
+money ledger and passed in, so the proxy stays free of I/O) and
+`AUTO_REFUND_MAX`. The second one defaults to 0: the README and the video both
+say that anything that moves money waits for a person, and that stays true
+unless a merchant opts in. The executor checks the budget again before a
+refund is sent, because several refunds can wait for approval at once, each
+inside the budget on its own.
+
+## D-022 — Recovery is planned by code, and the invoice writes are back
+
+After an incident is resolved, `flatline/recovery/planner.py` lists the
+customers whose checkout or renewal failed and files one proposal: PayPal
+invoices for failed checkouts, a retry of the outstanding balance for failed
+renewals. No model is involved. An invoice with an invented amount is the one
+error this product cannot make, so the recovery actions are `planner_only` in
+the catalog (the proxy refuses them from an agent) and the executor reads each
+failed event again and bills the event's amount, not the proposal's.
+
+D-019 removed the unused `create_invoice` and `send_invoice` writes. Recovery
+uses them, so the write MCP session loads four tools again (`invoices.create`,
+`invoices.send`, `invoices.sendReminder`, `payments.createRefund`). They follow
+the D-016 rule: REST only when MCP provably sent nothing.
+
+The incident stays `resolved` while a recovery proposal waits; approving it
+does not run the verifier again. Payments are confirmed by
+`INVOICING.INVOICE.PAID` and `PAYMENT.SALE.COMPLETED`. Sandbox buyers do not
+pay invoices on their own, so the Chaos panel can inject those events for the
+open requests; the ledger marks what they confirm as simulated. As in D-018,
+customers that come from injected events are recorded as simulated in the
+sandbox and nothing is sent for them.
+
+Left out on purpose: refunding duplicate charges. It needs its own detector
+and playbook, and it would be the first refund the agents initiate.
+
 ## D-021 — Each incident's agents see only that incident's evidence
 
 Once the models stopped seeing the prepared answer, the live check showed the

@@ -77,6 +77,28 @@ def diagnose(
                 ],
                 hypotheses_rejected=["buyer-side card declines as the primary cause"],
             )
+        if codes.get("INTERNAL_SERVER_ERROR", 0) > len(events) / 2:
+            return DiagnosisOutput(
+                root_cause=(
+                    "PayPal is answering captures with INTERNAL_SERVER_ERROR. The shop "
+                    "config has not changed and buyers are not being declined."
+                ),
+                confidence=0.85,
+                evidence=[
+                    EvidenceClaim(
+                        claim=f"error codes {codes}", source="event", ref="error_code_breakdown"
+                    ),
+                    EvidenceClaim(
+                        claim=f"sample failing order {sample.get('resource_id') or 'n/a'}",
+                        source="event",
+                        ref=str(sample.get("id") or sample.get("resource_id") or "event"),
+                    ),
+                ],
+                hypotheses_rejected=[
+                    "a bad shop config deploy",
+                    "buyer-side card declines",
+                ],
+            )
         buyers = {e.get("buyer_ref") for e in events if e.get("buyer_ref")}
         return DiagnosisOutput(
             root_cause=(
@@ -167,6 +189,26 @@ def remediate(incident: dict[str, Any], diagnosis: DiagnosisOutput) -> Remediato
                         params={"version": None},
                         rationale="Restore the last good currency config.",
                         expected_effect="captures succeed again",
+                    ),
+                ]
+            )
+        if "internal_server_error" in diagnosis.root_cause.lower():
+            return RemediatorOutput(
+                proposals=[
+                    ProposalDraft(
+                        action="notify.alert",
+                        params={"message": diagnosis.root_cause},
+                        rationale="PayPal side errors; the merchant should know at once.",
+                        expected_effect="merchant is aware",
+                    ),
+                    ProposalDraft(
+                        action="shop.banner.set",
+                        params={
+                            "text": "Payments are failing right now. You have not been "
+                            "charged. Please try again in a few minutes."
+                        },
+                        rationale="Tell shoppers; there is no healthy config to roll back to.",
+                        expected_effect="shoppers see a status banner",
                     ),
                 ]
             )

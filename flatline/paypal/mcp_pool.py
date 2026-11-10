@@ -41,6 +41,9 @@ READ_TOOL_FLAGS = {
 WRITE_TOOL_FLAGS = {
     "create_refund": "payments.createRefund",
     "send_invoice_reminder": "invoices.sendReminder",
+    # Recovery: a payment link is a PayPal invoice, created and then sent.
+    "create_invoice": "invoices.create",
+    "send_invoice": "invoices.send",
 }
 READ_TOOLS = tuple(READ_TOOL_FLAGS)
 WRITE_TOOLS = tuple(WRITE_TOOL_FLAGS)

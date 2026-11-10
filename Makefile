@@ -1,4 +1,4 @@
-.PHONY: help install up down test lint fmt demo-test sandbox-smoke secret-scan check
+.PHONY: help install up down test lint fmt demo-test bench bench-live sandbox-smoke secret-scan check
 
 help:
 	@echo "  make install         create .venv and install Python deps"
@@ -6,6 +6,8 @@ help:
 	@echo "  make down            stop the stack"
 	@echo "  make test            unit + integration tests (no network, no keys)"
 	@echo "  make demo-test       e2e demo scenarios (in-process, mock)"
+	@echo "  make bench           scored benchmark of 7 scenarios (in-process, mock, no keys)"
+	@echo "  make bench-live      the same benchmark with the models from .env (PayPal stays mock)"
 	@echo "  make lint            ruff + mypy + dashboard tsc/eslint when present"
 	@echo "  make sandbox-smoke   optional live sandbox checks (skipped without keys)"
 
@@ -49,6 +51,12 @@ fmt:
 demo-test:
 	PAYPAL_ENVIRONMENT=MOCK LLM_MODE=mock \
 		python -m pytest -q tests/e2e/test_demo_scenarios.py
+
+bench:
+	python -m flatline.bench
+
+bench-live:
+	python -m flatline.bench --live
 
 sandbox-smoke:
 	PAYPAL_ENVIRONMENT=SANDBOX \

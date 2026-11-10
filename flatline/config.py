@@ -62,7 +62,16 @@ class Settings(BaseSettings):
     )
 
     refund_approval_max: float = Field(default=50.00, alias="REFUND_APPROVAL_MAX")
+    # A refund at or under this runs without a click. 0 (the default): every refund waits.
+    auto_refund_max: float = Field(default=0.00, alias="AUTO_REFUND_MAX")
+    # The most the agents may refund in any 24 hours, approved or automatic.
+    daily_refund_budget: float = Field(default=200.00, alias="DAILY_REFUND_BUDGET")
     auto_actions_enabled: bool = Field(default=True, alias="AUTO_ACTIONS_ENABLED")
+
+    # Recovery: after an incident is resolved, ask the lost sales back (always with approval).
+    recovery_enabled: bool = Field(default=True, alias="RECOVERY_ENABLED")
+    recovery_max_links: int = Field(default=25, alias="RECOVERY_MAX_LINKS")
+    recovery_max_total: float = Field(default=1000.00, alias="RECOVERY_MAX_TOTAL")
 
     dashboard_passcode: str = Field(default="demo-judge", alias="DASHBOARD_PASSCODE")
     inject_token: str = Field(default="change-me", alias="INJECT_TOKEN")

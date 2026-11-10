@@ -130,6 +130,29 @@ class AuditLog(IdMixin, Base):
     details: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
 
 
+class LedgerEntry(IdMixin, Base):
+    """One line of an incident's money: what it cost, what was asked back, what came back.
+
+    kind is one of: impact (sales lost or refunded while the incident ran),
+    requested (a payment link sent or a renewal retried), recovered (PayPal confirmed
+    the payment), refunded (a refund the executor sent).
+    """
+
+    __tablename__ = "money_ledger"
+
+    incident_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("incidents.id"))
+    proposal_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("proposals.id"))
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    currency: Mapped[str] = mapped_column(String(8), default="USD")
+    # Invoice id, subscription id or capture id.
+    ref: Mapped[str | None] = mapped_column(String(120))
+    # Buyer or subscriber reference. Never an email address.
+    counterparty: Mapped[str | None] = mapped_column(String(80))
+    simulated: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    details: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+
+
 class AgentJob(IdMixin, Base):
     """Postgres-backed queue so the agents worker can pick up incidents."""
 

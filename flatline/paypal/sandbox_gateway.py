@@ -220,3 +220,65 @@ class SandboxGateway:
             return await self.pool.call_write("send_invoice_reminder", {"invoice_id": invoice_id})
         except (McpUnavailable, McpRejected):
             return await self._rest("POST", f"/v2/invoicing/invoices/{invoice_id}/remind")
+
+    async def create_invoice(
+        self,
+        *,
+        recipient_email: str | None,
+        amount: str,
+        currency: str,
+        item_name: str,
+        note: str = "",
+        reference: str = "",
+    ) -> dict[str, Any]:
+        """Create a draft invoice in the sandbox. The answer always carries `id`."""
+        if not recipient_email:
+            raise ValueError("an invoice needs a recipient email")
+        recipients = [{"billing_info": {"email_address": recipient_email}}]
+        items = [
+            {
+                "name": item_name[:200],
+                "quantity": "1",
+                "unit_amount": {"currency_code": currency, "value": amount},
+            }
+        ]
+        detail = {"currency_code": currency, "note": note, "reference": reference}
+        try:
+            await self.pool.ensure()
+            # @paypal/mcp takes the invoice detail as flat fields and nests it itself.
+            data = await self.pool.call_write(
+                "create_invoice", {**detail, "primary_recipients": recipients, "items": items}
+            )
+        except (McpUnavailable, McpRejected):
+            data = await self._rest(
+                "POST",
+                "/v2/invoicing/invoices",
+                json={"detail": detail, "primary_recipients": recipients, "items": items},
+            )
+        body = data if isinstance(data, dict) else {}
+        invoice_id = _invoice_id(body)
+        if not invoice_id:
+            raise RuntimeError(f"PayPal did not return an invoice id: {str(body)[:200]}")
+        return {**body, "id": invoice_id}
+
+    async def send_invoice(self, invoice_id: str) -> dict[str, Any]:
+        try:
+            await self.pool.ensure()
+            data = await self.pool.call_write(
+                "send_invoice", {"invoice_id": invoice_id, "send_to_recipient": True}
+            )
+        except (McpUnavailable, McpRejected):
+            data = await self._rest(
+                "POST",
+                f"/v2/invoicing/invoices/{invoice_id}/send",
+                json={"send_to_recipient": True},
+            )
+        return data if isinstance(data, dict) else {"result": data}
+
+
+def _invoice_id(body: dict[str, Any]) -> str:
+    """PayPal answers a create with the invoice, or with only a link to it."""
+    if body.get("id"):
+        return str(body["id"])
+    href = str(body.get("href") or "")
+    return href.rstrip("/").rsplit("/", 1)[-1] if "/invoices/" in href else ""

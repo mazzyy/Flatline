@@ -1,4 +1,5 @@
-"""Incident loop: agents propose, proxy decides, executor writes, verifier checks.
+"""Incident loop: agents propose, proxy decides, executor writes, verifier checks,
+and once the incident is resolved the recovery planner asks the lost sales back.
 
 Lives outside flatline/agents so the import-boundary test stays meaningful.
 """
@@ -16,12 +17,13 @@ from flatline.agents.schemas import ProposalDraft
 from flatline.agents.workflow import run_agents
 from flatline.config import settings
 from flatline.db.base import utcnow
-from flatline.db.models import AgentJob, Event, Incident, Proposal, audit
+from flatline.db.models import AgentJob, AgentStep, Event, Incident, Proposal, audit
 from flatline.detector.rules import event_matches_metric
 from flatline.ingest.sse import HUB
 from flatline.playbooks.loader import load_playbooks
 from flatline.policy.executor import execute_proposal
-from flatline.policy.proxy import decide, rate_limit_auto, rate_limit_pending
+from flatline.policy.proxy import AGENT, PLANNER, decide, rate_limit_auto, rate_limit_pending
+from flatline.recovery import ledger, planner
 
 log = logging.getLogger("flatline.loop")
 
@@ -49,25 +51,57 @@ async def process_incident(db: Session, incident: Incident) -> Incident:
     probe = red_team_probe(incident)
     if probe is not None:
         drafts.append(probe)
+    file_proposals(db, incident, drafts, source=AGENT)
+    db.flush()
+    pending = list(
+        db.scalars(
+            select(Proposal).where(
+                Proposal.incident_id == incident.id, Proposal.status == "pending"
+            )
+        ).all()
+    )
+    if not pending:
+        await verify_incident(db, incident)
+    return incident
+
+
+def file_proposals(
+    db: Session, incident: Incident, drafts: list[ProposalDraft], *, source: str
+) -> list[Proposal]:
+    """Put each draft through the policy proxy, store it, and run what may run on its own.
+
+    Agent drafts move the incident along (awaiting approval, escalated). The
+    recovery planner files its drafts after the incident is resolved, so those
+    leave the incident's status alone.
+    """
+    from_agent = source == AGENT
+    filed: list[Proposal] = []
     auto_done = 0
     pending_by_action: dict[str, int] = {}
     for draft in drafts:
-        decision = decide(draft.action, draft.params)
+        decision = decide(
+            draft.action,
+            draft.params,
+            refunded_today=ledger.refunded_last_24h(db),
+            source=source,
+        )
         status = "pending"
         if decision.tier == "forbidden":
             status = "refused"
-            incident.status = "escalated"
+            who = "Agent recommendation" if from_agent else "Recovery plan"
+            if from_agent:
+                incident.status = "escalated"
             note = (
-                (incident.notes or "")
-                + f"\nRefused {draft.action}: {decision.reason}. Agent recommendation: {draft.rationale}"
-            )
+                incident.notes or ""
+            ) + f"\nRefused {draft.action}: {decision.reason}. {who}: {draft.rationale}"
             incident.notes = note.strip()
         elif decision.tier == "approval":
             if not rate_limit_pending(pending_by_action.get(draft.action, 0)):
                 status = "refused"
             else:
                 pending_by_action[draft.action] = pending_by_action.get(draft.action, 0) + 1
-                incident.status = "awaiting_approval"
+                if from_agent:
+                    incident.status = "awaiting_approval"
         else:
             if not rate_limit_auto(auto_done):
                 status = "refused"
@@ -92,7 +126,7 @@ async def process_incident(db: Session, incident: Incident) -> Incident:
             action=f"decide.{decision.tier}",
             incident_id=incident.id,
             proposal_id=proposal.id,
-            details={"reason": decision.reason},
+            details={"reason": decision.reason, "source": source},
         )
         HUB.publish(
             "proposal.created",
@@ -100,17 +134,70 @@ async def process_incident(db: Session, incident: Incident) -> Incident:
         )
         if status == "approved":
             execute_proposal(db, proposal)
-    db.flush()
-    pending = list(
-        db.scalars(
-            select(Proposal).where(
-                Proposal.incident_id == incident.id, Proposal.status == "pending"
-            )
-        ).all()
+        filed.append(proposal)
+    return filed
+
+
+def settle_incident(db: Session, incident: Incident) -> Proposal | None:
+    """Once an incident is resolved: write down what it cost and ask the lost sales back.
+
+    No model takes part. The planner reads the failed events, the ledger gets
+    one impact line, and what is worth recovering becomes one proposal that
+    goes through the same policy proxy as everything else. Returns that
+    proposal, or None when there is nothing to ask back.
+    """
+    playbook = load_playbooks().get(incident.playbook)
+    found = planner.plan(db, incident, playbook)
+    if found.affected == 0:
+        return None
+    started = utcnow()
+    ledger.record(
+        db,
+        kind=ledger.IMPACT,
+        amount=found.impact,
+        currency=found.currency,
+        incident_id=incident.id,
+        details={"count": found.affected, "estimated": found.estimated},
     )
-    if not pending:
-        await verify_incident(db, incident)
-    return incident
+    summary = {
+        "affected": found.affected,
+        "impact": f"{found.impact} {found.currency}",
+        "recoverable": f"{found.total} {found.currency}",
+        "to_contact": len(found.items),
+        "left_alone": found.skipped,
+        "action": found.action,
+    }
+    db.add(
+        AgentStep(
+            incident_id=incident.id,
+            node="recovery",
+            input={"playbook": incident.playbook, "events_since": str(incident.window_start)},
+            output=summary,
+            model="code, no model",
+            latency_ms=int((utcnow() - started).total_seconds() * 1000),
+            tool_calls=[{"tool": "events_since_incident"}],
+            created_at=utcnow(),
+        )
+    )
+    audit(
+        db,
+        actor="recovery",
+        action="recovery.planned",
+        incident_id=incident.id,
+        details={k: v for k, v in summary.items() if k != "left_alone"},
+    )
+    db.flush()
+    HUB.publish("step.added", {"incident_id": str(incident.id), "node": "recovery"})
+    if not (settings().recovery_enabled and found.action and found.items):
+        return None
+    draft = ProposalDraft(
+        action=found.action,
+        params={"items": found.items, "total": str(found.total), "currency": found.currency},
+        rationale=planner.rationale(found, incident),
+        expected_effect="customers can complete the purchase they tried to make",
+    )
+    filed = file_proposals(db, incident, [draft], source=PLANNER)
+    return filed[0] if filed else None
 
 
 async def verify_incident(db: Session, incident: Incident, *, record_pending: bool = True) -> bool:
@@ -135,6 +222,8 @@ async def verify_incident(db: Session, incident: Incident, *, record_pending: bo
     observation = f"metric {metric} in last {minutes}m is {current} (threshold {threshold})"
     if resolved or record_pending:
         run_verifier(db, incident, resolved, observation)
+    if resolved:
+        settle_incident(db, incident)
     return resolved
 
 

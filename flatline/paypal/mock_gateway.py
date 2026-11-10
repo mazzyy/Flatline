@@ -104,7 +104,9 @@ class MockGateway:
     async def capture_subscription_outstanding(
         self, subscription_id: str, note: str = ""
     ) -> dict[str, Any]:
-        sub = await self.get_subscription(subscription_id)
+        # The mock answers every id: an injected subscription gets a stand in.
+        subs = self.store.setdefault("subscriptions", {})
+        sub = subs.setdefault(subscription_id, {"id": subscription_id, "status": "ACTIVE"})
         capture = {
             "id": f"CAP-{uuid4().hex[:10]}",
             "subscription_id": subscription_id,
@@ -119,3 +121,34 @@ class MockGateway:
         rec = {"id": invoice_id, "status": "REMINDED"}
         self.writes.append({"op": "send_invoice_reminder", **rec})
         return rec
+
+    async def create_invoice(
+        self,
+        *,
+        recipient_email: str | None,
+        amount: str,
+        currency: str,
+        item_name: str,
+        note: str = "",
+        reference: str = "",
+    ) -> dict[str, Any]:
+        invoice = {
+            "id": f"INV2-MOCK-{uuid4().hex[:12].upper()}",
+            "status": "DRAFT",
+            "recipient": recipient_email,
+            "amount": {"value": amount, "currency_code": currency},
+            "item_name": item_name,
+            "note": note,
+            "reference": reference,
+        }
+        self.store.setdefault("invoices", {})[invoice["id"]] = invoice
+        self.writes.append({"op": "create_invoice", **invoice})
+        return invoice
+
+    async def send_invoice(self, invoice_id: str) -> dict[str, Any]:
+        invoice = (self.store.get("invoices") or {}).get(invoice_id)
+        if not invoice:
+            raise KeyError(f"invoice not found: {invoice_id}")
+        invoice["status"] = "SENT"
+        self.writes.append({"op": "send_invoice", "id": invoice_id})
+        return {"id": invoice_id, "status": "SENT"}

@@ -76,3 +76,22 @@ def test_mcp_pool_keeps_read_and_write_tool_sets_disjoint() -> None:
     assert "create_refund" in WRITE_TOOLS
     assert "transactions.list" not in READ_TOOLS
     assert "payments.createRefund" not in WRITE_TOOLS
+
+
+def test_recovery_planner_only_plans() -> None:
+    """The planner and the ledger read events and write ledger lines. Sending is the
+    executor's job, so neither may import a gateway or the executor."""
+    recovery = AGENTS.parent / "recovery"
+    for path in recovery.glob("*.py"):
+        tree = ast.parse(path.read_text(), filename=str(path))
+        for node in ast.walk(tree):
+            modules: list[str] = []
+            if isinstance(node, ast.ImportFrom):
+                modules = [node.module or ""]
+            elif isinstance(node, ast.Import):
+                modules = [alias.name for alias in node.names]
+            for mod in modules:
+                assert not mod.startswith("flatline.paypal"), f"{path.name}: {mod}"
+                assert not mod.startswith("flatline.policy"), f"{path.name}: {mod}"
+                assert not mod.startswith("flatline.llm"), f"{path.name}: {mod}"
+                assert not mod.startswith("flatline.agents"), f"{path.name}: {mod}"

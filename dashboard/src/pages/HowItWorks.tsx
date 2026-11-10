@@ -37,6 +37,12 @@ const STEPS: { title: string; who: "agent" | "code" | "human"; whoLabel: string;
     whoLabel: "Deterministic",
     text: "After the fix, the verifier watches the metric for a quiet window and resolves the incident, or reopens it. Every step is in the audit log.",
   },
+  {
+    title: "Recover",
+    who: "human",
+    whoLabel: "Code plans · you approve",
+    text: "Once the incident is resolved, code reads the failed events and lists who lost a sale and for how much. One approval sends each of them a PayPal invoice, or retries each failed renewal. No model is involved, so no amount can be invented.",
+  },
 ];
 
 export default function HowItWorks() {
@@ -46,8 +52,8 @@ export default function HowItWorks() {
         <h1>An on-call SRE for your PayPal revenue</h1>
         <p>
           Merchants monitor servers, not money. Flatline watches a PayPal integration, spots revenue incidents
-          within minutes, explains the cause from evidence, and fixes it inside strict guardrails. AI proposes;
-          deterministic code decides; only the Executor writes.
+          within minutes, explains the cause from evidence, fixes it inside strict guardrails, and then asks
+          the lost sales back. AI proposes; deterministic code decides; only the Executor writes.
         </p>
         <div className="pills">
           <span className="pill">PayPal sandbox + MCP</span>
@@ -106,7 +112,7 @@ export default function HowItWorks() {
         </div>
         <div className="card">
           <div className="tier-head"><h3>Approval</h3><span className="badge approval">waits for you</span></div>
-          <p className="muted">Changes money or availability. Config rollback, pause a product or plan, capture a balance, a single refund under the cap.</p>
+          <p className="muted">Changes money or availability. Config rollback, pause a product or plan, capture a balance, a single refund under the cap, sending recovery invoices.</p>
         </div>
         <div className="card">
           <div className="tier-head"><h3>Forbidden</h3><span className="badge forbidden">never by agents</span></div>
@@ -161,6 +167,15 @@ export default function HowItWorks() {
             <div>
               <strong>See it verified</strong>
               <span>The verifier watches a quiet window and marks the incident resolved. Reload the shop: the banner is gone and checkout works again.</span>
+            </div>
+          </li>
+          <li>
+            <div>
+              <strong>Get the lost sales back</strong>
+              <span>
+                About a minute later a recovery proposal appears on the incident: the customers whose checkout failed, and what each tried to pay.
+                Approve it, then click <em>Customers pay their recovery requests</em> in <a href="#/chaos">Chaos</a> and watch <em>Recovered</em> on the Overview.
+              </span>
             </div>
           </li>
           <li>

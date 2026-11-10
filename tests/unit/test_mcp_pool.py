@@ -136,3 +136,72 @@ async def test_reads_record_how_they_were_served() -> None:
     assert gw.read_log == [{"tool": "paypal.show_subscription_plan_details", "via": "mcp"}]
     assert failing.read_log[0]["via"] == "rest"
     assert "McpToolError" in failing.read_log[0]["mcp_error"]
+
+
+# --- Recovery: a payment link is a PayPal invoice, created and then sent ---------
+
+
+def test_the_write_session_loads_the_invoice_tools_recovery_needs() -> None:
+    assert WRITE_TOOL_FLAGS["create_invoice"] == "invoices.create"
+    assert WRITE_TOOL_FLAGS["send_invoice"] == "invoices.send"
+    assert "create_invoice" not in READ_TOOL_FLAGS and "send_invoice" not in READ_TOOL_FLAGS
+
+
+class InvoicePool(FakePool):
+    def __init__(self, data: Any) -> None:
+        super().__init__(data=data)
+        self.writes: list[tuple[str, dict[str, Any]]] = []
+
+    async def call_write(self, tool: str, arguments: dict[str, Any]) -> Any:
+        self.writes.append((tool, arguments))
+        return self.data
+
+
+INVOICE = {
+    "recipient_email": "buyer@example.com",
+    "amount": "18.00",
+    "currency": "USD",
+    "item_name": "Order O-1: house-blend",
+    "note": "n",
+    "reference": "O-1",
+}
+
+
+@pytest.mark.asyncio
+async def test_invoice_goes_through_mcp_with_the_flat_fields_it_expects() -> None:
+    # PayPal answers a create with a link to the invoice, not the invoice itself.
+    link = {
+        "rel": "self",
+        "href": "https://api-m.sandbox.paypal.com/v2/invoicing/invoices/INV2-AB12",
+    }
+    pool = InvoicePool(link)
+    gw = RestSpy(pool)
+    invoice = await gw.create_invoice(**INVOICE)
+    assert invoice["id"] == "INV2-AB12"
+    tool, args = pool.writes[0]
+    assert tool == "create_invoice"
+    assert args["currency_code"] == "USD" and args["reference"] == "O-1"
+    assert args["primary_recipients"] == [{"billing_info": {"email_address": "buyer@example.com"}}]
+    assert args["items"][0]["unit_amount"] == {"currency_code": "USD", "value": "18.00"}
+    await gw.send_invoice("INV2-AB12")
+    assert pool.writes[1] == (
+        "send_invoice",
+        {"invoice_id": "INV2-AB12", "send_to_recipient": True},
+    )
+    assert gw.rest_calls == []
+
+
+@pytest.mark.asyncio
+async def test_invoice_is_never_created_twice() -> None:
+    gw = RestSpy(FakePool(error=McpToolError("PayPal said no")))
+    with pytest.raises(McpToolError):
+        await gw.create_invoice(**INVOICE)
+    assert gw.rest_calls == []
+
+
+@pytest.mark.asyncio
+async def test_invoice_without_a_recipient_is_not_sent_anywhere() -> None:
+    gw = RestSpy(InvoicePool({"id": "INV2-X"}))
+    with pytest.raises(ValueError, match="recipient"):
+        await gw.create_invoice(**{**INVOICE, "recipient_email": None})
+    assert gw.rest_calls == []

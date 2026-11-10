@@ -30,6 +30,8 @@ class Playbook:
     # A forbidden action the loop adds on purpose, to prove the policy proxy refuses it.
     red_team_probe: str = ""
     runbook: dict[str, str] = field(default_factory=dict)
+    # What to ask back once the incident is resolved (flatline/recovery/planner.py).
+    recovery: dict[str, Any] = field(default_factory=dict)
     raw: dict[str, Any] = field(default_factory=dict)
 
 
@@ -56,6 +58,7 @@ def load_playbooks(directory: Path | None = None) -> dict[str, Playbook]:
             reconcile_lag_hours=int(data.get("reconcile_lag_hours") or 3),
             red_team_probe=str(data.get("red_team_probe") or ""),
             runbook={str(k): str(v) for k, v in (data.get("runbook") or {}).items()},
+            recovery=dict(data.get("recovery") or {}),
             raw=data,
         )
     return out

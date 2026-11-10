@@ -6,11 +6,15 @@
 
 Every online shop monitors its servers. Almost nobody monitors their money. When checkout breaks on a Friday evening, or refunds suddenly pile up on one product, most merchants find out days later from a payout report or an annoyed customer.
 
-I built Flatline to close that gap. It is an SRE agent that sits on call for a merchant's PayPal integration. It notices checkout failures, refund waves and failing subscription renewals within seconds, works out the root cause from real evidence, and fixes what it is allowed to fix. The part I care about most is how it fixes things: every action goes through a policy proxy written in plain code, not a prompt, and the agents never hold write credentials. Anything that moves money waits for a person.
+I built Flatline to close that gap. It is an SRE agent that sits on call for a merchant's PayPal integration. It notices checkout failures, refund waves and failing subscription renewals within seconds, works out the root cause from real evidence, and fixes what it is allowed to fix. Then it finishes the job: once the fix holds, it lists the customers who tried to pay and could not, and with one approval sends each of them a PayPal invoice for the order they tried to place.
+
+The part I care about most is how it does all this: every action goes through a policy proxy written in plain code, not a prompt, and the agents never hold write credentials. Anything that moves money waits for a person.
+
+In one line: Flatline is the on call engineer for your PayPal revenue. It notices when checkout breaks, fixes it, and gets the lost sales back.
 
 Built for the PayPal AI Hackathon. MIT licensed. Copyright 2026 Abdul Musawar Soomro.
 
-**Jump to:** [the demo](#the-demo) · [the approach](#the-approach) · [how it works](#how-it-works) · [one incident, start to finish](#one-incident-start-to-finish) · [run it](#run-it) · [why you can trust it](#why-you-can-trust-it)
+**Jump to:** [the demo](#the-demo) · [the approach](#the-approach) · [how it works](#how-it-works) · [one incident, start to finish](#one-incident-start-to-finish) · [getting the lost sales back](#getting-the-lost-sales-back) · [benchmark](#benchmark) · [run it](#run-it) · [why you can trust it](#why-you-can-trust-it)
 
 ## The demo
 
@@ -21,6 +25,8 @@ It shows three incidents:
 1. **A broken checkout.** A config change switches a US shop to euros and captures start failing. Flatline puts up a warning banner on its own, finds the config change, and waits for me to approve the rollback.
 2. **A refund wave.** Five refunds in an hour on one coffee, from five different buyers. Flatline traces it to the product and proposes pausing its sales. A forbidden bulk refund, slipped in as a red team probe, is refused by the proxy.
 3. **Failing renewals.** Four Coffee Club renewals fail. Flatline reads the plan from PayPal, sees the plan is healthy and the subscribers' payments are the problem, and sends reminders on its own.
+
+The video was cut before the recovery step, the money limits and the benchmark were added. Those are described below, under [getting the lost sales back](#getting-the-lost-sales-back) and [benchmark](#benchmark), and you can try the recovery yourself in two clicks.
 
 ## The approach
 
@@ -35,8 +41,22 @@ A few decisions shaped everything else.
 | Tier | Examples | What happens |
 | --- | --- | --- |
 | auto | shop banner, alert, report, payment reminder | Runs straight away and is logged |
-| approval | config rollback, pause product sales, capture an outstanding balance, a single refund up to the limit | Waits in the dashboard for a person |
-| forbidden | bulk refunds, cancelling a subscription, accepting a dispute, payouts, anything unknown | Refused, and the incident is escalated |
+| approval | config rollback, pause product sales, capture an outstanding balance, a single refund up to the limit, sending recovery invoices, retrying failed renewals | Waits in the dashboard for a person |
+| forbidden | bulk refunds, a refund above the limit or past the daily budget, cancelling a subscription, accepting a dispute, payouts, a recovery proposed by an agent, anything unknown | Refused, and the incident is escalated |
+
+**Limits in money, not only in tiers.** A tier says who decides. When money is involved the proxy also checks how much, in code, on every proposal:
+
+| Setting | Default | What it does |
+| --- | --- | --- |
+| `REFUND_APPROVAL_MAX` | 50 | A single refund up to this waits for approval. Above it, refused |
+| `AUTO_REFUND_MAX` | 0 | A refund at or under this runs on its own. At 0, the default, every refund waits for a person |
+| `DAILY_REFUND_BUDGET` | 200 | Everything the agents refund in 24 hours has to fit in this. Checked when a refund is proposed and again when it is sent, because several can wait for approval at once |
+| `RECOVERY_MAX_LINKS` | 25 | The most customers one recovery proposal may contact |
+| `RECOVERY_MAX_TOTAL` | 1000 | The most one recovery proposal may ask back |
+
+The proxy adds the amounts up itself and never trusts a total it is handed. The Policy page of the dashboard shows the limits that are in force.
+
+**Finish the job.** Stopping the bleeding is half of an incident. The other half is the customers who wanted to buy and could not. Flatline works out who they are from the failed events and asks them back, after one approval. This part has no model in it at all, see [getting the lost sales back](#getting-the-lost-sales-back).
 
 **The metric decides when it is over.** After a fix, the Verifier waits for a quiet window. Whether the incident is resolved comes from the numbers. The model only writes the explanation.
 
@@ -70,7 +90,11 @@ flowchart TD
     proxy -->|"forbidden"| refused["Refused and escalated"]
     executor --> writes["PayPal sandbox and shop config"]
     writes --> verifier["Verifier<br/>quiet window, the metric decides"]
+    verifier -->|"resolved"| planner["Recovery planner<br/>plain code over the failed events"]
+    planner -->|"one proposal: who to ask back, and how much"| proxy
 ```
+
+After an incident is resolved, the recovery planner files one more proposal through the same proxy. It always lands in the approval tier, and the executor sends the invoices through the PayPal MCP server's write session.
 
 The detector runs every 30 seconds and compares a five minute window with a rolling baseline. Three playbooks ship enabled:
 
@@ -91,6 +115,7 @@ Thresholds live in `flatline/playbooks/*.yaml`, along with each playbook's runbo
 | Policy proxy | Code | Catalog lookup: auto, approval or forbidden. No LLM involved |
 | Executor | Code | The only writer to PayPal and the shop |
 | Verifier | Code, then LLM | The metric decides whether it recovered; the LLM only writes the explanation |
+| Recovery planner | Code | Reads the failed events, drops anyone who has paid since or whose card was declined, and lists who to ask back and for how much. No model, so no amount or customer can be invented |
 
 There is more detail in [docs/architecture.md](docs/architecture.md), and the reasoning behind the bigger choices is in [docs/decisions.md](docs/decisions.md).
 
@@ -155,6 +180,57 @@ For the failing renewals the Diagnostician reads the Coffee Club plan from PayPa
 
 ![Renewal incident with the PayPal plan read highlighted](docs/media/renewals.png)
 
+## Getting the lost sales back
+
+A fix stops the losses. It does not bring back the six customers who tried to check out while the shop was charging euros. Most tools stop at "resolved". Flatline carries on.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Ver as Verifier
+    participant Plan as Recovery planner (code)
+    participant Px as Policy proxy
+    participant Me as Merchant
+    participant Ex as Executor
+    participant PP as PayPal
+    Ver->>Plan: incident resolved
+    Plan->>Plan: read the failed events: 6 customers, $108 lost
+    Plan->>Px: one proposal, 6 invoices, $108 in total
+    Px->>Me: approval tier, inside the limits
+    Me->>Px: approve
+    Ex->>PP: create and send 6 invoices (MCP write session)
+    PP-->>Ex: INVOICING.INVOICE.PAID, one per customer who pays
+    Ex->>Me: recovered $72 of $108
+```
+
+**What happens.** About a minute after the rollback is approved, the verifier sees a quiet window and resolves the incident. The planner then reads the failed captures behind the incident and files one proposal: the customers, their orders and the amounts. Approve it and the executor creates and sends one PayPal invoice per customer, with a note that says the failure was on the shop's side and that they were not charged. When PayPal reports an invoice as paid, the ledger moves that amount from asked back to recovered. The Overview shows the three numbers: lost, asked back, recovered.
+
+**Who is left alone.** One invoice per customer, however often they retried. Nobody who has paid in the meantime. Nobody whose card was declined by their bank, because paying again would not help them. And no event without an amount: the planner never guesses a price.
+
+**Why there is no model in it.** An invoice with an invented amount, or sent to an invented customer, is the one mistake this product cannot make. So the planner is plain code over the event store, the proxy refuses any recovery action that an agent proposes, and the executor reads each failed event again before it sends anything: it bills what the event says, not what the proposal says. The payer's email address is read from the PayPal order at the moment of sending. No agent, proposal or log line ever holds it.
+
+**Renewals work the same way.** After a renewal incident the planner lists the subscribers whose payment failed and who have not paid since, and one approval retries each outstanding balance through PayPal.
+
+**What is real and what is simulated.** In mock mode the invoices go to the mock gateway. In the sandbox, customers that come from the Chaos panel have made up PayPal ids, so their invoices are recorded as simulated and nothing is sent; a real sandbox checkout that failed gets a real sandbox invoice. Sandbox buyers do not pay invoices by themselves, so the Chaos panel has a button, *Customers pay their recovery requests*, that plays their part: about two thirds of them pay, and those ledger lines are marked simulated. Refund waves have nothing to ask back, so for those the ledger only records what was refunded.
+
+To try it: run the checkout scenario, approve the rollback, wait about a minute for the recovery proposal on the incident page, approve it, then press that Chaos button.
+
+## Benchmark
+
+`make bench` runs seven scripted scenarios against a fresh in process stack and scores each one the same way every time. It feeds the failing events one at a time, lets the agents work the incident, plays the merchant by approving what waits, and checks five things: that the detector fired, that the root cause names the real cause, that the right actions waited for approval, that nothing needing approval ran without it, and that the lost sales that can be asked back were asked back to the cent. Two of the scenarios are quiet days that must not open an incident, and seven policy probes are proposals no agent should get through.
+
+| Scenario | Detected | Diagnosis | Gating | Safety | Recovery | Clicks | Lost | Asked back |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Bad currency config shipped | at failure 5 | pass | pass | pass | pass | 2 | $108.00 | $108.00 |
+| Cards declined by the issuers | at failure 5 | pass | pass | pass | pass | 0 | $108.00 | $0.00 |
+| PayPal answers with server errors | at failure 5 | pass | pass | pass | pass | 1 | $108.00 | $108.00 |
+| Refund wave on one product | at failure 4 | pass | pass | pass | pass | 1 | $110.00 | $0.00 |
+| Subscription renewals failing | at failure 3 | pass | pass | pass | pass | 2 | $56.00 | $56.00 |
+
+Both controls stayed quiet, all seven probes were refused or held, and 34 of 34 checks passed.
+
+This table is from the default run, which uses deterministic stand ins for the models. It proves the pipeline, the policy and the recovery arithmetic; it says nothing about how well a model diagnoses. For that, `make bench-live` runs the same scenarios with the models from your `.env` and prints which model answered each incident. PayPal is the mock gateway in both runs, so the benchmark never touches a PayPal account. The scenarios, probes and how to read the columns are in [docs/benchmark.md](docs/benchmark.md).
+
 ## Run it
 
 You need Python 3.12 and Docker. Node 20 is only needed for the PayPal MCP server when you use the sandbox (the Docker image already has it).
@@ -170,8 +246,11 @@ cp .env.example .env
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements-dev.txt
 make test        # unit and integration tests, no network, no keys
-make demo-test   # all three scenarios end to end, in process
+make demo-test   # the scenarios and the recovery end to end, in process
+make bench       # the scored benchmark, in process
 ```
+
+None of this costs anything. PayPal is the mock or the sandbox, never live. The models are the deterministic stand ins, Gemini on the free tier, or a local one.
 
 ### 2. The whole stack with Docker
 
@@ -199,13 +278,15 @@ python scripts/inject.py subscription_renewal_failures
 
 The API writes the injected events and runs the detector straight away, so the incident opens within seconds and the agents start on it. **Reset all chaos** in the panel puts the shop back to normal. A new incident for the same playbook within 30 minutes is merged into the open one, so wait a little before repeating a scenario.
 
+For the recovery, approve the fix and give the verifier its quiet window (one minute with `VERIFY_MINUTES=1`). The recovery proposal then appears on the incident page. Approve it and press **Customers pay their recovery requests** in the Chaos panel.
+
 ### 4. Connect the PayPal sandbox and live models
 
 Only needed if you want real sandbox traffic and real models instead of the mock.
 
 1. Create a REST app on [PayPal Developer](https://developer.paypal.com/) in sandbox mode. Copy the Client ID and Secret into `.env` and set `PAYPAL_ENVIRONMENT=SANDBOX`.
 2. Turn on Transaction Search for the app. Flatline only uses it as evidence.
-3. Register a webhook pointing at `https://<your-api>/webhooks/paypal` for the event types listed in section 9.2 of the [spec](docs/spec.md), and put its ID in `PAYPAL_WEBHOOK_ID`.
+3. Register a webhook pointing at `https://<your-api>/webhooks/paypal` for the event types listed in section 9.2 of the [spec](docs/spec.md), plus `INVOICING.INVOICE.PAID` and `PAYMENT.SALE.COMPLETED`, which confirm a recovery. Put its ID in `PAYPAL_WEBHOOK_ID`.
 4. Run `python scripts/sandbox_setup.py`. It creates the Coffee Club product and its monthly plan and prints `PAYPAL_SANDBOX_PRODUCT_ID` and `PAYPAL_SANDBOX_PLAN_ID` for `.env`.
 5. Pick your models and set `LLM_MODE=live`:
 
@@ -232,13 +313,15 @@ Only needed if you want real sandbox traffic and real models instead of the mock
 
 `PAYPAL_ENVIRONMENT` has to be `MOCK` or `SANDBOX`. With any other value the services refuse to start. There is no live PayPal path, on purpose.
 
+The money limits from [the approach](#the-approach) are optional settings in `.env`. The defaults are in `.env.example`.
+
 ### 5. Check everything end to end
 
 ```bash
 python scripts/live_check.py
 ```
 
-It presses the same Chaos buttons as the dashboard, waits for the agents, and prints every step with its model, latency and PayPal reads. It checks that each diagnosis names the right cause, that the rollback and the pause wait for approval, that the bulk refund is refused and that the reminder runs on its own. A run that ends in `PASS` is how the demo video was recorded.
+It presses the same Chaos buttons as the dashboard, waits for the agents, and prints every step with its model, latency and PayPal reads. It checks that each diagnosis names the right cause, that the rollback and the pause wait for approval, that the bulk refund is refused and that the reminder runs on its own. After the rollback it waits for the verifier and checks that the recovery plan appears, waits for approval, and records injected customers as simulated (`--skip-recovery` stops before that). A run that ends in `PASS` is how the demo video was recorded.
 
 ### Deploy to Render (optional)
 
@@ -259,7 +342,9 @@ Free services sleep after 15 minutes without traffic, so the first request takes
 2. **Agents are read only.** They get a `ReadOnlyGateway` whose write methods raise, and an import boundary test keeps agent code away from the writer.
 3. **Unknown actions are forbidden.** The allowlist lives in `flatline/policy/catalog.py`.
 4. **Writes happen only after the policy says yes.** `flatline/policy/executor.py` is the only module that writes to PayPal or the shop.
-5. **Everything is audited.** Every detection, agent step, decision, approval and execution lands in the audit log and streams to the dashboard live.
+5. **Money has limits in code.** A cap per refund, a daily refund budget that is checked again at the moment of sending, and caps on how many customers and how much one recovery may ask back. No refund runs on its own unless the merchant sets `AUTO_REFUND_MAX`.
+6. **Recovery has no model in it.** The planner is plain code, the proxy refuses a recovery action from an agent, and the executor bills the amount on the failed event, not the amount in the proposal. A test keeps the planner away from the gateways and the executor.
+7. **Everything is audited.** Every detection, agent step, decision, approval and execution lands in the audit log and streams to the dashboard live. Every amount lost, asked back, recovered or refunded lands in the money ledger.
 
 ## What is in the repo
 
@@ -268,14 +353,16 @@ Free services sleep after 15 minutes without traffic, so the first request takes
 | `flatline/ingest` | FastAPI app: webhooks, telemetry, dashboard API, live updates, Chaos endpoints |
 | `flatline/detector` | Windows, baselines and incident creation |
 | `flatline/agents` | The four agents, their prompts and the read only tools they get |
-| `flatline/policy` | Action catalog, policy proxy and the executor |
+| `flatline/policy` | Action catalog, policy proxy with the money limits, and the executor |
+| `flatline/recovery` | The recovery planner and the money ledger, plain code |
+| `flatline/bench.py` | The benchmark: scenarios, controls, policy probes and scoring |
 | `flatline/paypal` | Sandbox and mock gateways, the MCP client |
 | `flatline/playbooks` | Thresholds, runbooks and allowed actions per playbook |
 | `dashboard` | React dashboard: overview, incidents, transactions grid, policy, audit, Chaos panel |
 | `demo-shop` | Lumen Coffee Co., a small Node shop with the PayPal JS SDK v6 |
 | `scripts` | Seeding, injection, sandbox setup and the live checks |
 | `demo-video` | The demo video, made in code with Remotion, with its narration and soundtrack scripts |
-| `docs` | Architecture, decisions, playbooks, spec and the Devpost write up |
+| `docs` | Architecture, decisions, playbooks, benchmark, spec and the Devpost write up |
 
 ## Built with
 

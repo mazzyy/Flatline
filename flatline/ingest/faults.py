@@ -105,3 +105,40 @@ def renewal_failures(n: int = 4, healthy: int = 8) -> list[dict[str, Any]]:
         for i in range(healthy)
     ]
     return failed + renewed
+
+
+def recovery_payments(requests: list[Any], share: float = 2 / 3) -> list[dict[str, Any]]:
+    """Customers paying their recovery requests: the events PayPal would send.
+
+    `requests` are the ledger's open requests. About two thirds of them pay (at
+    least one), oldest first, because not everybody comes back. A payment link
+    is confirmed by INVOICING.INVOICE.PAID, a renewal retry by PAYMENT.SALE.COMPLETED.
+    """
+    import math
+
+    paying = requests[: max(1, math.ceil(len(requests) * share))] if requests else []
+    events: list[dict[str, Any]] = []
+    for row in paying:
+        amount = {"currency_code": row.currency, "value": str(row.amount)}
+        base = {"id": f"WH-{_pp_id()}-{_pp_id()}", "create_time": _at(0), "amount": str(row.amount)}
+        if (row.details or {}).get("action") == "recovery.renewals.retry":
+            events.append(
+                {
+                    **base,
+                    "event_type": "PAYMENT.SALE.COMPLETED",
+                    "resource": {
+                        "id": _pp_id(),
+                        "billing_agreement_id": row.ref,
+                        "amount": {"total": str(row.amount), "currency": row.currency},
+                    },
+                }
+            )
+        else:
+            events.append(
+                {
+                    **base,
+                    "event_type": "INVOICING.INVOICE.PAID",
+                    "resource": {"invoice": {"id": row.ref, "amount": amount}},
+                }
+            )
+    return events

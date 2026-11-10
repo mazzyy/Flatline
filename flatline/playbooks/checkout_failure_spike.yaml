@@ -20,3 +20,9 @@ average_order_value: 18.00
 runbook:
   causes: "A shop config change deployed just before the failures (currency, product settings); buyer side card declines spread over many different buyers; PayPal answering with server errors."
   fixes: "Put up an honest banner while checkout is broken; roll back to the last good config version when a config change caused it; alert the merchant."
+# After the fix is verified, code (no model) plans this for the customers whose
+# checkout failed. A declined card is the buyer's to fix, so those are left alone.
+recovery:
+  action: recovery.payment_links.send
+  skip_error_codes:
+    - INSTRUMENT_DECLINED

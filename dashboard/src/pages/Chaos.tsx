@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { authHeaders, post } from "../api";
 
-type Action = { label: string; blurb: string; body: Record<string, unknown>; secondary?: boolean };
+type Action = { label: string; blurb: string; body: Record<string, unknown>; secondary?: boolean; path?: string };
 
 const ACTIONS: Action[] = [
   {
@@ -30,6 +30,12 @@ const ACTIONS: Action[] = [
     body: { chaos: { inject: "renewal_failures" }, note: "renewals" },
   },
   {
+    label: "Customers pay their recovery requests",
+    blurb: "Plays the customers after you approved a recovery: about two thirds pay. Expect: Recovered goes up, marked simulated.",
+    body: {},
+    path: "/api/synthetic/recovery-payments",
+  },
+  {
     label: "Break webhook endpoint (stretch)",
     blurb: "The webhook route returns 500. The webhook_gap playbook is disabled by default; this only flips the flag.",
     body: { chaos: { webhook_broken: true }, note: "webhook gap" },
@@ -54,10 +60,14 @@ export default function ChaosPage() {
     setErr(false);
     setMsg("Working…");
     try {
-      const result = await post<ChaosResult>("/api/chaos", a.body, authHeaders());
+      const result = await post<ChaosResult>(a.path || "/api/chaos", a.body, authHeaders());
       const injected = result.injected?.length || 0;
       const incidents = result.incidents?.length || 0;
-      setMsg(`${a.label}: done · ${injected} synthetic events · ${incidents} incident${incidents === 1 ? "" : "s"} touched`);
+      setMsg(
+        a.path
+          ? `${a.label}: ${injected} simulated payment${injected === 1 ? "" : "s"}` + (injected ? "" : " (approve a recovery proposal first)")
+          : `${a.label}: done · ${injected} synthetic events · ${incidents} incident${incidents === 1 ? "" : "s"} touched`,
+      );
     } catch (e) {
       setErr(true);
       setMsg(String(e));

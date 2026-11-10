@@ -7,8 +7,9 @@
 
 For each scenario it presses the same Chaos button as the dashboard, waits for
 the agents, and prints every step with its model, latency and PayPal reads (MCP
-or REST). It approves the checkout rollback, then resets all chaos. Exits 1 when
-a check fails, so a run that ends in PASS is safe to record.
+or REST). It approves the checkout rollback, waits for the verifier, approves
+the recovery plan that follows, then resets all chaos. Exits 1 when a check
+fails, so a run that ends in PASS is safe to record.
 """
 
 from __future__ import annotations
@@ -88,6 +89,51 @@ def show_steps(body: dict[str, Any], report: Report) -> None:
     report.check(any(c["via"] == "mcp" for c in reads), "PayPal read through the MCP server")
 
 
+def check_recovery(api: httpx.Client, incident_id: str, report: Report, wait_s: float) -> None:
+    """After the fix is verified: a recovery plan appears, waits for approval, and is
+    honest about injected customers (recorded as simulated, nothing sent to PayPal)."""
+    deadline = time.monotonic() + wait_s
+    proposal: dict[str, Any] | None = None
+    while proposal is None:
+        body = api.get(f"/api/incidents/{incident_id}").json()
+        proposal = next(
+            (p for p in body.get("proposals", []) if p["action"].startswith("recovery.")), None
+        )
+        if proposal is None:
+            if time.monotonic() > deadline:
+                break
+            time.sleep(5)
+    report.check(proposal is not None, "a recovery plan appears once the fix is verified")
+    if proposal is None:
+        print(f"    (incident is {body['status']}; the verifier needs a quiet window first)")
+        return
+    customers = len((proposal.get("params") or {}).get("items") or [])
+    print(f"    proposal      {proposal['action']:35s} {proposal['tier']:9s} {proposal['status']}")
+    report.check(
+        proposal["tier"] == "approval" and proposal["status"] in ("pending", "executed"),
+        f"asking {customers} customers back waits for approval",
+    )
+    if proposal["status"] == "pending":
+        done = api.post(f"/api/proposals/{proposal['id']}/approve").json()
+        report.check(done["status"] == "executed", "approving the recovery executes it")
+    body = api.get(f"/api/incidents/{incident_id}").json()
+    sent = next(p for p in body["proposals"] if p["id"] == proposal["id"])
+    answer = ((sent.get("executions") or [{}])[-1]).get("response") or {}
+    # Injected customers have made up PayPal ids, so they are recorded as simulated.
+    # A real sandbox checkout that failed in the same window gets a real sandbox invoice.
+    statuses = {str(i.get("status")) for i in answer.get("items") or []}
+    report.check(
+        "simulated" in statuses and statuses <= {"simulated", "sent", "skipped"},
+        "injected customers are recorded as simulated, nothing is sent to PayPal for them",
+    )
+    money = body.get("money") or {}
+    print(
+        f"    money         lost {money.get('impact')} {money.get('currency')}, "
+        f"asked back {money.get('requested')}, incident still {body['status']}"
+    )
+    report.check(body["status"] == "resolved", "the incident stays resolved")
+
+
 def show_proposals(body: dict[str, Any]) -> list[dict[str, Any]]:
     proposals: list[dict[str, Any]] = body.get("proposals", [])
     for p in proposals:
@@ -102,6 +148,13 @@ def main() -> int:
     parser.add_argument("--passcode", default=cfg.dashboard_passcode)
     parser.add_argument("--token", default=cfg.inject_token)
     parser.add_argument("--pause", type=float, default=20, help="seconds between scenarios")
+    parser.add_argument(
+        "--recovery-wait",
+        type=float,
+        default=cfg.effective_verify_minutes * 60 + 120,
+        help="seconds to wait for the verifier before the recovery plan must exist",
+    )
+    parser.add_argument("--skip-recovery", action="store_true", help="stop at the approved fix")
     args = parser.parse_args()
 
     api = httpx.Client(
@@ -161,6 +214,8 @@ def main() -> int:
                     f"    approved {p['action']}: {done['status']}; incident now {after['status']}"
                 )
                 report.check(done["status"] in ("approved", "executed"), "approval executes")
+            if (pending or earlier) and not args.skip_recovery:
+                check_recovery(api, incident_id, report, args.recovery_wait)
         elif playbook == "refund_wave":
             report.check(
                 "yirgacheffe" in low and "currenc" not in low, "the diagnosis names the product"

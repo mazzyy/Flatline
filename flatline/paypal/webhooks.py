@@ -23,6 +23,9 @@ KNOWN_EVENT_TYPES = frozenset(
         "BILLING.SUBSCRIPTION.SUSPENDED",
         "BILLING.SUBSCRIPTION.CANCELLED",
         "CUSTOMER.DISPUTE.CREATED",
+        # Confirm a recovery: a paid payment link, a renewal that went through.
+        "INVOICING.INVOICE.PAID",
+        "PAYMENT.SALE.COMPLETED",
     }
 )
 

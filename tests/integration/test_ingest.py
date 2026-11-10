@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
@@ -144,3 +145,66 @@ def test_audit_written(client: TestClient) -> None:
     )
     audit = client.get("/api/audit").json()
     assert audit["lastRow"] >= 1
+
+
+def test_recovery_over_the_api(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Break checkout, approve the fix, approve the recovery, let customers pay."""
+    import asyncio
+
+    from flatline.config import reset_settings
+    from flatline.db.models import Incident
+    from flatline.loop import process_incident
+
+    monkeypatch.setenv("VERIFY_MINUTES", "0")  # the metric is quiet the moment we look
+    reset_settings()
+    auth = {"X-Passcode": "demo-judge", "X-Inject-Token": "test-inject"}
+    chaos = client.post("/api/chaos", headers=auth, json={"chaos": {"bad_currency": True}})
+    incident_id = chaos.json()["incidents"][0]
+
+    db = get_sessionmaker()()  # the agents worker's part
+    try:
+        asyncio.run(process_incident(db, db.get(Incident, UUID(incident_id))))
+        db.commit()
+    finally:
+        db.close()
+
+    def proposals() -> dict[str, dict]:
+        body = client.get(f"/api/incidents/{incident_id}").json()
+        return {p["action"]: p for p in body["proposals"]}
+
+    assert "recovery.payment_links.send" not in proposals()  # not before the fix is verified
+    rollback = proposals()["shop.config.rollback"]
+    assert client.post(f"/api/proposals/{rollback['id']}/approve", headers=auth).status_code == 200
+    body = client.get(f"/api/incidents/{incident_id}").json()
+    assert body["status"] == "resolved"
+    assert body["money"]["impact"] == "108.00" and body["money"]["requested"] == "0.00"
+    assert [s["node"] for s in body["steps"]][-1] == "recovery"
+
+    recovery = proposals()["recovery.payment_links.send"]
+    assert (recovery["tier"], recovery["status"]) == ("approval", "pending")
+    sent = client.post(f"/api/proposals/{recovery['id']}/approve", headers=auth).json()
+    assert sent["status"] == "executed"
+    body = client.get(f"/api/incidents/{incident_id}").json()
+    assert body["status"] == "resolved"  # approving a recovery does not reopen or re-verify
+    assert [s["node"] for s in body["steps"]].count("verifier") == 1
+    assert body["money"]["requested"] == "108.00"
+
+    assert client.post("/api/synthetic/recovery-payments").status_code == 401
+    paid = client.post("/api/synthetic/recovery-payments", headers=auth).json()
+    assert len(paid["injected"]) == 4
+    totals = client.get("/api/money").json()
+    assert (totals["impact"], totals["requested"], totals["recovered"]) == (
+        "108.00",
+        "108.00",
+        "72.00",
+    )
+    assert totals["simulated"] is True  # mock PayPal, synthetic payments
+
+
+def test_policy_catalog_lists_the_money_limits(client: TestClient) -> None:
+    body = client.get("/api/policy/catalog").json()
+    limits = {row["key"]: row["value"] for row in body["limits"]}
+    assert limits["AUTO_REFUND_MAX"] == 0  # off unless the merchant turns it on
+    assert limits["REFUND_APPROVAL_MAX"] == 50 and limits["DAILY_REFUND_BUDGET"] == 200
+    recovery = next(i for i in body["items"] if i["key"] == "recovery.payment_links.send")
+    assert recovery["tier"] == "approval" and recovery["planner_only"] is True

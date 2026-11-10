@@ -129,3 +129,18 @@ async def test_transaction_search_fallback_sends_a_date_range() -> None:
     end = datetime.fromisoformat(q["end_date"][0].replace("Z", "+00:00"))
     assert 0 < (end - start).days <= 31
     assert q["fields"] == ["all"]
+
+
+@pytest.mark.asyncio
+async def test_mock_gateway_invoices_and_readonly_wrapper() -> None:
+    gw = MockGateway()
+    invoice = await gw.create_invoice(
+        recipient_email=None, amount="18.00", currency="USD", item_name="Order O-1"
+    )
+    assert invoice["status"] == "DRAFT" and invoice["id"].startswith("INV2-MOCK-")
+    assert (await gw.send_invoice(invoice["id"]))["status"] == "SENT"
+    assert [w["op"] for w in gw.writes] == ["create_invoice", "send_invoice"]
+    ro = ReadOnlyGateway(gw)
+    for method in ("create_invoice", "send_invoice"):
+        with pytest.raises(WriteAccessError):
+            getattr(ro, method)
