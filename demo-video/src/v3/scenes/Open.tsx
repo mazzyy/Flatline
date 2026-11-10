@@ -35,7 +35,7 @@ export const Open: React.FC<{ t: number }> = ({ t }) => {
   const oncall = win(t, cue("oncall") - 0.2, REWIND + 0.1, 0.5);
   const dimPulse = 1 - 0.55 * oncall;
   const out = 1 - lin(t, end - 0.9, end);
-  const chips = ["API · 200 OK", "CPU · 31%", "UPTIME · 100%", "ERRORS · 0"];
+  const chips = ["API · 200 OK", "CPU · 31%", "UPTIME · 100%", "ALL DASHBOARDS GREEN"];
   return (
     <div style={{ position: "absolute", inset: 0, opacity: out }}>
       <div style={{ position: "absolute", left: 96, top: 84, opacity: ramp(t, 0.3, 1.2) }}>
@@ -66,7 +66,7 @@ export const Open: React.FC<{ t: number }> = ({ t }) => {
 
       <div style={{ position: "absolute", left: 96, top: 770, display: "flex", gap: 18, opacity: 1 - oncall }}>
         {chips.map((chip, i) => {
-          const k = pop(t, cue("monday") + 0.5 + i * 0.32, 0.45);
+          const k = pop(t, cue("monday") + 0.25 + i * 0.22, 0.45);
           return (
             <div key={chip} style={{ opacity: Math.min(1, k * 1.5), transform: `translateY(${(1 - k) * 16}px)`, display: "flex", alignItems: "center", gap: 10, fontFamily: f.mono, fontSize: 24, color: c.dim, border: `1.5px solid ${c.line}`, background: c.panel, borderRadius: 12, padding: "12px 20px" }}>
               <Check size={24} />

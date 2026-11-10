@@ -1,6 +1,6 @@
 # Flatline film (November cut)
 
-`out/flatline-film.mp4`: 1920×1080, 30 fps, 2:47, H.264 + AAC at -15 LUFS. Under the three minute limit.
+`out/flatline-film.mp4`: 1920×1080, 30 fps, 2:41, H.264 + AAC at -15 LUFS. Under the three minute limit.
 `out/flatline-film-no-voice.mp4`: the same picture with music and effects only, for recording your own voice.
 
 It is a separate Remotion entry point (`src/v3/index.tsx`) and does not touch the earlier cut in `src/`.
@@ -25,8 +25,11 @@ ffmpeg -i out/picture.mp4 -i out/mix.wav -map 0:v -map 1:a -c:v copy -af loudnor
 - **Screens.** `public/v3/` holds the stills. The incident (overview excepted) is from the earlier sandbox and Gemini
   recordings. The overview and the recovery screens were shot from the app in mock mode after the recovery step
   was built; no model names are in frame there.
-- **Honesty on screen.** The four payments are labelled as simulated ("I play the customers"), and the benchmark
-  card says it ran with stand-in models.
+- **AG Grid.** The six failed payments are shown in the transactions grid (`public/v3/aggrid.jpg`, mock mode) before they become the recovery list.
+- **The real invoice.** `invoice-real.jpg` and `invoice-paid.jpg` are screenshots of invoice INV2-Y94L-ETFU-ZUZA-PB57,
+  sent by `scripts/sandbox_invoice.py` through the PayPal MCP server and paid by a sandbox buyer on 10 Nov 2026.
+- **Honesty on screen.** The small print says one invoice was sent and paid for real and the four counted payments
+  are simulated, and the benchmark card says it ran with stand-in models.
 - **Sound.** Voice is Kokoro `am_michael` at 0.95 speed. Music and effects are synthesized in `score.py`; nothing is licensed.
 
 The narration with its timings is in `scripts/audio-v3/SCRIPT.md`.

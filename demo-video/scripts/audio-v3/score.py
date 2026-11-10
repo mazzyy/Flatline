@@ -176,7 +176,7 @@ for k, m in enumerate([50, 57, 62, 66, 69, 74, 78, 81, 86]):
 music.add(cue("stop") + 1.5, pad([45, 57], cue("six") - cue("stop"), a=2, r=2, bright=0.3), gain=0.35)
 music.add(cue("six") - 0.3, pad([35, 42, 47, 50], cue("after") - cue("six") + 2.6, a=1.2, r=2.4, bright=0.4), gain=0.55)
 for i, m in enumerate([66, 64, 62, 61, 59, 54]):
-    music.add(cue("six") + 0.5 + i * 0.28, piano(m, 3.5, 0.5), pan=-0.4 + i * 0.16, gain=0.13)
+    music.add(cue("six") + 3.35 + i * 0.13, piano(m, 3.5, 0.5), pan=-0.4 + i * 0.16, gain=0.13)
 
 # --- Recovery, guardrails and the close: one progression locked to the heartbeat ------
 CH = [[43, 50, 55, 59, 62], [38, 45, 50, 54, 57], [45, 52, 57, 61, 64], [35, 42, 47, 50, 54]]  # G D A Bm
@@ -196,7 +196,7 @@ for t, c in bars:
 
 fx.add(RECOVERY_CLICK, tick(1800, 0.05), gain=0.5)
 fx.add(RECOVERY_CLICK + 0.35, noise_sweep(1.1, 900, 5000), gain=0.11)
-for i in range(6): fx.add(RECOVERY_CLICK + 0.5 + i * 0.16 + 0.55, tick(900, 0.06), pan=-0.5 + i * 0.2, gain=0.22)
+for i in range(6): fx.add(cue("play") - 1.05 + i * 0.09 + 0.5, tick(900, 0.06), pan=-0.5 + i * 0.2, gain=0.22)
 for i, p in enumerate(PAYMENTS):                      # four customers pay
     beeps.add(p, beep(880 * 2 ** ([0, 4, 7, 12][i] / 12), 0.11), gain=0.2)
     fx.add(p, bell([74, 78, 81, 86][i], 3.2), pan=-0.3 + i * 0.2, gain=0.17)
@@ -208,7 +208,7 @@ for k, m in enumerate([62, 66, 69, 74, 78, 81, 86]):
 
 fx.add(cue("refused") + 2.55, sub(1.2, 95, 42), gain=0.75)   # the stamp
 fx.add(cue("refused") + 2.55, lp(rng.standard_normal(int(0.12 * SR)) * np.exp(-tt(0.12) * 40), 1400), gain=0.5)
-b0, b1 = cue("bench") + 1.2, cue("bench") + 4.9               # 34 checks light up
+b0, b1 = cue("bench") + 0.4, end("bench") - 0.2               # 34 checks light up
 for i in range(34):
     fx.add(b0 + (b1 - b0) * i / 33, beep(520 * 2 ** (i / 34), 0.045), pan=-0.5 + i / 34, gain=0.05)
 fx.add(b1 + 0.05, bell(86, 2.5), gain=0.14)

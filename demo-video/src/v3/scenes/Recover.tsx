@@ -18,10 +18,14 @@ export const Recover: React.FC<{ t: number }> = ({ t }) => {
   const sixAt = cue("six");
   const shotA = cue("after") + 2.4;
   const shotB = RECOVERY_CLICK + 0.45;
-  const sentAt = RECOVERY_CLICK + 0.5;
+  const realOut = cue("play") - 0.75; // the real sandbox invoice, then the six cards
+  const sentAt = realOut - 0.3;
+  const paidAt = shotB + (realOut - shotB) * 0.56;
   const codeAt = cue("code") - 0.4;
   const paid = PAYMENTS.filter((p) => t >= p).length;
-  const lostCards = win(t, sixAt, shotA + 0.1, 0.35);
+  const gridOut = sixAt + 3.45; // the AG Grid view of the six failed payments, then the cards
+  const cardsAt = gridOut - 0.25;
+  const lostCards = win(t, cardsAt, shotA + 0.1, 0.35);
   const invoices = win(t, sentAt, codeAt + 0.2, 0.4);
   const seventy = ramp(t, cue("seventy") - 0.1, cue("seventy") + 0.5);
   const lastPay = PAYMENTS.filter((p) => t >= p).pop() ?? -9;
@@ -29,8 +33,8 @@ export const Recover: React.FC<{ t: number }> = ({ t }) => {
   return (
     <>
       {/* "Most tools stop here." */}
-      {t < sixAt + 0.4 ? (
-        <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", opacity: win(t, S.start + 0.5, sixAt + 0.3, 0.5) * mix(1, 0.28, lin(t, cue("stop") + 2.4, cue("stop") + 4)) }}>
+      {t < sixAt ? (
+        <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", opacity: win(t, S.start + 0.5, sixAt - 0.2, 0.4) * mix(1, 0.28, lin(t, cue("stop") + 2.4, cue("stop") + 4)) }}>
           <div style={{ display: "flex", alignItems: "center", gap: 22, border: `3px solid ${c.alive}`, borderRadius: 22, padding: "22px 44px", transform: `scale(${0.9 + 0.1 * pop(t, S.start + 0.6, 0.5)}) rotate(-3deg)` }}>
             <Check size={64} />
             <div style={{ fontFamily: f.mono, fontWeight: 600, fontSize: 76, letterSpacing: 8, color: c.alive }}>RESOLVED</div>
@@ -42,7 +46,7 @@ export const Recover: React.FC<{ t: number }> = ({ t }) => {
       {/* Six people who tried to pay */}
       {lostCards > 0
         ? ORDERS.map((id, i) => {
-            const k = pop(t, sixAt + 0.5 + i * 0.28, 0.45);
+            const k = pop(t, cardsAt + 0.15 + i * 0.13, 0.45);
             const { x, y } = cell(i);
             return (
               <div key={id} style={{ position: "absolute", left: x, top: y, width: CW, height: CH, boxSizing: "border-box", opacity: Math.min(1, k * 1.5) * lostCards, transform: `translateY(${(1 - k) * 26}px)`, background: c.panel, border: `2px solid ${c.flat}66`, borderRadius: 18, padding: "20px 22px" }}>
@@ -61,10 +65,16 @@ export const Recover: React.FC<{ t: number }> = ({ t }) => {
       {lostCards > 0 ? (
         <div style={{ position: "absolute", left: 1230, top: 330, opacity: lostCards }}>
           <div style={{ fontFamily: f.mono, fontSize: 22, letterSpacing: 4, color: c.faint }}>LOST WHILE WE WERE DOWN</div>
-          <div style={{ fontFamily: f.sans, fontWeight: 800, fontSize: 190, color: c.flat, letterSpacing: -6, lineHeight: 1.05, fontVariantNumeric: "tabular-nums" }}>${18 * Math.min(6, Math.max(0, Math.floor((t - sixAt - 0.5) / 0.28) + 1))}</div>
+          <div style={{ fontFamily: f.sans, fontWeight: 800, fontSize: 190, color: c.flat, letterSpacing: -6, lineHeight: 1.05, fontVariantNumeric: "tabular-nums" }}>${18 * Math.min(6, Math.max(0, Math.floor((t - cardsAt - 0.15) / 0.13) + 1))}</div>
           <div style={{ fontFamily: f.serif, fontStyle: "italic", fontSize: 44, color: c.dim }}>six people who wanted coffee</div>
         </div>
       ) : null}
+
+      {/* The same six, in the transactions grid (AG Grid, server-side rows) */}
+      <Shot t={t} src="aggrid.jpg" url="flatline · transactions (AG Grid)" opacity={win(t, sixAt - 0.35, gridOut, 0.3)} keys={[{ at: 0, rect: { x: 190, y: 130, w: 1220 } }, { at: sixAt - 0.2, rect: { x: 205, y: 215, w: 1010 }, dur: 3.2 }]}>
+        {(s) => <Ring t={t} at={sixAt + 0.5} box={[224, 334, 1152, 150]} color={c.flat} s={s} pad={4} />}
+      </Shot>
+      <Tag t={t} at={sixAt + 0.9} until={gridOut} x={1090} y={690} text="Six failed payments" sub="Filtered in the transactions grid (AG Grid)" color={c.flat} />
 
       {/* The recovery proposal, on the real dashboard */}
       <Shot t={t} src="recovery-pending.jpg" opacity={win(t, shotA, shotB, 0.35)} keys={[{ at: 0, rect: { x: 170, y: 150, w: 1100 } }, { at: shotA + 0.3, rect: { x: 200, y: 290, w: 860 }, dur: 3 }]}>
@@ -79,10 +89,20 @@ export const Recover: React.FC<{ t: number }> = ({ t }) => {
       <Tag t={t} at={shotA + 1.2} until={RECOVERY_CLICK - 1.3} x={1090} y={430} text="Six customers, found" sub="From the failed payments themselves" color={c.blue} />
       <Tag t={t} at={RECOVERY_CLICK - 1.1} until={shotB} x={1090} y={760} text="One more approval" sub="Nothing is sent until I say so" color={c.warn} />
 
+      {/* One of them for real: an invoice this code sent in the PayPal sandbox, and a sandbox buyer paying it */}
+      <Shot t={t} src="invoice-real.jpg" url="sandbox.paypal.com/invoice" opacity={win(t, shotB - 0.1, paidAt + 0.15, 0.3)} keys={[{ at: 0, rect: { x: 30, y: 40, w: 1500 } }, { at: shotB, rect: { x: 50, y: 150, w: 1120 }, dur: 3 }]}>
+        {(s) => <Ring t={t} at={shotB + 0.9} box={[103, 474, 915, 70]} color={c.alive} s={s} />}
+      </Shot>
+      <Tag t={t} at={shotB + 0.5} until={paidAt} x={1090} y={770} text="A real PayPal invoice" sub="Sent by this code in the PayPal sandbox" color={c.alive} />
+      <Shot t={t} src="invoice-paid.jpg" url="sandbox.paypal.com/invoice" opacity={win(t, paidAt, realOut, 0.3)} keys={[{ at: 0, rect: { x: 200, y: 20, w: 1200 } }, { at: paidAt, rect: { x: 280, y: 30, w: 1040 }, dur: 2.2 }]}>
+        {(s) => <Ring t={t} at={paidAt + 0.35} box={[590, 118, 400, 180]} color={c.alive} s={s} />}
+      </Shot>
+      <Tag t={t} at={paidAt + 0.4} until={realOut} x={1090} y={770} text="Paid for real" sub="By a sandbox buyer, in the PayPal sandbox" color={c.alive} />
+
       {/* Six invoices go out, four come back paid */}
       {invoices > 0
         ? ORDERS.map((id, i) => {
-            const at = sentAt + i * 0.16;
+            const at = sentAt + i * 0.09;
             const k = ramp(t, at, at + 0.7);
             const { x, y } = cell(i);
             const isPaid = i < paid;
@@ -107,12 +127,12 @@ export const Recover: React.FC<{ t: number }> = ({ t }) => {
           })
         : null}
       {invoices > 0 ? (
-        <div style={{ position: "absolute", left: 1230, top: 296, opacity: invoices * ramp(t, sentAt + 0.8, sentAt + 1.4) }}>
+        <div style={{ position: "absolute", left: 1230, top: 296, opacity: invoices * ramp(t, sentAt + 0.4, sentAt + 0.9) }}>
           <div style={{ fontFamily: f.mono, fontSize: 22, letterSpacing: 4, color: c.faint }}>RECOVERED</div>
           <div style={{ fontFamily: f.sans, fontWeight: 800, fontSize: mix(190, 230, seventy), color: paid ? c.alive : c.faint, letterSpacing: -6, lineHeight: 1.05, fontVariantNumeric: "tabular-nums", transform: `scale(${bump})`, transformOrigin: "0 60%", textShadow: paid ? `0 0 80px ${c.alive}55` : "none" }}>${paid * 18}</div>
           <div style={{ fontFamily: f.serif, fontStyle: "italic", fontSize: 44, color: c.dim }}>of $108 lost</div>
           <div style={{ marginTop: 26, maxWidth: 560, fontFamily: f.mono, fontSize: 21, lineHeight: 1.5, color: c.dim, opacity: ramp(t, cue("play"), cue("play") + 0.5), borderLeft: `3px solid ${c.line}`, paddingLeft: 16 }}>
-            DEMO: I play the customers. Sandbox buyers do not pay on their own, so these four payments are simulated and labelled as such.
+            DEMO: one invoice was sent and paid for real in the PayPal sandbox (just shown). The four payments counted here are simulated: I play the customers.
           </div>
         </div>
       ) : null}

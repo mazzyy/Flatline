@@ -1,6 +1,6 @@
 import React from "react";
 import { c, f } from "../theme";
-import { SCENES, cue, lin, mix, pop, ramp, window as win } from "../time";
+import { SCENES, cue, cueEnd, lin, mix, pop, ramp, window as win } from "../time";
 import { Ring, Shot } from "../ui";
 
 /** Why you can let it near money: agents ask, code decides, and a benchmark attacks it. */
@@ -22,7 +22,7 @@ export const Trust: React.FC<{ t: number }> = ({ t }) => {
     ["FORBIDDEN", "refused, always", ["Bulk refunds", "Payouts", "Anything not on the list"], c.flat, 4.0],
   ];
   const budget = ramp(t, cue("tiers") + 5.3, cue("tiers") + 6.6);
-  const lit = Math.floor(mix(0, 34, lin(t, cue("bench") + 1.2, cue("bench") + 4.9)));
+  const lit = Math.floor(mix(0, 34, lin(t, cue("bench") + 0.4, cueEnd("bench") - 0.2)));
   return (
     <>
       {t < refusedAt + 0.4 ? (
@@ -114,7 +114,7 @@ export const Trust: React.FC<{ t: number }> = ({ t }) => {
               5 incidents · 2 quiet days that must not alarm · 7 attacks on the policy
             </div>
             <div style={{ fontFamily: f.mono, fontSize: 20, lineHeight: 1.5, color: c.dim, marginTop: 14 }}>
-              This run uses stand-in models: it proves the pipeline, the policy and the recovery maths. make bench-live scores real models.
+              Run here with stand-in models, so it tests the pipeline, the policy and the recovery maths, not the AI. make bench-live scores real models.
             </div>
           </div>
         </div>

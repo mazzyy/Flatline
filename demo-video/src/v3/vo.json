@@ -1,180 +1,180 @@
 {
  "voice": "am_michael",
- "total": 167.441,
+ "total": 161.359,
  "lines": [
   {
    "scene": "open",
    "id": "line",
-   "start": 1.8,
-   "end": 6.472,
+   "start": 1.4,
+   "end": 6.072,
    "text": "This line is a coffee shop's revenue. Every beat is somebody paying."
   },
   {
    "scene": "open",
    "id": "breaks",
-   "start": 8.072,
-   "end": 12.417,
+   "start": 7.272,
+   "end": 11.617,
    "text": "Friday evening, a config change goes out... and checkout breaks."
   },
   {
    "scene": "open",
    "id": "monday",
-   "start": 15.017,
-   "end": 20.777,
-   "text": "The servers are fine. Every dashboard is green. Nobody finds out until Monday."
+   "start": 13.517,
+   "end": 17.229,
+   "text": "The servers are fine. Nobody finds out until Monday."
   },
   {
    "scene": "open",
    "id": "oncall",
-   "start": 21.777,
-   "end": 26.409,
+   "start": 18.229,
+   "end": 22.861,
    "text": "We put people on call for servers. Nobody is on call for the money."
   },
   {
    "scene": "title",
    "id": "built",
-   "start": 28.609,
-   "end": 33.473,
+   "start": 24.661,
+   "end": 29.525,
    "text": "So I built Flatline. An on-call engineer for your PayPal revenue."
   },
   {
    "scene": "break",
    "id": "break",
-   "start": 34.773,
-   "end": 41.363,
+   "start": 30.525,
+   "end": 37.115,
    "text": "Let me break my own shop. One bad config, and this American store now charges in euros."
   },
   {
    "scene": "detect",
    "id": "detect",
-   "start": 42.563,
-   "end": 50.844,
+   "start": 38.315,
+   "end": 46.597,
    "text": "Payments start failing. Within seconds, Flatline opens an incident, and puts a number on it: the money at risk, every hour."
   },
   {
    "scene": "agents",
    "id": "agents",
-   "start": 51.744,
-   "end": 61.28,
+   "start": 47.497,
+   "end": 57.033,
    "text": "Then four AI agents go to work. One of them reads the real transactions from PayPal, through PayPal's own MCP server."
   },
   {
    "scene": "agents",
    "id": "cause",
-   "start": 62.28,
-   "end": 68.546,
+   "start": 58.033,
+   "end": 64.298,
    "text": "And it finds the cause, with evidence. Not the bank. Not PayPal. Our own config change."
   },
   {
    "scene": "approve",
    "id": "waits",
-   "start": 69.346,
-   "end": 73.8,
+   "start": 65.098,
+   "end": 69.552,
    "text": "The warning banner, it put up by itself. But the rollback waits for me."
   },
   {
    "scene": "approve",
    "id": "click",
-   "start": 75.2,
-   "end": 76.187,
+   "start": 70.952,
+   "end": 71.939,
    "text": "One click."
   },
   {
    "scene": "approve",
    "id": "back",
-   "start": 78.387,
-   "end": 79.452,
+   "start": 74.139,
+   "end": 75.204,
    "text": "And we're back."
   },
   {
    "scene": "recover",
    "id": "stop",
-   "start": 81.852,
-   "end": 86.274,
+   "start": 77.604,
+   "end": 82.026,
    "text": "Most tools stop here. Incident resolved, everybody goes home."
   },
   {
    "scene": "recover",
    "id": "six",
-   "start": 87.174,
-   "end": 92.985,
+   "start": 82.926,
+   "end": 88.737,
    "text": "But six people tried to buy coffee while we were down. That's $108, gone."
   },
   {
    "scene": "recover",
    "id": "after",
-   "start": 93.785,
-   "end": 103.702,
+   "start": 89.537,
+   "end": 99.454,
    "text": "Flatline goes after it. It finds those six customers, and with one more approval, sends each of them a PayPal invoice, with an apology."
   },
   {
    "scene": "recover",
    "id": "play",
-   "start": 105.302,
-   "end": 108.793,
+   "start": 102.054,
+   "end": 105.545,
    "text": "In this demo, I play the customers. Four of them pay."
   },
   {
    "scene": "recover",
    "id": "seventy",
-   "start": 111.193,
-   "end": 113.184,
+   "start": 107.945,
+   "end": 109.936,
    "text": "$72. Back."
   },
   {
    "scene": "recover",
    "id": "code",
-   "start": 114.284,
-   "end": 122.405,
+   "start": 111.036,
+   "end": 119.157,
    "text": "And no AI writes those invoices. That part is plain code, because a model should never get to invent an amount."
   },
   {
    "scene": "trust",
    "id": "rule",
-   "start": 124.205,
-   "end": 128.832,
+   "start": 120.957,
+   "end": 125.584,
    "text": "That's the rule everywhere. The agents can only ask. Code decides."
   },
   {
    "scene": "trust",
    "id": "refused",
-   "start": 129.532,
-   "end": 132.879,
+   "start": 126.284,
+   "end": 129.631,
    "text": "I tried to sneak in a bulk refund. Refused."
   },
   {
    "scene": "trust",
    "id": "tiers",
-   "start": 133.579,
-   "end": 141.039,
+   "start": 130.331,
+   "end": 137.791,
    "text": "Safe fixes run on their own. Anything that moves money waits for a human. And refunds have a daily budget."
   },
   {
    "scene": "trust",
    "id": "bench",
-   "start": 141.839,
-   "end": 148.225,
-   "text": "And a benchmark attacks all of it, on every change. 34 checks. 34 passed."
+   "start": 138.591,
+   "end": 142.143,
+   "text": "And a benchmark attacks all of it. 34 checks."
   },
   {
    "scene": "close",
    "id": "stack",
-   "start": 150.025,
-   "end": 155.157,
+   "start": 143.943,
+   "end": 149.074,
    "text": "Built on PayPal's sandbox, MCP server, webhooks and invoicing."
   },
   {
    "scene": "close",
    "id": "oneline",
-   "start": 155.957,
-   "end": 160.999,
+   "start": 149.874,
+   "end": 154.917,
    "text": "It notices when your checkout breaks, fixes it, and gets the lost sales back."
   },
   {
    "scene": "close",
    "id": "tag",
-   "start": 162.499,
-   "end": 164.841,
+   "start": 156.417,
+   "end": 158.759,
    "text": "Flatline. On call for your revenue."
   }
  ]
