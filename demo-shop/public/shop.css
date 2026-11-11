@@ -26,3 +26,9 @@ button.secondary { background: transparent; color: var(--ink); border: 1px solid
 paypal-button { display: block; width: 100%; max-width: 360px; --paypal-button-border-radius: 8px; }
 #mock-pay { width: 100%; max-width: 360px; }
 .err { color: var(--risk); margin-top: .75rem; }
+.or { text-align: center; max-width: 360px; color: var(--muted); margin: .7rem 0; }
+#demo-pay { width: 100%; max-width: 360px; }
+button:disabled { opacity: .55; cursor: default; }
+.small { font-size: .9rem; max-width: 360px; }
+.demo-note { max-width: 960px; margin: 0 auto; padding: 1.2rem 1.25rem 2.5rem; color: var(--muted); font-size: .92rem; border-top: 1px solid var(--line); }
+.demo-note a { color: var(--accent); margin-left: .4rem; white-space: nowrap; }

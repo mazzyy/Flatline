@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { passcode, setInjectToken, setPasscode } from "./api";
+import { passcode } from "./api";
+import Monitor from "./components/Monitor";
 import AuditPage from "./pages/Audit";
 import ChaosPage from "./pages/Chaos";
 import HowItWorks from "./pages/HowItWorks";
 import IncidentPage from "./pages/Incident";
+import Landing from "./pages/Landing";
 import Overview from "./pages/Overview";
 import PolicyPage from "./pages/Policy";
 import Transactions from "./pages/Transactions";
@@ -74,44 +76,12 @@ export default function App() {
   }, [route]);
 
   if (!authed) {
-    return (
-      <div className="login-wrap">
-        <div className="card login">
-          <div className="brand">
-            <span className="brand-mark" />
-            Flatline <small>for Payments</small>
-          </div>
-          <h1>Log in to the demo</h1>
-          <p className="muted">An on-call agent for a merchant&apos;s PayPal revenue.</p>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              const fd = new FormData(e.currentTarget);
-              setPasscode(String(fd.get("pass") || ""));
-              setInjectToken(String(fd.get("inject") || "change-me"));
-              setAuthed(true);
-            }}
-          >
-            <div className="field">
-              <label htmlFor="pass">Shared passcode</label>
-              <input id="pass" name="pass" placeholder="passcode" defaultValue="demo-judge" />
-            </div>
-            <div className="field">
-              <label htmlFor="inject">Chaos / inject token</label>
-              <input id="inject" name="inject" placeholder="inject token" defaultValue="change-me" />
-            </div>
-            <button type="submit">Log In</button>
-          </form>
-          <p className="foot muted">
-            Sandbox and mock data only. There is no live PayPal path.
-          </p>
-        </div>
-      </div>
-    );
+    return <Landing onEnter={() => setAuthed(true)} />;
   }
 
   return (
     <>
+      <Monitor />
       <header className="pp-header">
         <div className="pp-header-inner">
           <a className="brand" href="#/overview">

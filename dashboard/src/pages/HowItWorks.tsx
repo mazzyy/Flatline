@@ -1,4 +1,4 @@
-const SHOP_URL = `${location.protocol}//${location.hostname}:3000`;
+import { useSite } from "../site";
 
 const STEPS: { title: string; who: "agent" | "code" | "human"; whoLabel: string; text: string }[] = [
   {
@@ -46,6 +46,7 @@ const STEPS: { title: string; who: "agent" | "code" | "human"; whoLabel: string;
 ];
 
 export default function HowItWorks() {
+  const { shopUrl: SHOP_URL } = useSite();
   return (
     <div>
       <section className="hero">

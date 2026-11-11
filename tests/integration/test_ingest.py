@@ -208,3 +208,60 @@ def test_policy_catalog_lists_the_money_limits(client: TestClient) -> None:
     assert limits["REFUND_APPROVAL_MAX"] == 50 and limits["DAILY_REFUND_BUDGET"] == 200
     recovery = next(i for i in body["items"] if i["key"] == "recovery.payment_links.send")
     assert recovery["tier"] == "approval" and recovery["planner_only"] is True
+
+
+def test_site_endpoint_and_shop_proxy_are_off_by_default(client: TestClient) -> None:
+    site = client.get("/api/site").json()
+    assert site == {"shop_url": "", "paypal_environment": "MOCK", "llm_mode": "mock"}
+    # Without SHOP_INTERNAL_URL the API does not pass anything on.
+    assert client.get("/shop/").status_code == 404
+    assert client.post("/shop/api/demo-pay", json={}).status_code == 404
+
+
+def test_shop_proxy_passes_requests_on_to_the_configured_shop_only(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import httpx
+
+    from flatline.config import reset_settings
+
+    seen: list[str] = []
+
+    class FakeClient:
+        def __init__(self, **_: object) -> None: ...
+        async def __aenter__(self) -> FakeClient:
+            return self
+
+        async def __aexit__(self, *_: object) -> None: ...
+        async def request(self, method: str, url: str, **_: object) -> httpx.Response:
+            seen.append(f"{method} {url}")
+            return httpx.Response(200, text="<h1>Lumen</h1>", headers={"content-type": "text/html"})
+
+    monkeypatch.setattr(httpx, "AsyncClient", FakeClient)
+    monkeypatch.setenv("SHOP_INTERNAL_URL", "http://127.0.0.1:3000")
+    monkeypatch.setenv("SHOP_PUBLIC_URL", "/shop")
+    reset_settings()
+    page = client.get("/shop/checkout/house-blend")
+    assert page.status_code == 200 and "Lumen" in page.text
+    # A path can not steer the request to another host.
+    client.get("/shop/http://example.com/x")
+    assert seen[0] == "GET http://127.0.0.1:3000/shop/checkout/house-blend"
+    assert all(
+        url.startswith(("GET http://127.0.0.1:3000/shop", "POST http://127.0.0.1:3000/shop"))
+        for url in seen
+    )
+    assert client.get("/api/site").json()["shop_url"] == "/shop"
+
+
+def test_a_no_login_demo_checkout_is_stored_as_simulated(client: TestClient) -> None:
+    body = {
+        "type": "checkout.capture",
+        "ok": False,
+        "error_code": "CURRENCY_MISMATCH",
+        "order_id": "DEMO-1",
+        "amount": "18.00",
+    }
+    client.post("/api/telemetry", json={**body, "simulated": True})
+    client.post("/api/telemetry", json={**body, "order_id": "ORD-REAL"})
+    rows = {r["resource_id"]: r["synthetic"] for r in client.get("/api/events").json()["rows"]}
+    assert rows == {"DEMO-1": True, "ORD-REAL": False}

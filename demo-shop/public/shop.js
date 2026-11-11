@@ -1,5 +1,8 @@
+// Set by the server when the shop is served under a path such as /shop.
+const BASE = window.__BASE__ || "";
+
 async function boot() {
-  const cfg = await (await fetch("/api/config")).json();
+  const cfg = await (await fetch(`${BASE}/api/config`)).json();
   const banner = document.getElementById("banner");
   if (cfg.banner) {
     banner.hidden = false;
@@ -22,7 +25,7 @@ function renderCatalog(cfg) {
     grid.insertAdjacentHTML(
       "beforeend",
       `<article class="card"><h2>${p.name}</h2><p class="muted">${p.blurb}</p><p class="price">$${p.price}</p>
-       <a class="btn" href="/checkout/${p.id}">${paused ? "Paused" : "Buy"}</a></article>`
+       <a class="btn" href="${BASE}/checkout/${p.id}">${paused ? "Paused" : "Buy"}</a></article>`
     );
   }
 }
@@ -34,7 +37,7 @@ function productFrom(cfg) {
 
 function renderProduct(cfg) {
   const p = productFrom(cfg);
-  document.getElementById("app").innerHTML = `<article class="card"><h1>${p.name}</h1><p>${p.blurb}</p><p class="price">$${p.price}</p><a class="btn" href="/checkout/${p.id}">Checkout</a></article>`;
+  document.getElementById("app").innerHTML = `<article class="card"><h1>${p.name}</h1><p>${p.blurb}</p><p class="price">$${p.price}</p><a class="btn" href="${BASE}/checkout/${p.id}">Checkout</a></article>`;
 }
 
 async function renderCheckout(cfg) {
@@ -54,28 +57,55 @@ async function renderCheckout(cfg) {
       console.error("PayPal SDK", e);
       document.getElementById("err").textContent = "The PayPal button could not load.";
     }
+    addDemoPay(p);
   } else {
     const btn = document.createElement("button");
     btn.id = "mock-pay";
     btn.textContent = "Pay (mock)";
     document.getElementById("pay").appendChild(btn);
     btn.onclick = async () => {
-      const created = await fetch("/api/orders", {
+      const created = await fetch(`${BASE}/api/orders`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ product_id: p.id }),
       });
       const order = await created.json();
-      const cap = await fetch(`/api/orders/${order.id}/capture`, {
+      const cap = await fetch(`${BASE}/api/orders/${order.id}/capture`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ product_id: p.id }),
       });
       const result = await cap.json();
-      if (result.ok) location.href = "/thanks";
+      if (result.ok) location.href = `${BASE}/thanks`;
       else document.getElementById("err").textContent = result.error_code || "Payment failed";
     };
   }
+}
+
+/** A second way to pay for visitors with no PayPal sandbox buyer: no login, no PayPal call. */
+function addDemoPay(p) {
+  const pay = document.getElementById("pay");
+  pay.insertAdjacentHTML(
+    "beforeend",
+    `${document.getElementById("paypal-btn") ? '<p class="or">or</p>' : ""}<button id="demo-pay" class="secondary">Pay without a PayPal login (demo)</button>
+     <p class="muted small">No PayPal account needed. This checkout is simulated: it succeeds or fails exactly as the shop's
+     current settings would make a real one, and Flatline labels it as simulated.</p>`
+  );
+  const btn = document.getElementById("demo-pay");
+  btn.onclick = async () => {
+    btn.disabled = true;
+    const res = await fetch(`${BASE}/api/demo-pay`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ product_id: p.id }),
+    });
+    const result = await res.json();
+    if (result.ok) location.href = `${BASE}/thanks`;
+    else {
+      btn.disabled = false;
+      document.getElementById("err").textContent = `Payment failed: ${result.error_code || result.error || "unknown error"}. You were not charged.`;
+    }
+  };
 }
 
 async function renderPaypalV6(cfg, p) {
@@ -100,14 +130,14 @@ async function renderPaypalV6(cfg, p) {
   if (methods.isEligible("paypal")) btn.hidden = false;
   const session = sdk.createPayPalOneTimePaymentSession({
     onApprove: async ({ orderId }) => {
-      const cap = await fetch(`/api/orders/${orderId}/capture`, { method: "POST" });
+      const cap = await fetch(`${BASE}/api/orders/${orderId}/capture`, { method: "POST" });
       const result = await cap.json();
-      if (result.ok) location.href = "/thanks";
+      if (result.ok) location.href = `${BASE}/thanks`;
       else document.getElementById("err").textContent = result.error_code || "Capture failed";
     },
   });
   btn.addEventListener("click", async () => {
-    const created = await fetch("/api/orders", {
+    const created = await fetch(`${BASE}/api/orders`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ product_id: p.id }),
@@ -123,14 +153,14 @@ function renderSubscribe(cfg) {
     <button id="join" ${paused ? "disabled" : ""}>${paused ? "Sign-ups paused" : "Join (mock)"}</button>
     <p id="err" class="err"></p></article>`;
   document.getElementById("join").onclick = async () => {
-    const res = await fetch("/api/subscribe", { method: "POST" });
-    if (res.ok) location.href = "/thanks";
+    const res = await fetch(`${BASE}/api/subscribe`, { method: "POST" });
+    if (res.ok) location.href = `${BASE}/thanks`;
     else document.getElementById("err").textContent = (await res.json()).error || "Could not subscribe";
   };
 }
 
 function renderThanks() {
-  document.getElementById("app").innerHTML = `<article class="card"><h1>Thank you</h1><p class="muted">The roastery has your order.</p><a href="/">Back to the shop</a></article>`;
+  document.getElementById("app").innerHTML = `<article class="card"><h1>Thank you</h1><p class="muted">The roastery has your order.</p><a href="${BASE}/">Back to the shop</a></article>`;
 }
 
 boot();

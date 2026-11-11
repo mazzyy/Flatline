@@ -81,6 +81,11 @@ class Settings(BaseSettings):
     notify_webhook_url: str = Field(default="", alias="NOTIFY_WEBHOOK_URL")
     flatline_api_url: str = Field(default="http://localhost:8000", alias="FLATLINE_API_URL")
     shop_port: int = Field(default=3000, alias="SHOP_PORT")
+    # Where a browser finds the demo shop. Empty: the same host on port 3000 (local setup).
+    shop_public_url: str = Field(default="", alias="SHOP_PUBLIC_URL")
+    # One-container hosting: the API serves the shop under /shop by passing requests on
+    # to the shop process at this address (scripts/start.sh sets both values).
+    shop_internal_url: str = Field(default="", alias="SHOP_INTERNAL_URL")
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
 
     @field_validator("paypal_environment")

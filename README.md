@@ -323,6 +323,29 @@ python scripts/live_check.py
 
 It presses the same Chaos buttons as the dashboard, waits for the agents, and prints every step with its model, latency and PayPal reads. It checks that each diagnosis names the right cause, that the rollback and the pause wait for approval, that the bulk refund is refused and that the reminder runs on its own. After the rollback it waits for the verifier and checks that the recovery plan appears, waits for approval, and records injected customers as simulated (`--skip-recovery` stops before that). A run that ends in `PASS` is how the demo video was recorded.
 
+### Deploy to Heroku as one container
+
+The image can run everything a judge needs behind one URL: the landing page and dashboard at `/`, the demo shop at `/shop`, with the detector and the agents in the same process. `RUN_SHOP=true` turns the shop on (see `scripts/start.sh`).
+
+```bash
+heroku create <your-app>
+heroku stack:set container -a <your-app>
+heroku addons:create heroku-postgresql:essential-0 -a <your-app>
+heroku config:set -a <your-app> \
+  RUN_SHOP=true RUN_WORKERS=true DEMO_MODE=true VERIFY_MINUTES=1 \
+  PAYPAL_ENVIRONMENT=SANDBOX LLM_MODE=live \
+  PAYPAL_CLIENT_ID=... PAYPAL_CLIENT_SECRET=... PAYPAL_WEBHOOK_ID=... \
+  PAYPAL_SANDBOX_PLAN_ID=... PAYPAL_SANDBOX_PRODUCT_ID=... \
+  GEMINI_API_KEY=... MODEL_FAST=gemini/gemini-2.5-flash-lite MODEL_REASONING=gemini/gemini-2.5-flash \
+  DASHBOARD_PASSCODE=demo-judge INJECT_TOKEN=change-me \
+  APP_BASE_URL=https://<your-app>.herokuapp.com
+git push heroku main
+```
+
+Heroku sets `DATABASE_URL` and `PORT` itself. Afterwards, point the PayPal sandbox webhook at `https://<your-app>.herokuapp.com/webhooks/paypal` and check the deployment with `python scripts/live_check.py --url https://<your-app>.herokuapp.com`. The container runs Python, the Node shop and two PayPal MCP processes; if the dyno runs out of memory, use a larger one. To try the same layout locally: `docker build -t flatline . && docker run -p 8000:8000 -e RUN_SHOP=true -e RUN_WORKERS=true -e DATABASE_URL=sqlite:////tmp/flatline.db flatline`.
+
+In the sandbox the shop's checkout has two buttons: the PayPal button, for visitors with a sandbox buyer account, and **Pay without a PayPal login (demo)**. The second one makes no PayPal call; it succeeds or fails as the shop's current settings would make a real payment, and Flatline stores it with a simulated badge.
+
 ### Deploy to Render (optional)
 
 The repo includes a [Blueprint](render.yaml) that fits Render's free instances: one web service runs the API, the detector and the agent loop together (`RUN_WORKERS=true`), a second one runs the demo shop, and a free Postgres holds the data.

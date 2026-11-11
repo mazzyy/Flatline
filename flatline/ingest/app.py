@@ -11,7 +11,7 @@ from uuid import UUID
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -132,7 +132,8 @@ def create_app() -> FastAPI:
             plan_id=body.get("plan_id"),
             error_code=error_code,
             payload=body,
-            synthetic=False,
+            # The shop's "pay without a PayPal login" checkout: no PayPal order behind it.
+            synthetic=bool(body.get("simulated")),
             verified=True,
         )
         db.add(row)
@@ -191,6 +192,49 @@ def create_app() -> FastAPI:
             details={"inject": "recovery_payments", "synthetic_events": len(stored)},
         )
         return {"injected": stored, "money": ledger.summary(db)}
+
+    @app.get("/api/site")
+    def site() -> dict[str, Any]:
+        """What the landing page needs to send a visitor to the right places."""
+        cfg = settings()
+        return {
+            "shop_url": cfg.shop_public_url,
+            "paypal_environment": cfg.paypal_environment,
+            "llm_mode": cfg.llm_mode,
+        }
+
+    @app.api_route("/shop", methods=["GET", "POST"])
+    @app.api_route("/shop/{path:path}", methods=["GET", "POST"])
+    async def shop_proxy(request: Request, path: str = "") -> Response:
+        """One-container hosting: pass /shop on to the demo shop process.
+
+        Only active when SHOP_INTERNAL_URL is set. The address is fixed by the
+        operator; nothing in the request can change where this goes.
+        """
+        import httpx
+
+        upstream = settings().shop_internal_url.rstrip("/")
+        if not upstream:
+            raise HTTPException(status_code=404, detail="the demo shop is not served from here")
+        headers = {
+            k: v for k, v in request.headers.items() if k.lower() in ("content-type", "accept")
+        }
+        try:
+            async with httpx.AsyncClient(timeout=60) as client:
+                answer = await client.request(
+                    request.method,
+                    f"{upstream}{request.url.path}",
+                    params=dict(request.query_params),
+                    content=await request.body(),
+                    headers=headers,
+                )
+        except httpx.HTTPError as exc:
+            raise HTTPException(status_code=502, detail="the demo shop is not answering") from exc
+        return Response(
+            content=answer.content,
+            status_code=answer.status_code,
+            media_type=answer.headers.get("content-type"),
+        )
 
     @app.get("/api/shop/config")
     def shop_config(db: Session = Depends(session_dep)) -> dict[str, Any]:

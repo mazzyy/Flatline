@@ -1,0 +1,5 @@
+# One container on Heroku: the API, the dashboard, the detector, the agents and the
+# demo shop (under /shop). Deploy steps are in the README.
+build:
+  docker:
+    web: Dockerfile

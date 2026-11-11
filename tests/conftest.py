@@ -24,6 +24,8 @@ SAFE_ENV = {
     "RECOVERY_ENABLED": "true",
     "RECOVERY_MAX_LINKS": "25",
     "RECOVERY_MAX_TOTAL": "1000",
+    "SHOP_PUBLIC_URL": "",
+    "SHOP_INTERNAL_URL": "",
     "AZURE_API_KEY": "",
     "GITHUB_TOKEN": "",
     "DASHBOARD_PASSCODE": "demo-judge",

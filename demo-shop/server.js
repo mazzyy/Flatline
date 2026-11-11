@@ -3,7 +3,11 @@
 /**
  * Lumen Coffee Co. — fictional demo shop.
  * MOCK: "Pay (mock)" hits this server; chaos flags decide success.
- * SANDBOX: PayPal JS SDK v6 buttons + Orders REST on this server.
+ * SANDBOX: PayPal JS SDK v6 buttons + Orders REST on this server, plus a
+ * "pay without a PayPal login" button for visitors who have no sandbox buyer.
+ *
+ * SHOP_BASE_PATH (for example /shop) serves the whole shop under that path, so
+ * one container can put it behind the Flatline API.
  */
 
 const express = require("express");
@@ -17,6 +21,9 @@ const CLIENT_ID = process.env.PAYPAL_CLIENT_ID || "";
 const CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET || "";
 const PLAN_ID = process.env.PAYPAL_SANDBOX_PLAN_ID || "P-COFFEECLUB";
 const API_BASE = "https://api-m.sandbox.paypal.com";
+const BASE = (process.env.SHOP_BASE_PATH || "").replace(/\/+$/, "");
+// Where the "see what Flatline saw" link goes. Next to the shop when behind one host.
+const DASHBOARD = process.env.FLATLINE_PUBLIC_URL || (BASE ? "/" : "http://localhost:8000");
 
 if (PAYPAL_ENV !== "MOCK" && PAYPAL_ENV !== "SANDBOX") {
   console.error(
@@ -66,9 +73,11 @@ async function sandboxToken() {
   return (await res.json()).access_token;
 }
 
-const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+const server = express();
+const app = express.Router();
+server.use(express.json());
+server.use(express.urlencoded({ extended: true }));
+server.use(BASE || "/", app);
 app.use("/static", express.static(path.join(__dirname, "public")));
 
 app.get("/api/config", async (_req, res) => {
@@ -79,6 +88,7 @@ app.get("/api/config", async (_req, res) => {
     paypal_client_id: CLIENT_ID,
     plan_id: PLAN_ID,
     products,
+    dashboard_url: DASHBOARD,
   });
 });
 
@@ -207,6 +217,40 @@ app.post("/api/orders/:id/capture", async (req, res) => {
   res.status(ok ? 200 : 422).json({ ok, error_code, order, paypal });
 });
 
+/**
+ * Checkout without a PayPal login, for visitors who have no sandbox buyer.
+ * No PayPal call is made. The outcome follows the shop's config the way a real
+ * capture would (a shop charging the wrong currency fails), and the telemetry
+ * is marked simulated, so Flatline shows it with a simulated badge.
+ */
+app.post("/api/demo-pay", async (req, res) => {
+  const started = Date.now();
+  const cfg = await shopConfig();
+  const product = products.find((p) => p.id === req.body.product_id) || products[0];
+  if ((cfg.paused_products || []).includes(product.id)) {
+    return res.status(409).json({ error: "product_paused" });
+  }
+  const chaos = cfg.chaos || {};
+  const currency = chaos.bad_currency ? "EUR" : cfg.currency || "USD";
+  let error_code = null;
+  if (chaos.mock_response) error_code = chaos.mock_response;
+  else if (currency !== "USD") error_code = "CURRENCY_MISMATCH";
+  const ok = !error_code;
+  const order_id = `DEMO-${Date.now().toString(36).toUpperCase()}`;
+  await telemetry({
+    type: "checkout.capture",
+    ok,
+    error_code,
+    order_id,
+    product_id: product.id,
+    amount: product.price,
+    currency,
+    simulated: true,
+    latency_ms: Date.now() - started,
+  });
+  res.status(ok ? 200 : 422).json({ ok, error_code, order_id });
+});
+
 app.post("/api/subscribe", async (req, res) => {
   const cfg = await shopConfig();
   if (cfg.plan_signups_paused) {
@@ -230,20 +274,24 @@ function page(name, extra = "") {
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Lumen Coffee Co.</title>
-  <link rel="stylesheet" href="/static/shop.css"/>
+  <link rel="stylesheet" href="${BASE}/static/shop.css"/>
 </head>
 <body>
   <div id="banner" class="banner" hidden></div>
   <header>
-    <a class="brand" href="/">Lumen Coffee Co.</a>
+    <a class="brand" href="${BASE}/">Lumen Coffee Co.</a>
     <nav>
-      <a href="/">Shop</a>
-      <a href="/subscribe">Coffee Club</a>
+      <a href="${BASE}/">Shop</a>
+      <a href="${BASE}/subscribe">Coffee Club</a>
     </nav>
   </header>
   <main id="app">${extra}</main>
-  <script>window.__PAGE__=${JSON.stringify(name)};</script>
-  <script src="/static/shop.js"></script>
+  <footer class="demo-note">
+    Lumen Coffee Co. is a made up shop: the demo store that Flatline watches. Nothing here costs real money.
+    <a href="${DASHBOARD}">See what Flatline saw &rarr;</a>
+  </footer>
+  <script>window.__PAGE__=${JSON.stringify(name)};window.__BASE__=${JSON.stringify(BASE)};</script>
+  <script src="${BASE}/static/shop.js"></script>
 </body>
 </html>`;
 }
@@ -254,6 +302,6 @@ app.get("/checkout/:id", (req, res) => res.send(page("checkout", `<div data-prod
 app.get("/subscribe", (_req, res) => res.send(page("subscribe")));
 app.get("/thanks", (_req, res) => res.send(page("thanks")));
 
-app.listen(PORT, () => {
-  console.log(`Lumen Coffee Co. on http://localhost:${PORT} (${PAYPAL_ENV})`);
+server.listen(PORT, () => {
+  console.log(`Lumen Coffee Co. on http://localhost:${PORT}${BASE} (${PAYPAL_ENV})`);
 });
