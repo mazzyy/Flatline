@@ -327,6 +327,15 @@ It presses the same Chaos buttons as the dashboard, waits for the agents, and pr
 
 The image can run everything a judge needs behind one URL: the landing page and dashboard at `/`, the demo shop at `/shop`, with the detector and the agents in the same process. `RUN_SHOP=true` turns the shop on (see `scripts/start.sh`).
 
+The short way, which does every step below and reads the keys from your `.env` without printing them:
+
+```bash
+heroku login
+scripts/deploy_heroku.sh <your-app>
+```
+
+Or by hand:
+
 ```bash
 heroku create <your-app>
 heroku stack:set container -a <your-app>
