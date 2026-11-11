@@ -6,15 +6,28 @@ import incidentImg from "../assets/guide/incident.jpg";
 import recoveryImg from "../assets/guide/recovery.jpg";
 import shopImg from "../assets/guide/shop.jpg";
 import { useSite } from "../site";
-import { useRevenue } from "../useRevenue";
+import { cash, useRevenue } from "../useRevenue";
 
 const REPO = "https://github.com/mazzyy/Flatline";
 // Set VITE_VIDEO_URL at build time to show the film link.
 const VIDEO = (import.meta.env.VITE_VIDEO_URL as string | undefined) || "";
 
-/** The front door: what this is, the two places to look, and a short guide to trying it. */
+const WHAT: [string, string, string][] = [
+  ["Detect", "Within seconds", "It watches PayPal webhooks and the shop's checkout. When failures jump, an incident opens with the money at risk per hour."],
+  ["Diagnose", "Four AI agents, read only", "They read the payments, the shop's settings and PayPal itself, and name the cause with evidence."],
+  ["Fix", "One click", "Safe fixes run on their own. Anything that changes the shop or moves money waits for you."],
+  ["Recover", "Plain code, no AI", "Once the fix holds, it finds the customers who could not pay and sends each one a PayPal invoice."],
+];
+
+const TIERS: [string, string, string[]][] = [
+  ["auto", "runs on its own", ["Warning banner", "Alert the merchant", "Payment reminder"]],
+  ["approval", "waits for a human", ["Config rollback", "Recovery invoices", "A refund up to the limit"]],
+  ["forbidden", "refused, always", ["Bulk refunds", "Payouts", "Anything not on the list"]],
+];
+
+/** The front door: the pitch in the film's own words, then the live demo and a short guide to it. */
 export default function Landing({ onEnter }: { onEnter: () => void }) {
-  const { checkoutDown } = useRevenue();
+  const { checkoutDown, money } = useRevenue();
   const { shopUrl, sandbox } = useSite();
   const here = location.host;
   const shopLabel = shopUrl.startsWith("/") ? `${here}${shopUrl}` : shopUrl.replace(/^https?:\/\//, "");
@@ -84,15 +97,14 @@ export default function Landing({ onEnter }: { onEnter: () => void }) {
       <header className="film-top">
         <span className="film-word">Flatline</span>
         <nav>
+          <a href="#what">What it does</a>
           <a href="#guide">How to try it</a>
-          {VIDEO ? (
-            <a href={VIDEO} target="_blank" rel="noreferrer">Watch the film</a>
-          ) : null}
           <a href={REPO} target="_blank" rel="noreferrer">GitHub</a>
+          <a className="film-btn small" href="#demo">Try the live demo</a>
         </nav>
       </header>
 
-      <section className="film-hero compact">
+      <section className="film-hero">
         <div className="film-hud">
           <span>LUMEN COFFEE CO. · REVENUE</span>
           <span className={`film-state ${checkoutDown ? "down" : ""}`}>
@@ -101,19 +113,87 @@ export default function Landing({ onEnter }: { onEnter: () => void }) {
           </span>
         </div>
         <div className="film-pulse">
-          <Pulse alive={!checkoutDown} height={130} seconds={7} stroke={3} />
+          <Pulse alive={!checkoutDown} height={170} seconds={7} stroke={3.2} />
         </div>
+        <p className="film-kicker">We put people on call for servers.</p>
         <h1>
-          On call for your <em>revenue.</em>
+          Nobody is on call for the <em>money.</em>
         </h1>
         <p className="film-sub">
-          Flatline watches a shop&apos;s PayPal payments. When checkout breaks it notices, fixes it, and gets the lost sales back. This page is a
-          live demo: the line above is this demo shop&apos;s checkout right now.
+          Flatline is an on-call engineer for your PayPal revenue. It notices when your checkout breaks, fixes it, and gets the lost sales back.
         </p>
+        <div className="film-cta">
+          <a className="film-btn" href="#demo">Try the live demo</a>
+          {VIDEO ? (
+            <a className="film-btn ghost" href={VIDEO} target="_blank" rel="noreferrer">Watch the film (2:41)</a>
+          ) : null}
+          <a className="film-btn ghost" href={REPO} target="_blank" rel="noreferrer">Read the code</a>
+        </div>
+        <p className="film-fine">The line above is live: it is this demo shop&apos;s checkout right now. Break it and it goes flat.</p>
       </section>
 
-      <section className="film-section tight">
-        <span className="film-label">THE DEMO HAS TWO PARTS</span>
+      <section className="film-money">
+        <div>
+          <span className="film-label">LOST TO INCIDENTS</span>
+          <strong className="lost">{cash(money?.impact, money?.currency)}</strong>
+          <span className="film-serif">{money?.counts.impact ?? 0} sales that failed or were refunded</span>
+        </div>
+        <div>
+          <span className="film-label">ASKED BACK</span>
+          <strong>{cash(money?.requested, money?.currency)}</strong>
+          <span className="film-serif">{money?.counts.requested ?? 0} customers, each batch approved by a person</span>
+        </div>
+        <div>
+          <span className="film-label">RECOVERED</span>
+          <strong className="back">{cash(money?.recovered, money?.currency)}</strong>
+          <span className="film-serif">in this demo so far{money?.simulated ? ", partly simulated and labelled" : ""}</span>
+        </div>
+      </section>
+
+      <section id="what" className="film-section">
+        <h2>
+          Most tools stop at &ldquo;resolved&rdquo;. <em>Flatline goes after the money.</em>
+        </h2>
+        <p className="film-lede">
+          A config change goes out on a Friday evening and checkout breaks. The servers are fine, every dashboard is green, and the shop finds out
+          on Monday. Flatline finds out in seconds.
+        </p>
+        <div className="film-steps">
+          {WHAT.map(([name, sub, text], i) => (
+            <article key={name}>
+              <span className="film-label">STEP {i + 1}</span>
+              <h3>{name}</h3>
+              <p className="film-serif">{sub}</p>
+              <p>{text}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="film-section">
+        <h2>
+          The agents can only ask. <em>Code decides.</em>
+        </h2>
+        <div className="film-tiers">
+          {TIERS.map(([tier, sub, items]) => (
+            <article key={tier} className={tier}>
+              <span className="film-tier">{tier.toUpperCase()}</span>
+              <p className="film-serif">{sub}</p>
+              <ul>
+                {items.map((it) => (
+                  <li key={it}>{it}</li>
+                ))}
+              </ul>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section id="demo" className="film-section">
+        <span className="film-label">THE LIVE DEMO HAS TWO PARTS</span>
+        <h2>
+          Don&apos;t take our word for it. <em>Break the shop yourself.</em>
+        </h2>
         <div className="film-places">
           <article>
             <span className="film-num">1</span>
@@ -152,7 +232,9 @@ export default function Landing({ onEnter }: { onEnter: () => void }) {
 
       <section id="guide" className="film-section">
         <span className="film-label">TRY IT IN FIVE MINUTES</span>
-        <h2>Break the shop, and watch what happens.</h2>
+        <h2>
+          Four steps, <em>start to finish.</em>
+        </h2>
         <ol className="film-guide">
           {STEPS.map((s, i) => (
             <li key={s.title}>

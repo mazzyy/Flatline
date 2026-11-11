@@ -468,3 +468,5 @@ table.items td { padding: 0.25rem 1.4rem 0.25rem 0; border-top: 1px solid var(--
 .film-facts h3 { font-size: 1.15rem; font-weight: 600; margin: 0 0 0.4rem; }
 .film-facts p { color: var(--f-dim); line-height: 1.55; margin: 0; }
 .film-facts a { text-decoration: underline; }
+.film-lede { max-width: 820px; font-size: 1.2rem; line-height: 1.6; color: var(--f-dim); margin: -0.8rem 0 2rem; }
+.film-section h2 + .film-places, .film-section h2 + .film-guide { margin-top: 0; }

@@ -45,19 +45,20 @@ async function renderCheckout(cfg) {
   const paused = (cfg.paused_products || []).includes(p.id);
   const app = document.getElementById("app");
   app.innerHTML = `<article class="card"><h1>Checkout — ${p.name}</h1><p class="price">$${p.price} ${cfg.currency || "USD"}</p>
-    <div id="pay"></div><p id="err" class="err"></p></article>`;
+    <div id="pay"></div><div id="demo"></div><p id="err" class="err"></p></article>`;
   if (paused) {
     document.getElementById("err").textContent = "This product is paused.";
     return;
   }
   if (cfg.paypal_environment === "SANDBOX" && cfg.paypal_client_id) {
+    // The no-login button goes up first, so it is there even if PayPal is slow or blocked.
+    addDemoPay(p);
     try {
       await renderPaypalV6(cfg, p);
     } catch (e) {
       console.error("PayPal SDK", e);
-      document.getElementById("err").textContent = "The PayPal button could not load.";
+      document.getElementById("err").textContent = "The PayPal button could not load. You can still use the demo button.";
     }
-    addDemoPay(p);
   } else {
     const btn = document.createElement("button");
     btn.id = "mock-pay";
@@ -84,13 +85,10 @@ async function renderCheckout(cfg) {
 
 /** A second way to pay for visitors with no PayPal sandbox buyer: no login, no PayPal call. */
 function addDemoPay(p) {
-  const pay = document.getElementById("pay");
-  pay.insertAdjacentHTML(
-    "beforeend",
-    `${document.getElementById("paypal-btn") ? '<p class="or">or</p>' : ""}<button id="demo-pay" class="secondary">Pay without a PayPal login (demo)</button>
+  document.getElementById("demo").innerHTML = `<p class="or">or</p>
+     <button id="demo-pay" class="secondary">Pay without a PayPal login (demo)</button>
      <p class="muted small">No PayPal account needed. This checkout is simulated: it succeeds or fails exactly as the shop's
-     current settings would make a real one, and Flatline labels it as simulated.</p>`
-  );
+     current settings would make a real one, and Flatline labels it as simulated.</p>`;
   const btn = document.getElementById("demo-pay");
   btn.onclick = async () => {
     btn.disabled = true;
