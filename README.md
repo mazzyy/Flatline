@@ -2,6 +2,8 @@
 
 **On call for your revenue.**
 
+**Try it live:** [flatline-demo-27612c3a852c.herokuapp.com](https://flatline-demo-27612c3a852c.herokuapp.com) · passcode `demo-judge` · demo shop at [/shop](https://flatline-demo-27612c3a852c.herokuapp.com/shop) · PayPal sandbox only, no real money anywhere.
+
 [![Flatline demo, click to watch the full video](docs/media/demo.gif)](docs/media/flatline_demo.mp4)
 
 Every online shop monitors its servers. Almost nobody monitors their money. When checkout breaks on a Friday evening, or refunds suddenly pile up on one product, most merchants find out days later from a payout report or an annoyed customer.
@@ -14,7 +16,27 @@ In one line: Flatline is the on call engineer for your PayPal revenue. It notice
 
 Built for the PayPal AI Hackathon. MIT licensed. Copyright 2026 Abdul Musawar Soomro.
 
-**Jump to:** [the demo](#the-demo) · [the approach](#the-approach) · [how it works](#how-it-works) · [one incident, start to finish](#one-incident-start-to-finish) · [getting the lost sales back](#getting-the-lost-sales-back) · [benchmark](#benchmark) · [run it](#run-it) · [why you can trust it](#why-you-can-trust-it)
+**Jump to:** [try it live](#try-it-live) · [the demo](#the-demo) · [the approach](#the-approach) · [how it works](#how-it-works) · [one incident, start to finish](#one-incident-start-to-finish) · [getting the lost sales back](#getting-the-lost-sales-back) · [benchmark](#benchmark) · [run it](#run-it) · [why you can trust it](#why-you-can-trust-it)
+
+## Try it live
+
+The whole project runs behind one address, on the PayPal sandbox with live models. Nothing here can move real money.
+
+| What | Where |
+| --- | --- |
+| Landing page and dashboard | https://flatline-demo-27612c3a852c.herokuapp.com (passcode `demo-judge`) |
+| Demo shop, Lumen Coffee Co. | https://flatline-demo-27612c3a852c.herokuapp.com/shop |
+
+It takes about three minutes:
+
+1. **Buy a coffee.** Open the [shop](https://flatline-demo-27612c3a852c.herokuapp.com/shop), pick a product and press **Pay without a PayPal login (demo)**. If you have a PayPal sandbox buyer account, the PayPal button works too. The payment goes through.
+2. **See it arrive.** Open the [dashboard](https://flatline-demo-27612c3a852c.herokuapp.com), enter the passcode `demo-judge` and look at **Transactions**. Your payment is at the top. Payments made with the demo button carry a simulated badge.
+3. **Break the shop.** In the dashboard open **Chaos** and press **Ship bad currency config**. This US shop now charges in euros, and six customers fail to pay. Go back to the shop and try to buy again: your payment fails too.
+4. **Watch Flatline work.** Within seconds an incident opens on the **Overview** with the money at risk per hour. Open it to see the four agent steps, the evidence read from PayPal, and the root cause. The warning banner on the shop went up on its own; the rollback is waiting for you.
+5. **Approve the fix.** Press **Approve** on the rollback. The shop works again, and after a quiet minute the verifier closes the incident.
+6. **Get the lost sales back.** A recovery proposal now appears on the incident page, listing each customer who tried to pay and could not. Approve it, then press **Customers pay their recovery requests** in the Chaos panel. The Overview shows what was lost, asked back and recovered.
+
+When you are done, **Reset all chaos** puts the shop back to normal. A second incident of the same kind within 30 minutes is merged into the first one, so wait a little before repeating a scenario. The first page load can take a few seconds if the server has been idle.
 
 ## The demo
 
@@ -26,7 +48,7 @@ It shows three incidents:
 2. **A refund wave.** Five refunds in an hour on one coffee, from five different buyers. Flatline traces it to the product and proposes pausing its sales. A forbidden bulk refund, slipped in as a red team probe, is refused by the proxy.
 3. **Failing renewals.** Four Coffee Club renewals fail. Flatline reads the plan from PayPal, sees the plan is healthy and the subscribers' payments are the problem, and sends reminders on its own.
 
-The video was cut before the recovery step, the money limits and the benchmark were added. Those are described below, under [getting the lost sales back](#getting-the-lost-sales-back) and [benchmark](#benchmark), and you can try the recovery yourself in two clicks.
+That recording was cut before the recovery step, the money limits and the benchmark were added. The submission film on the Devpost page is newer and shows all of it, including one real sandbox invoice being sent and paid. The details are below, under [getting the lost sales back](#getting-the-lost-sales-back) and [benchmark](#benchmark), and you can try the recovery yourself on the [live demo](#try-it-live).
 
 ## The approach
 
@@ -324,6 +346,8 @@ python scripts/live_check.py
 It presses the same Chaos buttons as the dashboard, waits for the agents, and prints every step with its model, latency and PayPal reads. It checks that each diagnosis names the right cause, that the rollback and the pause wait for approval, that the bulk refund is refused and that the reminder runs on its own. After the rollback it waits for the verifier and checks that the recovery plan appears, waits for approval, and records injected customers as simulated (`--skip-recovery` stops before that). A run that ends in `PASS` is how the demo video was recorded.
 
 ### Deploy to Heroku as one container
+
+This is how the [live demo](https://flatline-demo-27612c3a852c.herokuapp.com) is hosted.
 
 The image can run everything a judge needs behind one URL: the landing page and dashboard at `/`, the demo shop at `/shop`, with the detector and the agents in the same process. `RUN_SHOP=true` turns the shop on (see `scripts/start.sh`).
 

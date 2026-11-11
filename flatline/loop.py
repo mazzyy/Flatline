@@ -21,6 +21,7 @@ from flatline.db.models import AgentJob, AgentStep, Event, Incident, Proposal, a
 from flatline.detector.rules import event_matches_metric
 from flatline.ingest.sse import HUB
 from flatline.playbooks.loader import load_playbooks
+from flatline.policy.executor import _active_config as active_config
 from flatline.policy.executor import execute_proposal
 from flatline.policy.proxy import AGENT, PLANNER, decide, rate_limit_auto, rate_limit_pending
 from flatline.recovery import ledger, planner
@@ -223,8 +224,44 @@ async def verify_incident(db: Session, incident: Incident, *, record_pending: bo
     if resolved or record_pending:
         run_verifier(db, incident, resolved, observation)
     if resolved:
+        clear_banner(db, incident)
         settle_incident(db, incident)
     return resolved
+
+
+def clear_banner(db: Session, incident: Incident) -> Proposal | None:
+    """Take the warning banner down once the incident that put it up is resolved.
+
+    Plain code, through the same policy proxy as everything else. Nothing
+    happens when this incident never set a banner, when it is already down,
+    or while another incident is still open.
+    """
+    last = db.scalar(
+        select(Proposal)
+        .where(
+            Proposal.incident_id == incident.id,
+            Proposal.action.in_(("shop.banner.set", "shop.banner.clear")),
+            Proposal.status == "executed",
+        )
+        .order_by(Proposal.decided_at.desc())
+    )
+    if not last or last.action != "shop.banner.set":
+        return None
+    if not (active_config(db).config or {}).get("banner"):
+        return None  # a rollback already took it down
+    still_open = db.scalar(
+        select(Incident).where(Incident.id != incident.id, Incident.status != "resolved")
+    )
+    if still_open:
+        return None
+    draft = ProposalDraft(
+        action="shop.banner.clear",
+        params={},
+        rationale="The incident is resolved and checkout has been quiet for the whole verify window, so the warning no longer applies.",
+        expected_effect="customers stop seeing a warning about a problem that is over",
+    )
+    filed = file_proposals(db, incident, [draft], source=PLANNER)
+    return filed[0] if filed else None
 
 
 async def reverify_pending(db: Session) -> list[Incident]:

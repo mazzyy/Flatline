@@ -463,3 +463,32 @@ def test_refund_budget_is_checked_again_when_the_refund_is_sent(db: Session) -> 
     assert [r.success for r in results] == [True, True, True, True, False]
     assert "DAILY_REFUND_BUDGET" in (results[-1].error or "")
     assert ledger.refunded_last_24h(db) == 180.0
+
+
+@pytest.mark.asyncio
+async def test_banner_comes_down_when_the_incident_resolves(db: Session) -> None:
+    """Declines are not ours to fix: no rollback happens, so code clears the banner at the end."""
+    for i in range(6):
+        _event(
+            db,
+            event_type="checkout.capture",
+            error_code="INSTRUMENT_DECLINED",
+            product_id="house-blend",
+            buyer_ref=f"D{i}",
+            resource_id=f"DEC-{i}",
+        )
+    db.commit()
+    incident = scan_once(db)[0]
+    # Nothing needs approval and the failures are older than the verify window,
+    # so the incident is verified and resolved in the same pass.
+    await process_incident(db, incident)
+    db.commit()
+    db.refresh(incident)
+    assert incident.status == "resolved"
+    proposals = list(db.query(Proposal).filter(Proposal.incident_id == incident.id).all())
+    by_action = {p.action: p for p in proposals}
+    assert by_action["shop.banner.set"].status == "executed"
+    cleared = [p for p in proposals if p.action == "shop.banner.clear"]
+    assert len(cleared) == 1 and cleared[0].tier == "auto" and cleared[0].status == "executed"
+    active = db.query(ShopConfigVersion).filter(ShopConfigVersion.active.is_(True)).one()
+    assert active.config.get("banner") == ""

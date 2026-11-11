@@ -6,12 +6,12 @@ type Action = { label: string; blurb: string; body: Record<string, unknown>; sec
 const ACTIONS: Action[] = [
   {
     label: "Inject checkout failures (declines)",
-    blurb: "Six buyers hit INSTRUMENT_DECLINED. Expect: alert + banner, no rollback of a healthy config.",
+    blurb: "Six buyers hit INSTRUMENT_DECLINED and the shop declines for one minute. Expect: alert + banner, no rollback of a healthy config; the banner comes down when it is over.",
     body: { chaos: { mock_response: "INSTRUMENT_DECLINED" }, note: "declines" },
   },
   {
     label: "Inject checkout failures (server errors)",
-    blurb: "PayPal returns INTERNAL_SERVER_ERROR on capture. Expect: alert + banner.",
+    blurb: "PayPal returns INTERNAL_SERVER_ERROR on capture for one minute. Expect: alert + banner; the banner comes down when it is over.",
     body: { chaos: { mock_response: "INTERNAL_SERVER_ERROR" }, note: "server errors" },
   },
   {

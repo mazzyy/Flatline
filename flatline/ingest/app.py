@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -239,7 +239,9 @@ def create_app() -> FastAPI:
     @app.get("/api/shop/config")
     def shop_config(db: Session = Depends(session_dep)) -> dict[str, Any]:
         row = _active_config(db)
-        return {"version": row.version, **dict(row.config or DEFAULT_SHOP_CONFIG)}
+        cfg = dict(row.config or DEFAULT_SHOP_CONFIG)
+        cfg["chaos"] = _live_chaos(cfg.get("chaos"))
+        return {"version": row.version, **cfg}
 
     @app.get("/api/incidents")
     def list_incidents(
@@ -358,6 +360,11 @@ def create_app() -> FastAPI:
             incoming.pop("note", None)
             incoming.pop("reset", None)
             chaos.update(incoming)
+            if incoming.get("mock_response"):
+                # A wave of declines or PayPal errors is not ours to fix, and in
+                # real life it passes. The simulated one passes after a minute.
+                until = utcnow() + timedelta(seconds=OUTAGE_SECONDS)
+                chaos["mock_until"] = until.isoformat()
             if incoming.get("bad_currency"):
                 cfg["currency"] = "EUR"
             injected = _inject_from_chaos(db, incoming)
@@ -538,6 +545,27 @@ def _decide_proposal(db: Session, proposal_id: UUID, *, approved: bool) -> dict[
         except Exception as exc:
             log.warning("verify after approve failed: %s", exc)
     return proposal_out(row)
+
+
+OUTAGE_SECONDS = 60
+
+
+def _live_chaos(chaos: Any) -> dict[str, Any]:
+    """The chaos settings the shop should act on: a simulated outage that has run its time is over."""
+    out = dict(chaos or {})
+    until = out.get("mock_until")
+    if not until:
+        return out
+    try:
+        ends = datetime.fromisoformat(str(until))
+    except ValueError:
+        return out
+    if ends.tzinfo is None:
+        ends = ends.replace(tzinfo=UTC)
+    if datetime.now(UTC) >= ends:
+        out.pop("mock_response", None)
+        out.pop("mock_until", None)
+    return out
 
 
 def _chaos_flag(db: Session, key: str) -> bool:

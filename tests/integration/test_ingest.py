@@ -265,3 +265,17 @@ def test_a_no_login_demo_checkout_is_stored_as_simulated(client: TestClient) -> 
     client.post("/api/telemetry", json={**body, "order_id": "ORD-REAL"})
     rows = {r["resource_id"]: r["synthetic"] for r in client.get("/api/events").json()["rows"]}
     assert rows == {"DEMO-1": True, "ORD-REAL": False}
+
+
+def test_a_simulated_outage_ends_on_its_own(client: TestClient, monkeypatch) -> None:
+    from flatline.ingest import app as app_module
+
+    monkeypatch.setattr(app_module, "OUTAGE_SECONDS", 0)
+    res = client.post(
+        "/api/chaos",
+        headers={"X-Passcode": "demo-judge", "X-Inject-Token": "test-inject"},
+        json={"chaos": {"mock_response": "INSTRUMENT_DECLINED"}},
+    )
+    assert res.status_code == 200
+    cfg = client.get("/api/shop/config").json()
+    assert "mock_response" not in cfg["chaos"]

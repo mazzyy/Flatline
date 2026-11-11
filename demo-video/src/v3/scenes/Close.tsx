@@ -54,8 +54,15 @@ export const Close: React.FC<{ t: number }> = ({ t }) => {
           <div style={{ position: "absolute", left: 0, top: 470 }}>
             <Pulse t={t} width={1920} height={150} seconds={7} stroke={4} head={false} />
           </div>
-          <div style={{ position: "absolute", left: 0, right: 0, top: 650, textAlign: "center", fontFamily: f.serif, fontStyle: "italic", fontSize: 76, color: c.text, opacity: ramp(t, cue("tag") + 0.8, cue("tag") + 1.4) }}>On call for your revenue.</div>
-          <div style={{ position: "absolute", left: 0, right: 0, top: 810, display: "flex", justifyContent: "center", alignItems: "center", gap: 22, opacity: ramp(t, cue("tag") + 1.6, cue("tag") + 2.2) }}>
+          <div style={{ position: "absolute", left: 0, right: 0, top: 626, textAlign: "center", fontFamily: f.serif, fontStyle: "italic", fontSize: 76, color: c.text, opacity: ramp(t, cue("tag") + 0.8, cue("tag") + 1.4) }}>On call for your revenue.</div>
+          <div style={{ position: "absolute", left: 0, right: 0, top: 752, display: "flex", justifyContent: "center", opacity: ramp(t, cue("tag") + 1.2, cue("tag") + 1.8) }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 18, border: `2px solid ${c.alive}88`, background: c.panel, borderRadius: 999, padding: "14px 34px" }}>
+              <div style={{ width: 14, height: 14, borderRadius: 7, background: c.alive, boxShadow: `0 0 18px ${c.alive}` }} />
+              <div style={{ fontFamily: f.mono, fontSize: 22, letterSpacing: 4, color: c.alive }}>TRY IT LIVE</div>
+              <div style={{ fontFamily: f.mono, fontSize: 30, color: c.text }}>flatline-demo-27612c3a852c.herokuapp.com</div>
+            </div>
+          </div>
+          <div style={{ position: "absolute", left: 0, right: 0, top: 862, display: "flex", justifyContent: "center", alignItems: "center", gap: 22, opacity: ramp(t, cue("tag") + 1.6, cue("tag") + 2.2) }}>
             <Img src={staticFile("brand/builder.jpg")} style={{ width: 84, height: 84, borderRadius: 42, objectFit: "cover", border: `2px solid ${c.line}` }} />
             <div>
               <div style={{ fontFamily: f.sans, fontWeight: 600, fontSize: 32, color: c.text }}>Built by Abdul Musawar Soomro</div>
