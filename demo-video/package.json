@@ -33,10 +33,11 @@
     "typescript": "5.9.3"
   },
   "scripts": {
-    "dev": "remotion studio",
-    "build": "remotion bundle",
+    "dev": "remotion studio src/v3/index.tsx",
+    "build": "remotion bundle src/v3/index.tsx",
     "upgrade": "remotion upgrade",
-    "lint": "eslint src && tsc"
+    "lint": "eslint src && tsc",
+    "render": "remotion render src/v3/index.tsx Film out/flatline-film.mp4"
   },
   "allowScripts": {
     "esbuild": false

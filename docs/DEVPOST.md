@@ -1,6 +1,6 @@
 # Flatline: Devpost submission text
 
-Paste each section into the matching Devpost field. `docs/DEVPOST_ABOUT.md` is the "About the project" field in one piece.
+Paste each section into the matching Devpost field.
 
 ## Inspiration
 

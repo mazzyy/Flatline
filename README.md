@@ -421,7 +421,7 @@ Free services sleep after 15 minutes without traffic, so the first request takes
 | `dashboard` | React dashboard: overview, incidents, transactions grid, policy, audit, Chaos panel |
 | `demo-shop` | Lumen Coffee Co., a small Node shop with the PayPal JS SDK v6 |
 | `scripts` | Seeding, injection, sandbox setup and the live checks |
-| `demo-video` | The demo video, made in code with Remotion, with its narration and soundtrack scripts |
+| `demo-video` | The film, made in code with Remotion (`src/v3`), with its score and voice scripts. See `demo-video/FILM.md` |
 | `docs` | Architecture, decisions, playbooks, benchmark, spec and the Devpost write up |
 
 ## Built with

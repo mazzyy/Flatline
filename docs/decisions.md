@@ -76,7 +76,7 @@ add it, labelled as a probe, so the proxy's refusal is shown honestly.
 ## D-019 — The video is recorded by script, not by hand
 
 `docs/DEMO_SCRIPT.md` (spec 15) described a manual click path. The clips are
-recorded by `demo-video/scripts/record-clips.mjs` against the running stack,
+recorded by a script (`demo-video/scripts/record-clips.mjs`, removed with the old cut) against the running stack,
 so the file was removed. The renewal clip showed that the Remediator never
 received the playbook's `allowed_actions` (the live model invented action
 names); its input now carries them. Unused invoice create/send writes were
