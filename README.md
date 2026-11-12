@@ -18,7 +18,7 @@ In one line: Flatline is the on call engineer for your PayPal revenue. It notice
 
 Built for the PayPal AI Hackathon. MIT licensed. Copyright 2026 Abdul Musawar Soomro.
 
-**Jump to:** [try it live](#try-it-live) · [the demo](#the-demo) · [the approach](#the-approach) · [how it works](#how-it-works) · [one incident, start to finish](#one-incident-start-to-finish) · [getting the lost sales back](#getting-the-lost-sales-back) · [benchmark](#benchmark) · [run it](#run-it) · [why you can trust it](#why-you-can-trust-it)
+**Jump to:** [try it live](#try-it-live) · [the demo](#the-demo) · [the approach](#the-approach) · [how it works](#how-it-works) · [one incident, start to finish](#one-incident-start-to-finish) · [getting the lost sales back](#getting-the-lost-sales-back) · [AG Grid](#how-it-uses-ag-grid) · [benchmark](#benchmark) · [run it](#run-it) · [why you can trust it](#why-you-can-trust-it)
 
 ## Try it live
 
@@ -240,6 +240,22 @@ sequenceDiagram
 **What is real and what is simulated.** In mock mode the invoices go to the mock gateway. In the sandbox, customers that come from the Chaos panel have made up PayPal ids, so their invoices are recorded as simulated and nothing is sent; a real sandbox checkout that failed gets a real sandbox invoice. Sandbox buyers do not pay invoices by themselves, so the Chaos panel has a button, *Customers pay their recovery requests*, that plays their part: about two thirds of them pay, and those ledger lines are marked simulated. Refund waves have nothing to ask back, so for those the ledger only records what was refunded.
 
 To try it: run the checkout scenario, approve the rollback, wait about a minute for the recovery proposal on the incident page, approve it, then press that Chaos button.
+
+## How it uses AG Grid
+
+The dashboard's two record views are built on AG Grid Community (`ag-grid-community` and `ag-grid-react` 33, Quartz theme). They are where a merchant, or a judge, checks the agents' work against the raw data.
+
+**Transactions** ([`dashboard/src/pages/Transactions.tsx`](dashboard/src/pages/Transactions.tsx)) shows every PayPal webhook and checkout event Flatline has stored.
+
+- **Infinite row model with the work done on the server.** The grid asks the API for rows in blocks of 50 (`rowModelType="infinite"`, up to 8 blocks cached), and `/api/events` answers each block straight from PostgreSQL with `start_row` and `end_row`. The browser never holds the whole event table, so it stays fast however long the shop has been running.
+- **Server side sorting.** Clicking a column header sends the grid's sort model to the API, which orders the query in SQL. Only known columns can be sorted on.
+- **Search across the record.** The search box above the grid matches event type, order id, product, buyer and error code on the server, then clears the grid's cache so it reloads from the first block.
+- **Column groups** split each row into When, What and Money, so the error code and the amount sit next to each other when you look for a pattern.
+- **A custom cell renderer** puts a "simulated" badge on every event that the Chaos panel injected or the demo button created. The agents are never told which events are simulated, but you can always see it.
+
+**Audit log** ([`dashboard/src/pages/Audit.tsx`](dashboard/src/pages/Audit.tsx)) uses the same infinite row model over `/api/audit`: every detection, agent step, policy decision, approval and execution, newest first.
+
+To try it on the [live demo](#try-it-live), open **Transactions** after shipping the bad currency config: sort by Type, search for `CURRENCY_MISMATCH`, and the failed captures behind the incident are all there, each marked simulated.
 
 ## Benchmark
 
