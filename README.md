@@ -6,7 +6,7 @@
 
 **Try it live:** [flatline-demo-27612c3a852c.herokuapp.com](https://flatline-demo-27612c3a852c.herokuapp.com) · passcode `demo-judge` · demo shop at [/shop](https://flatline-demo-27612c3a852c.herokuapp.com/shop) · PayPal sandbox only, no real money anywhere.
 
-[![Flatline, the film: click to watch on YouTube](docs/media/film-thumbnail.jpg)](https://www.youtube.com/watch?v=mnbAXQDoEko)
+[![Flatline, on call for your revenue. Click to watch the film on YouTube](docs/media/film-banner.jpg)](https://www.youtube.com/watch?v=mnbAXQDoEko)
 
 Every online shop monitors its servers. Almost nobody monitors their money. When checkout breaks on a Friday evening, or refunds suddenly pile up on one product, most merchants find out days later from a payout report or an annoyed customer.
 
