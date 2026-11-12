@@ -1,6 +1,6 @@
 # Flatline: Devpost submission text
 
-Paste each section into the matching Devpost field. Replace YOUTUBE_LINK once the video is uploaded.
+Paste each section into the matching Devpost field. `docs/DEVPOST_ABOUT.md` is the "About the project" field in one piece.
 
 ## Inspiration
 
@@ -23,7 +23,7 @@ Then it finishes the job. Once the verifier has resolved an incident, a recovery
 
 Money has limits in code as well as tiers: a cap per refund, a daily refund budget that is checked again at the moment of sending, and caps on how much one recovery may ask back. No refund runs on its own unless the merchant opts in.
 
-The demo runs three playbooks: a checkout failure spike caused by a bad currency config, a refund wave concentrated on one product, and failed subscription renewals on one plan. The video was cut before the recovery step was added; the README walks through it.
+The demo runs three playbooks: a checkout failure spike caused by a bad currency config, a refund wave concentrated on one product, and failed subscription renewals on one plan. The video shows the first one from failure to recovered money, including a real sandbox invoice being sent and paid.
 
 ## What I built during the hackathon
 
@@ -31,7 +31,7 @@ Flatline is a new codebase started in the submission period. From Warden it take
 
 ## How I built it
 
-The backend is Python 3.12 with FastAPI for ingest, webhooks, the dashboard API and live updates over server sent events, SQLAlchemy 2 with PostgreSQL 16 for storage, and Alembic for migrations. The detector reads its thresholds from playbook YAML files. The four agents call models through LiteLLM. The dashboard is React, Vite and TypeScript, with AG Grid Community for the transactions grid (server side rows, column groups, a simulated badge for injected events). The demo shop, Lumen Coffee Co., is a small Node server with the PayPal JS SDK v6. Everything runs with Docker Compose locally and deploys to Render from a Blueprint. The demo video is made in code with Remotion, with an original soundtrack.
+The backend is Python 3.12 with FastAPI for ingest, webhooks, the dashboard API and live updates over server sent events, SQLAlchemy 2 with PostgreSQL 16 for storage, and Alembic for migrations. The detector reads its thresholds from playbook YAML files. The four agents call models through LiteLLM. The dashboard is React, Vite and TypeScript, with AG Grid Community for the transactions grid (server side rows, column groups, a simulated badge for injected events). The demo shop, Lumen Coffee Co., is a small Node server with the PayPal JS SDK v6. Everything runs with Docker Compose locally, and the live demo is one container on Heroku that serves the dashboard and the shop behind one address. The demo video is made in code with Remotion, with an original soundtrack.
 
 ## How it uses PayPal
 
@@ -63,7 +63,7 @@ The backend is Python 3.12 with FastAPI for ingest, webhooks, the dashboard API 
 1. The whole loop runs end to end against the PayPal sandbox: detect, diagnose, gate, execute, verify.
 2. The write boundary is enforced three ways: agents get a read only gateway whose write methods raise, an import boundary test keeps agent code away from the writer, and the PayPal MCP read session does not even load write tools.
 3. The refund scenario shows the safety model on screen: a red-team probe slips a forbidden bulk refund in next to the agent's proposals, and the proxy refuses it.
-4. More than 120 automated tests run in CI with no keys.
+4. 130 automated tests run with no keys.
 5. It does not stop at "resolved". In the checkout scenario six customers lost a $108 sale between them; one approval sends six invoices, and the ledger shows what came back.
 6. A benchmark (`make bench`) scores seven scripted scenarios on detection, diagnosis, gating, safety and recovery, with two quiet day controls and seven policy probes. 34 of 34 checks pass with the stand in models, and `make bench-live` scores real models on the same scenarios.
 
@@ -80,20 +80,29 @@ An agent that touches money is mostly a permissions problem, not a prompting pro
 
 ## Try it
 
-1. Demo video: YOUTUBE_LINK
-2. Code: https://github.com/mazzyy/Flatline (MIT)
-3. Run it yourself: the README has complete setup and run instructions. With Docker installed it is `git clone https://github.com/mazzyy/Flatline && cd Flatline && cp .env.example .env && make up`, no keys needed.
+1. Live demo: https://flatline-demo-27612c3a852c.herokuapp.com (passcode `demo-judge`), demo shop at https://flatline-demo-27612c3a852c.herokuapp.com/shop
+2. Demo video: https://youtu.be/z9Kkz_AERaY
+3. Code: https://github.com/mazzyy/Flatline (MIT)
+4. Run it yourself: the README has complete setup and run instructions. With Docker installed it is `git clone https://github.com/mazzyy/Flatline && cd Flatline && cp .env.example .env && make up`, no keys needed.
 
 ## Testing instructions for judges
 
-1. Clone the repo and run `cp .env.example .env && make up` (Docker required). This starts the API, dashboard, detector, agent loop, Postgres and the demo shop in mock mode, so no PayPal or model keys are needed.
-2. Open http://localhost:8000 and log in with passcode `demo-judge` and inject token `change-me` (the token unlocks the Chaos panel). The demo shop is at http://localhost:3000.
-3. In Chaos, click **Ship bad currency config**. The detector opens an incident within about 30 seconds. Open it to see the root cause, the agent timeline and the proposals, then approve the rollback.
-4. **Inject refund wave** shows the refused bulk refund. **Inject subscription renewal failures** shows the Diagnostician reading the plan from PayPal and an automatic payment reminder; if the model also proposes capturing the balance, that waits for approval. **Reset all chaos** puts everything back.
-5. For the recovery: after approving the rollback in step 3, wait about a minute. A recovery proposal appears on the same incident with the six customers and $108. Approve it, press **Customers pay their recovery requests** in Chaos, and the Overview shows $72 recovered.
-6. `make bench` runs the scored benchmark in a few seconds, with no keys (needs the Python setup from the README).
-7. To run it against the PayPal sandbox with live models, follow "Connect the PayPal sandbox" in the README (a sandbox REST app and a free Gemini API key, or a local Qwen through Ollama), then run `python scripts/live_check.py`. It plays all three scenarios and prints each agent step with its model, latency and whether PayPal was read through the MCP server. This is how the demo video was recorded. No real money moves anywhere.
+The quick way, nothing to install:
+
+1. Open the demo shop at https://flatline-demo-27612c3a852c.herokuapp.com/shop, pick a coffee and press **Pay without a PayPal login (demo)**. The payment goes through.
+2. Open https://flatline-demo-27612c3a852c.herokuapp.com, log in with passcode `demo-judge`, and look at **Transactions**: your payment is at the top.
+3. Open **Chaos** and click **Ship bad currency config**. An incident opens within seconds. Open it to see the root cause, the agent timeline and the proposals, then approve the rollback.
+4. Wait about a minute. A recovery proposal appears on the same incident with the six customers and $108. Approve it, press **Customers pay their recovery requests** in Chaos, and the Overview shows what was recovered.
+5. **Inject refund wave** shows the refused bulk refund. **Inject subscription renewal failures** shows the Diagnostician reading the plan from PayPal and an automatic payment reminder. **Reset all chaos** puts everything back.
+
+The live demo runs on the PayPal sandbox with live models. No real money moves anywhere.
+
+To run it yourself:
+
+1. Clone the repo and run `cp .env.example .env && make up` (Docker required). This starts everything in mock mode, so no PayPal or model keys are needed. The dashboard is at http://localhost:8000 (passcode `demo-judge`, inject token `change-me`) and the shop at http://localhost:3000.
+2. `make bench` runs the scored benchmark in a few seconds, with no keys (needs the Python setup from the README).
+3. To run it against the PayPal sandbox with live models, follow "Connect the PayPal sandbox" in the README, then run `python scripts/live_check.py`.
 
 ## Built with
 
-python, fastapi, sqlalchemy, postgresql, alembic, litellm, gemini, ollama, qwen, paypal, paypal-mcp, paypal-js-sdk, model-context-protocol, react, vite, typescript, ag-grid, node.js, docker, render, remotion
+python, fastapi, sqlalchemy, postgresql, alembic, litellm, gemini, ollama, qwen, paypal, paypal-mcp, paypal-js-sdk, model-context-protocol, react, vite, typescript, ag-grid, node.js, docker, heroku, remotion
