@@ -6,6 +6,8 @@ Paste each section into the matching Devpost field.
 
 Every online shop monitors its servers. Almost nobody monitors their money. When checkout breaks on a Friday evening, or refunds suddenly pile up on one product, a small merchant usually finds out days later from a payout report or an annoyed customer.
 
+It is not a small problem. In a survey of 1,500 businesses and 8,000 shoppers, 45% of shoppers said they would not retry after one declined payment, and US businesses lost 2.1% of revenue to wrongly declined payments ([Checkout.com and Oxford Economics, 2023](https://www.checkout.com/newsroom/checkout-com-research-finds-us-businesses-lag-behind-in-payment-performance-losing-2-1-of-global-revenues-annually)). Flatline is built for the half who do not come back.
+
 Earlier this year I built Warden, an SRE agent for Kubernetes with one hard rule: the agents diagnose and propose, but they never hold write credentials. Payments have the same shape of problem, and the same rule matters even more when the action is a refund. Flatline is that idea, rebuilt for a merchant's PayPal revenue.
 
 ## What it does

@@ -1,0 +1,558 @@
+{
+  "info": {
+    "_postman_id": "3fd47d06-2bb3-430f-b869-e66826730a0a",
+    "name": "Flatline",
+    "description": "The Flatline API on the live demo, in the order a judge would try it. Everything runs on the PayPal sandbox; no real money moves.\n\nSet baseUrl to http://localhost:8000 to use it against a local `make up`.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Look around",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/healthz",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "healthz"
+              ]
+            },
+            "description": "Is the service up."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Site info",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/site",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "site"
+              ]
+            },
+            "description": "Where the shop lives, and which PayPal environment and model mode are running (always SANDBOX or MOCK)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Revenue health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/metrics/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "metrics",
+                "health"
+              ]
+            },
+            "description": "Health score, open incidents, captures and failure rate."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Transactions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/events?start_row=0&end_row=20&sort_field=occurred_at&sort_dir=desc",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "events"
+              ],
+              "query": [
+                {
+                  "key": "start_row",
+                  "value": "0"
+                },
+                {
+                  "key": "end_row",
+                  "value": "20"
+                },
+                {
+                  "key": "sort_field",
+                  "value": "occurred_at"
+                },
+                {
+                  "key": "sort_dir",
+                  "value": "desc"
+                }
+              ]
+            },
+            "description": "The same server side rows the AG Grid transactions view loads: newest first, 20 rows."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Policy catalog",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/policy/catalog",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "policy",
+                "catalog"
+              ]
+            },
+            "description": "Every action an agent may propose, its tier (auto, approval, forbidden) and the money limits."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Money ledger",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/money",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "money"
+              ]
+            },
+            "description": "Lost to incidents, asked back, and recovered."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Break checkout and watch Flatline",
+      "item": [
+        {
+          "name": "Ship bad currency config",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Passcode",
+                "value": "{{passcode}}"
+              },
+              {
+                "key": "X-Inject-Token",
+                "value": "{{injectToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/chaos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "chaos"
+              ]
+            },
+            "description": "Same as the Chaos panel button: a new shop config switches the US shop to EUR and six checkouts fail. An incident opens within seconds.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"chaos\": {\n    \"bad_currency\": true\n  },\n  \"note\": \"bad currency\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List incidents",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/incidents",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "incidents"
+              ]
+            },
+            "description": "Saves the newest incident's id for the next requests."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "const items = pm.response.json().items || [];",
+                  "pm.test('an incident exists', () => pm.expect(items.length).to.be.above(0));",
+                  "if (items.length) pm.collectionVariables.set('incidentId', items[0].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Incident detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/incidents/{{incidentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "incidents",
+                "{{incidentId}}"
+              ]
+            },
+            "description": "Root cause, the four agent steps with the model that answered each, and the proposals with their tiers. Saves the first proposal waiting for approval. The agents need a few seconds; send again if no proposal is pending yet."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "const body = pm.response.json();",
+                  "const pending = (body.proposals || []).filter(p => p.status === 'pending');",
+                  "if (pending.length) { pm.collectionVariables.set('proposalId', pending[0].id); console.log('pending:', pending[0].action); }",
+                  "else console.log('nothing pending yet: wait a few seconds and send again');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Approve the pending proposal",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Passcode",
+                "value": "{{passcode}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/proposals/{{proposalId}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "proposals",
+                "{{proposalId}}",
+                "approve"
+              ]
+            },
+            "description": "Approve what is waiting (first the config rollback). After about a minute of quiet, the verifier resolves the incident and the recovery proposal appears: run Incident detail again and approve that one too."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Customers pay their recovery requests",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Passcode",
+                "value": "{{passcode}}"
+              },
+              {
+                "key": "X-Inject-Token",
+                "value": "{{injectToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/synthetic/recovery-payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "synthetic",
+                "recovery-payments"
+              ]
+            },
+            "description": "Plays the customers paying their invoices (sandbox buyers do not pay on their own). Payments are marked simulated. Run Money ledger afterwards."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Safety and clean up",
+      "item": [
+        {
+          "name": "Inject refund wave",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Passcode",
+                "value": "{{passcode}}"
+              },
+              {
+                "key": "X-Inject-Token",
+                "value": "{{injectToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/chaos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "chaos"
+              ]
+            },
+            "description": "Five refunds on one product. The incident shows pause sales waiting for approval and a bulk refund refused by the policy proxy.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"chaos\": {\n    \"inject\": \"refund_wave\"\n  },\n  \"note\": \"refund wave\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Audit log",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/audit?start_row=0&end_row=50",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "audit"
+              ],
+              "query": [
+                {
+                  "key": "start_row",
+                  "value": "0"
+                },
+                {
+                  "key": "end_row",
+                  "value": "50"
+                }
+              ]
+            },
+            "description": "Every detection, agent step, policy decision, approval and execution, newest first."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reset all chaos",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Passcode",
+                "value": "{{passcode}}"
+              },
+              {
+                "key": "X-Inject-Token",
+                "value": "{{injectToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/chaos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "chaos"
+              ]
+            },
+            "description": "Puts the shop back to normal.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reset\": true\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://flatline-demo-27612c3a852c.herokuapp.com"
+    },
+    {
+      "key": "passcode",
+      "value": "demo-judge"
+    },
+    {
+      "key": "injectToken",
+      "value": "change-me"
+    },
+    {
+      "key": "incidentId",
+      "value": ""
+    },
+    {
+      "key": "proposalId",
+      "value": ""
+    }
+  ]
+}

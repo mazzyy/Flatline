@@ -10,6 +10,8 @@
 
 Every online shop monitors its servers. Almost nobody monitors their money. When checkout breaks on a Friday evening, or refunds suddenly pile up on one product, most merchants find out days later from a payout report or an annoyed customer.
 
+It is not a small problem. In a survey of 1,500 businesses and 8,000 shoppers, 45% of shoppers said they would not retry after one declined payment, and US businesses lost 2.1% of revenue to wrongly declined payments ([Checkout.com and Oxford Economics, 2023](https://www.checkout.com/newsroom/checkout-com-research-finds-us-businesses-lag-behind-in-payment-performance-losing-2-1-of-global-revenues-annually)). Flatline is built for the half who do not come back.
+
 I built Flatline to close that gap. It is an SRE agent that sits on call for a merchant's PayPal integration. It notices checkout failures, refund waves and failing subscription renewals within seconds, works out the root cause from real evidence, and fixes what it is allowed to fix. Then it finishes the job: once the fix holds, it lists the customers who tried to pay and could not, and with one approval sends each of them a PayPal invoice for the order they tried to place.
 
 The part I care about most is how it does all this: every action goes through a policy proxy written in plain code, not a prompt, and the agents never hold write credentials. Anything that moves money waits for a person.
