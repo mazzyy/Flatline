@@ -9,8 +9,8 @@ import { useSite } from "../site";
 import { cash, useRevenue } from "../useRevenue";
 
 const REPO = "https://github.com/mazzyy/Flatline";
-// Set VITE_VIDEO_URL at build time to show the film link.
-const VIDEO = (import.meta.env.VITE_VIDEO_URL as string | undefined) || "";
+// VITE_VIDEO_URL at build time overrides the film link.
+const VIDEO = (import.meta.env.VITE_VIDEO_URL as string | undefined) || "https://www.youtube.com/watch?v=mnbAXQDoEko";
 
 const WHAT: [string, string, string][] = [
   ["Detect", "Within seconds", "It watches PayPal webhooks and the shop's checkout. When failures jump, an incident opens with the money at risk per hour."],

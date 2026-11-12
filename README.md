@@ -2,9 +2,11 @@
 
 **On call for your revenue.**
 
+**Watch the film (2:41):** [youtube.com/watch?v=mnbAXQDoEko](https://www.youtube.com/watch?v=mnbAXQDoEko)
+
 **Try it live:** [flatline-demo-27612c3a852c.herokuapp.com](https://flatline-demo-27612c3a852c.herokuapp.com) · passcode `demo-judge` · demo shop at [/shop](https://flatline-demo-27612c3a852c.herokuapp.com/shop) · PayPal sandbox only, no real money anywhere.
 
-[![Flatline demo, click to watch the full video](docs/media/demo.gif)](docs/media/flatline_demo.mp4)
+[![Flatline, the film: click to watch on YouTube](docs/media/film-thumbnail.jpg)](https://www.youtube.com/watch?v=mnbAXQDoEko)
 
 Every online shop monitors its servers. Almost nobody monitors their money. When checkout breaks on a Friday evening, or refunds suddenly pile up on one product, most merchants find out days later from a payout report or an annoyed customer.
 
@@ -40,7 +42,9 @@ When you are done, **Reset all chaos** puts the shop back to normal. A second in
 
 ## The demo
 
-The GIF above is a short cut. The full walkthrough with narration runs two and a half minutes: [docs/media/flatline_demo.mp4](docs/media/flatline_demo.mp4). Everything in it was recorded against the running stack on the PayPal sandbox with live models, and every root cause, proposal and rationale you see on screen was written by the model named in that agent step.
+**The film** ([watch on YouTube](https://www.youtube.com/watch?v=mnbAXQDoEko), 2:41) tells the whole story: a checkout breaks, Flatline finds the cause, waits for approval to fix it, and then gets the lost sales back, including one real PayPal sandbox invoice being sent and paid.
+
+**The walkthrough** ([docs/media/flatline_demo.mp4](docs/media/flatline_demo.mp4), with a short cut in [docs/media/demo.gif](docs/media/demo.gif)) is the earlier, plainer recording. Everything in it was recorded against the running stack on the PayPal sandbox with live models, and every root cause, proposal and rationale you see on screen was written by the model named in that agent step.
 
 It shows three incidents:
 
@@ -48,7 +52,7 @@ It shows three incidents:
 2. **A refund wave.** Five refunds in an hour on one coffee, from five different buyers. Flatline traces it to the product and proposes pausing its sales. A forbidden bulk refund, slipped in as a red team probe, is refused by the proxy.
 3. **Failing renewals.** Four Coffee Club renewals fail. Flatline reads the plan from PayPal, sees the plan is healthy and the subscribers' payments are the problem, and sends reminders on its own.
 
-That recording was cut before the recovery step, the money limits and the benchmark were added. The submission film on the Devpost page is newer and shows all of it, including one real sandbox invoice being sent and paid. The details are below, under [getting the lost sales back](#getting-the-lost-sales-back) and [benchmark](#benchmark), and you can try the recovery yourself on the [live demo](#try-it-live).
+That recording was cut before the recovery step, the money limits and the benchmark were added. [The film](https://www.youtube.com/watch?v=mnbAXQDoEko) is newer and shows all of it, including one real sandbox invoice being sent and paid. The details are below, under [getting the lost sales back](#getting-the-lost-sales-back) and [benchmark](#benchmark), and you can try the recovery yourself on the [live demo](#try-it-live).
 
 ## The approach
 

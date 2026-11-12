@@ -75,7 +75,7 @@ An agent that touches money is mostly a permissions problem, not a prompting pro
 ## Try it
 
 1. Live demo: https://flatline-demo-27612c3a852c.herokuapp.com (passcode `demo-judge`), demo shop at https://flatline-demo-27612c3a852c.herokuapp.com/shop
-2. Demo video: https://youtu.be/z9Kkz_AERaY
+2. Demo video: https://www.youtube.com/watch?v=mnbAXQDoEko
 3. Code: https://github.com/mazzyy/Flatline (MIT)
 4. Run it yourself: the README has complete setup and run instructions. With Docker installed it is `git clone https://github.com/mazzyy/Flatline && cd Flatline && cp .env.example .env && make up`, no keys needed.
 
